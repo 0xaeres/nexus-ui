@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" fill="none">
+  
+  <g transform="translate(4 8)">
+    <polygon points="16,3 27.5,9.5 27.5,22.5 16,29 4.5,22.5 4.5,9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></polygon>
+    
+    <polygon points="16,16 27.5,9.5 16,3" fill="currentColor" fill-opacity="0.16"></polygon>
+    <polygon points="16,16 27.5,22.5 27.5,9.5" fill="currentColor" fill-opacity="0.10"></polygon>
+    <polygon points="16,16 16,29 27.5,22.5" fill="currentColor" fill-opacity="0.06"></polygon>
+    <polygon points="16,16 4.5,22.5 16,29" fill="currentColor" fill-opacity="0.10"></polygon>
+    <polygon points="16,16 4.5,9.5 4.5,22.5" fill="currentColor" fill-opacity="0.16"></polygon>
+    <polygon points="16,16 16,3 4.5,9.5" fill="var(--accent, #7C8CFF)"></polygon>
+    <g stroke="currentColor" stroke-width="0.4" stroke-opacity="0.4">
+      <line x1="16" y1="16" x2="16" y2="3"></line>
+      <line x1="16" y1="16" x2="27.5" y2="9.5"></line>
+      <line x1="16" y1="16" x2="27.5" y2="22.5"></line>
+      <line x1="16" y1="16" x2="16" y2="29"></line>
+      <line x1="16" y1="16" x2="4.5" y2="22.5"></line>
+      <line x1="16" y1="16" x2="4.5" y2="9.5"></line>
+    </g>
+  </g>
+
+  
+  <text x="48" y="30" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" letter-spacing="4.8" fill="currentColor">NEXUS</text>
+</svg>

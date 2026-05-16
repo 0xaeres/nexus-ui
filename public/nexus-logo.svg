@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  
+  <defs>
+    
+  </defs>
+
+  
+  
+  
+  <polygon points="32,32 54.5,19 32,6" fill="currentColor" fill-opacity="0.16"></polygon>
+  <polygon points="32,32 54.5,45 54.5,19" fill="currentColor" fill-opacity="0.10"></polygon>
+  <polygon points="32,32 32,58 54.5,45" fill="currentColor" fill-opacity="0.06"></polygon>
+  <polygon points="32,32 9.5,45 32,58" fill="currentColor" fill-opacity="0.10"></polygon>
+  <polygon points="32,32 9.5,19 9.5,45" fill="currentColor" fill-opacity="0.16"></polygon>
+
+  
+  <polygon points="32,32 32,6 9.5,19" fill="var(--accent, #7C8CFF)"></polygon>
+
+  
+  <g stroke="currentColor" stroke-width="0.6" stroke-opacity="0.35" stroke-linecap="round">
+    <line x1="32" y1="32" x2="32" y2="6"></line>
+    <line x1="32" y1="32" x2="54.5" y2="19"></line>
+    <line x1="32" y1="32" x2="54.5" y2="45"></line>
+    <line x1="32" y1="32" x2="32" y2="58"></line>
+    <line x1="32" y1="32" x2="9.5" y2="45"></line>
+    <line x1="32" y1="32" x2="9.5" y2="19"></line>
+  </g>
+
+  
+  <polygon points="32,6 54.5,19 54.5,45 32,58 9.5,45 9.5,19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></polygon>
+
+  
+  <g fill="currentColor">
+    <circle cx="32" cy="6" r="1.4"></circle>
+    <circle cx="54.5" cy="19" r="1.4"></circle>
+    <circle cx="54.5" cy="45" r="1.4"></circle>
+    <circle cx="32" cy="58" r="1.4"></circle>
+    <circle cx="9.5" cy="45" r="1.4"></circle>
+    <circle cx="9.5" cy="19" r="1.4"></circle>
+  </g>
+</svg>
