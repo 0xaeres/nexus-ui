@@ -276,6 +276,42 @@ should be flat surfaces with focused use of `stat` for emphasis.
   via `next/font/google` in `app/layout.tsx` and exposed as
   `--font-inter` / `--font-jetbrains` variables. Tailwind's `font-sans`
   and `font-mono` resolve to these via `@theme inline`.
+- Root font size is **16px** (`html { font-size: 16px }`). All Tailwind
+  spacing/sizing is `rem`-based and scales from this.
+
+**Canonical text scale — these are the ONLY sizes allowed in the app.**
+Use the components in `components/ui/typography.tsx`, not raw `<h1>`/`text-*`:
+
+| Size | Use | Component |
+|---|---|---|
+| `text-2xl` 24px | Page titles | `<H1>` |
+| `text-xl` 20px | Major sections | `<H2>` |
+| `text-base` 16px | Body, buttons, table cells, card titles | `<Body>`, `<H3>` |
+| `text-sm` 14px | Descriptions, mono paths, muted text | `<Muted>`, `<Subtle>`, `<Code>` |
+| `text-xs` 12px | Section labels, badges, dense metadata | `<SectionLabel>`, `<Small>` |
+
+No `text-[10px]`, no `text-[11px]`, no raw `<h1>/<h2>/<h3>`, no `text-lg`
+except a deliberate hero callout (currently only the Onboarding step-4
+"Run Council" CTA). Enforced by:
+
+```
+grep -rn 'text-\[1[01]px\]\|<h1\|<h2\|<h3' components/screens components/shell app/ \
+  | grep -v 'components/ui/typography.tsx'   # must be empty
+```
+
+### 9.5a Page layout primitives
+
+`components/ui/page.tsx` exposes the standard page chrome — use these
+instead of hand-rolling header/body wrappers:
+
+- `<PageHeader>` — fixed 64px-tall header, `border-b`, content centered in
+  a `max-w-[1280px]` `px-8` container.
+- `<PageBody>` — scrollable region, same max-width/padding, `py-8 space-y-8`.
+- `<PageGrid>` — 12-column grid (`grid-cols-12 gap-6`) for dashboard-style
+  layouts. Use `col-span-*` on children.
+
+**Exceptions:** `Skills` and `CouncilSession` keep their custom 2-/3-pane
+bodies (full-bleed below the header). Only their header uses `<PageHeader>`.
 
 ### 9.6 Connector scope (locked to 3)
 
@@ -312,7 +348,8 @@ syncing, the Dashboard shows a single inline strip that links into Sources.
 |---|---|
 | `app/layout.tsx`, `app/globals.css`, `postcss.config.mjs` | Tailwind v4 |
 | `components/ui/*` | shadcn primitives (canonical) |
-| `components/shell/{Shell,TopBar,SideNav,ProductSwitcher,CommandPalette}.tsx` | Tailwind |
+| `components/shell/{Shell,TopBar,SideNav,ProductSwitcher,CommandPalette,ShortcutsHelp}.tsx` | Tailwind |
+| `components/ui/{page,typography}.tsx` | New: page chrome + canonical type scale |
 | `components/pipeline/Pipeline.tsx` | Tailwind |
 | `components/screens/{Dashboard,Skills,Sources,CouncilLanding,CouncilSession,Onboarding,Activity,Settings,ConnectorNew,ConnectorDetail}.tsx` | Tailwind |
 | `components/sources/IngestionProgress.tsx` | Tailwind |
@@ -333,6 +370,55 @@ primitives.
 Page components stay server components by default. `'use client'` is only
 on files that need interaction state, effects, browser APIs, or a Radix
 primitive that internally uses hooks.
+
+### 9.11 Keyboard shortcuts
+
+The global handler lives in `components/shell/Shell.tsx`. It ignores key
+events originating in inputs/textareas/contentEditable and suspends the
+`g`-sequence while the palette or help dialog owns the keyboard.
+
+| Keys | Action |
+|---|---|
+| `⌘K` / `Ctrl+K` | Toggle command palette |
+| `?` | Toggle the shortcuts help dialog (`ShortcutsHelp.tsx`) |
+| `Esc` | Close palette / help |
+| `g` then `d` | Dashboard (product-scoped) |
+| `g` then `c` | Council |
+| `g` then `s` | Skills |
+| `g` then `a` | Activity |
+| `g` then `n` | Sources |
+
+The `g`-prefix is a Vim-style sequence with an 800ms window. All nav
+targets resolve against the **current product** (`/p/${currentProductId}/…`),
+so shortcuts respect the active tenant.
+
+Inside the command palette (`CommandPalette.tsx`), while the search box is
+empty: `1`–`9` jump to the Nth visible result, and a single letter
+(`d/c/s/a/n`) runs the matching Navigate command. `↑↓` move the selection,
+`↵` runs it. The palette itself is product-aware — its hrefs are built from
+`useProduct()`, not hardcoded to `forge`.
+
+### 9.12 Command palette glass treatment
+
+Follows the modern command-palette convention (Linear / Vercel / cmdk):
+a **blurred, dimmed backdrop** with a **crisp, near-solid elevated panel**
+floating on top.
+
+- **Overlay:** `bg-black/55 backdrop-blur-md` — this is what produces the
+  glassy depth; the whole app recedes behind a soft frosted dim.
+- **Panel:** `bg-surface-raised` (solid, opaque) + `border-border-strong`
+  + `shadow-2xl shadow-black/80` + a faint `ring-inset ring-white/[0.05]`
+  top sheen.
+
+**Critical — do NOT make the panel translucent.** Glass-on-blur looks
+muddy: if the backdrop is already blurred, a translucent panel has nothing
+crisp to refract and reads as double-blur mush. With a blurred backdrop the
+panel must be a clean solid surface. (Translucent-glass panels only work
+when the backdrop is *not* pre-blurred — we deliberately chose the
+blurred-backdrop + solid-panel direction instead.)
+
+This blur treatment is **reserved for the command palette** — regular
+cards and dialogs stay flat (see 9.2).
 
 ---
 

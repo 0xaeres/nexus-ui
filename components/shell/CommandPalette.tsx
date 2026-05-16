@@ -105,14 +105,14 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-[15vh] px-4"
+      className="fixed inset-0 z-50 bg-black/55 backdrop-blur-md flex items-start justify-center pt-[15vh] px-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
     >
       <div
-        className="w-full max-w-2xl bg-surface-raised border border-border-strong rounded-lg shadow-2xl shadow-black/60 overflow-hidden"
+        className="w-full max-w-2xl rounded-xl overflow-hidden bg-surface-raised border border-border-strong shadow-2xl shadow-black/80 ring-1 ring-inset ring-white/[0.05]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-border">
