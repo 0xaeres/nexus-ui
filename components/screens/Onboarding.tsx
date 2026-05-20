@@ -1,27 +1,36 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Hexagon, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Check, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { BrandIcon } from '@/components/icons/BrandIcon'
-import { IngestionProgress } from '@/components/sources/IngestionProgress'
 import { PageHeader } from '@/components/ui/page'
-import { H1, H2 } from '@/components/ui/typography'
+import { H1, H2, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import {
-  NEXUS_CONNECTORS,
-  COUNCIL_ROSTERS,
-  COUNCIL_COST_ESTIMATES,
-  COUNCIL_AGENT_LABELS,
+  ApiError,
+  addSource,
+  createProduct,
+  createSession,
+} from '@/lib/api'
+import {
   COUNCIL_AGENT_HUES,
-} from '@/lib/data'
+  COUNCIL_AGENT_LABELS,
+  COUNCIL_ROSTERS,
+} from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Step = 1 | 2 | 3 | 4
 
-function StepIndicator({ current, total }: { current: Step; total: number }) {
+const CONNECTOR_TEMPLATES = [
+  { id: 'github', name: 'GitHub', secret: 'token', placeholder: 'ghp_...' },
+  { id: 'filesystem', name: 'Local filesystem', secret: null, placeholder: '/path/to/code' },
+]
+
+
+function StepIndicator({ current }: { current: Step }) {
+  const total = 4
   return (
     <div className="flex items-center mb-10 max-w-lg w-full">
       {Array.from({ length: total }, (_, i) => {
@@ -50,310 +59,307 @@ function StepIndicator({ current, total }: { current: Step; total: number }) {
   )
 }
 
+
 export function Onboarding() {
+  const router = useRouter()
   const [step, setStep] = useState<Step>(1)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  // Step 1 state
+  const [productId, setProductId] = useState('')
   const [productName, setProductName] = useState('')
   const [tagline, setTagline] = useState('')
   const [teamLead, setTeamLead] = useState('')
-  const [addedSources, setAddedSources] = useState<string[]>([])
-  const [progress, setProgress] = useState(0)
-  const router = useRouter()
 
-  const newProductId = productName.toLowerCase().replace(/\s+/g, '-') || 'new-product'
+  // Step 2 state
+  const [sourceType, setSourceType] = useState<string>('github')
+  const [sourceName, setSourceName] = useState('github')
+  const [sourceSecret, setSourceSecret] = useState('')
+  const [sourceRoot, setSourceRoot] = useState('')
 
-  // Step 3 progress simulation
-  useEffect(() => {
-    if (step !== 3) return
-    setProgress(0)
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return Math.min(100, p + Math.random() * 12)
+  // Step 4 state
+  const [councilTopic, setCouncilTopic] = useState('')
+
+  // ------------------------------------------------------------ step actions
+
+  const createProductStep = async () => {
+    setBusy(true); setError(null)
+    try {
+      const id = productId.trim() || productName.trim().toLowerCase().replace(/\s+/g, '-')
+      await createProduct({
+        id,
+        name: productName.trim() || id,
+        tagline: tagline.trim(),
+        owner: { team: id, lead: teamLead.trim() || 'unknown' },
       })
-    }, 600)
-    return () => clearInterval(interval)
-  }, [step])
+      setProductId(id)
+      setStep(2)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
 
-  const ingestDone = progress >= 100
+  const addSourceStep = async () => {
+    setBusy(true); setError(null)
+    try {
+      const config: Record<string, unknown> = {}
+      if (sourceType === 'github' && sourceSecret) config.token = sourceSecret
+      if (sourceType === 'filesystem' && sourceRoot) config.roots = sourceRoot.split(',').map(s => s.trim())
+      await addSource(productId, {
+        name: sourceName.trim() || sourceType,
+        type: sourceType,
+        config,
+      })
+      setStep(3)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const skipIngestStep = () => {
+    // Real ingestion runs via the daemon; the wizard just advances past it
+    // since /ingest is a CLI command, not an API endpoint.
+    setStep(4)
+  }
+
+  const startCouncilStep = async () => {
+    setBusy(true); setError(null)
+    try {
+      const topic = councilTopic.trim() || `${productName} overview`
+      const { session_id } = await createSession(productId, {
+        topic,
+        skill_kind: 'master',
+      })
+      router.push(`/p/${productId}/council/${session_id}`)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  // ------------------------------------------------------------ render
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col items-center px-10 py-12 overflow-auto">
       <PageHeader>
-        <Hexagon className="h-5 w-5 text-accent" />
-        <H1>Onboard new product</H1>
+        <H1>Onboard a product</H1>
         <Badge variant="outline" className="font-mono">step {step} of 4</Badge>
       </PageHeader>
 
-      <div className="flex-1 overflow-auto px-10 py-10">
-        <div className="max-w-5xl mx-auto flex flex-col">
-          <StepIndicator current={step} total={4} />
+      <div className="w-full max-w-2xl flex flex-col items-center pt-6">
+        <StepIndicator current={step} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10 items-start">
-            <div className="max-w-3xl">
-              {step === 1 && (
-                <Step1
-                  productName={productName} setProductName={setProductName}
-                  tagline={tagline} setTagline={setTagline}
-                  teamLead={teamLead} setTeamLead={setTeamLead}
-                  onNext={() => setStep(2)}
+        {error && (
+          <Card variant="surface" className="w-full mb-4 px-5 py-3 border border-danger/30 bg-danger/10">
+            <Small className="text-danger font-mono">{error}</Small>
+          </Card>
+        )}
+
+        <Card variant="surface" className="w-full p-6 flex flex-col gap-4">
+          {step === 1 && (
+            <>
+              <H2>Identity</H2>
+              <Muted>Name your product. The id becomes its URL slug.</Muted>
+              <KV label="product id">
+                <Input
+                  value={productId}
+                  onChange={e => setProductId(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                  placeholder="forge"
+                  required
                 />
-              )}
-              {step === 2 && (
-                <Step2
-                  addedSources={addedSources} setAddedSources={setAddedSources}
-                  onBack={() => setStep(1)} onNext={() => setStep(3)}
+              </KV>
+              <KV label="display name">
+                <Input
+                  value={productName}
+                  onChange={e => setProductName(e.target.value)}
+                  placeholder="Forge"
+                  required
                 />
-              )}
-              {step === 3 && (
-                <Step3 progress={progress} ingestDone={ingestDone} onNext={() => setStep(4)} />
-              )}
-              {step === 4 && (
-                <Step4
-                  newProductId={newProductId}
-                  onLater={() => router.push(`/p/${newProductId}/dashboard`)}
-                  onStart={() => router.push(`/p/${newProductId}/council/onboarding-master`)}
+              </KV>
+              <KV label="tagline">
+                <Input
+                  value={tagline}
+                  onChange={e => setTagline(e.target.value)}
+                  placeholder="What this product is"
                 />
-              )}
-            </div>
+              </KV>
+              <KV label="team lead">
+                <Input
+                  value={teamLead}
+                  onChange={e => setTeamLead(e.target.value)}
+                  placeholder="jane.doe@org"
+                />
+              </KV>
+              <StepFooter
+                onNext={createProductStep}
+                nextDisabled={!productName.trim() || busy}
+                busy={busy}
+              />
+            </>
+          )}
 
-            <aside className="hidden lg:block sticky top-0">
-              {step === 1 && <RailExplainer1 />}
-              {step === 2 && <RailExplainer2 />}
-              {step === 3 && <RailExplainer3 sources={addedSources} />}
-              {step === 4 && <RailExplainer4 />}
-            </aside>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Step1({ productName, setProductName, tagline, setTagline, teamLead, setTeamLead, onNext }: {
-  productName: string; setProductName: (v: string) => void
-  tagline: string; setTagline: (v: string) => void
-  teamLead: string; setTeamLead: (v: string) => void
-  onNext: () => void
-}) {
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <H2>Identity</H2>
-        <p className="text-sm font-mono text-fg-subtle mt-1 mb-0">Tell Nexus about your product</p>
-      </div>
-      <div className="flex flex-col gap-4">
-        <FormField label="Product name *" placeholder="forge" value={productName} onChange={setProductName} mono />
-        <FormField label="Short tagline" placeholder="Sovereign agentic harness for developer workflows" value={tagline} onChange={setTagline} />
-        <FormField label="Team lead" placeholder="j.lambert" value={teamLead} onChange={setTeamLead} mono />
-      </div>
-      <div className="flex justify-end">
-        <Button onClick={onNext} disabled={!productName.trim()}>
-          Continue <ArrowRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function Step2({ addedSources, setAddedSources, onBack, onNext }: {
-  addedSources: string[]; setAddedSources: (v: string[]) => void
-  onBack: () => void; onNext: () => void
-}) {
-  const toggle = (id: string) => {
-    setAddedSources(addedSources.includes(id) ? addedSources.filter(s => s !== id) : [...addedSources, id])
-  }
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <H2>Sources</H2>
-        <p className="text-sm font-mono text-fg-subtle mt-1 mb-0">Connect knowledge sources for this product</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {NEXUS_CONNECTORS.map(c => {
-          const added = addedSources.includes(c.id)
-          return (
-            <button key={c.id} onClick={() => toggle(c.id)} className="text-left">
-              <Card
-                variant="action"
-                className={cn(
-                  'p-5 flex flex-col gap-2 cursor-pointer transition-colors',
-                  added && 'border-success/50 bg-success/[0.05]',
-                )}
-              >
-                <div className="flex items-center gap-2.5">
-                  <BrandIcon id={c.id} size={22} />
-                  <span className="text-base font-medium text-fg flex-1">{c.name}</span>
-                  <span
+          {step === 2 && (
+            <>
+              <H2>First source</H2>
+              <Muted>Add at least one MCP-compatible source. You can add more later.</Muted>
+              <div className="grid grid-cols-2 gap-2">
+                {CONNECTOR_TEMPLATES.map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => { setSourceType(t.id); setSourceName(t.id) }}
                     className={cn(
-                      'h-5 w-5 rounded-full border flex items-center justify-center shrink-0',
-                      added ? 'bg-success border-success' : 'border-border-strong',
+                      'rounded-md border p-3 text-left transition-colors',
+                      sourceType === t.id
+                        ? 'border-accent bg-bg-active'
+                        : 'border-border bg-surface hover:bg-bg-active',
                     )}
                   >
-                    {added && <Check className="h-3 w-3 text-bg" />}
+                    <div className="font-mono text-base text-fg">{t.name}</div>
+                  </button>
+                ))}
+              </div>
+              <KV label="source name">
+                <Input value={sourceName} onChange={e => setSourceName(e.target.value)} />
+              </KV>
+              {sourceType === 'github' && (
+                <KV label="github token">
+                  <Input
+                    type="password"
+                    value={sourceSecret}
+                    onChange={e => setSourceSecret(e.target.value)}
+                    placeholder="ghp_..."
+                  />
+                </KV>
+              )}
+              {sourceType === 'filesystem' && (
+                <KV label="root path">
+                  <Input
+                    value={sourceRoot}
+                    onChange={e => setSourceRoot(e.target.value)}
+                    placeholder="/path/to/code"
+                  />
+                </KV>
+              )}
+              <StepFooter
+                onBack={() => setStep(1)}
+                onNext={addSourceStep}
+                nextDisabled={busy}
+                busy={busy}
+              />
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <H2>Ingestion</H2>
+              <Muted>
+                Run <code className="font-mono">nexus ingest --product {productId} --path …</code>
+                {' '}from your terminal to populate the corpus. The daemon will keep it
+                fresh once you set <code className="font-mono">watch: true</code> in the
+                connector config.
+              </Muted>
+              <div className="bg-bg-active rounded-md p-3 font-mono text-xs text-fg-muted whitespace-pre-wrap">
+                {`uv run nexus ingest --product ${productId} --path /path/to/code`}
+              </div>
+              <StepFooter
+                onBack={() => setStep(2)}
+                onNext={skipIngestStep}
+                nextLabel="Skip and continue"
+              />
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <H2>Master skill council</H2>
+              <Muted>
+                Kick off the first council session to draft the Master Skill.
+                4 agents will run; estimated cost ≈ $0.012, ~6-8 minutes.
+              </Muted>
+              <KV label="topic">
+                <Input
+                  value={councilTopic}
+                  onChange={e => setCouncilTopic(e.target.value)}
+                  placeholder={`${productName} overview`}
+                />
+              </KV>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <SectionLabel className="w-full">Roster preview</SectionLabel>
+                {COUNCIL_ROSTERS.master.map(r => (
+                  <span
+                    key={r}
+                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface border border-border text-xs font-mono"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: COUNCIL_AGENT_HUES[r] }} />
+                    {COUNCIL_AGENT_LABELS[r]}
                   </span>
-                </div>
-                <span className="text-sm text-fg-muted">{c.desc}</span>
-              </Card>
-            </button>
-          )
-        })}
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <Button onClick={onNext} disabled={addedSources.length === 0}>
-          Start ingestion <ArrowRight className="h-4 w-4" />
-        </Button>
+                ))}
+              </div>
+              <StepFooter
+                onBack={() => setStep(3)}
+                onNext={startCouncilStep}
+                nextLabel="Start council"
+                busy={busy}
+              />
+            </>
+          )}
+        </Card>
+
+        <Subtle className="mt-6 font-mono">
+          {step === 1 && 'After onboarding you can manage everything from /p/{id}/settings'}
+          {step === 2 && 'MCP-compatible connectors only - we map type → command at runtime'}
+          {step === 3 && 'Live status will appear on the Sources page once daemon is running'}
+          {step === 4 && 'Master skill seeds the product; domain skills come later'}
+        </Subtle>
       </div>
     </div>
   )
 }
 
-function Step3({ progress, ingestDone, onNext }: { progress: number; ingestDone: boolean; onNext: () => void }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <H2>Ingestion</H2>
-        <p className="text-sm font-mono text-fg-subtle mt-1 mb-0">Nexus is indexing your knowledge sources</p>
-      </div>
-      <Card variant="surface" className="p-5">
-        <IngestionProgress progress={Math.round(progress)} streaming={!ingestDone} />
-      </Card>
-      {ingestDone && (
-        <div className="flex justify-end">
-          <Button onClick={onNext}>Continue <ArrowRight className="h-3.5 w-3.5" /></Button>
-        </div>
-      )}
-    </div>
-  )
-}
 
-function Step4({ newProductId, onLater, onStart }: { newProductId: string; onLater: () => void; onStart: () => void }) {
-  const roster = COUNCIL_ROSTERS['master']
-  const cost = COUNCIL_COST_ESTIMATES['master']
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <H2>Council kickoff</H2>
-        <p className="text-sm font-mono text-fg-subtle mt-1 mb-0">Run Council to draft your Master Skill for <span className="text-fg">{newProductId}</span></p>
-      </div>
-
-      <Card variant="stat" glowColor="rgba(124,140,255,0.14)" className="p-7">
-        <div className="text-lg font-semibold text-fg mb-4">Run Council to draft your Master Skill</div>
-        <div className="flex flex-col gap-2 mb-5">
-          {roster.map(role => (
-            <div key={role} className="flex items-center gap-2.5">
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: COUNCIL_AGENT_HUES[role] }} />
-              <span className="text-sm text-fg-muted">{COUNCIL_AGENT_LABELS[role]}</span>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-3 px-4 py-3 rounded-md bg-accent/10 border border-accent/20 text-sm font-mono mb-5">
-          <span className="text-success">~${cost.usd.toFixed(3)}</span>
-          <span className="text-fg-subtle">·</span>
-          <span className="text-fg-muted">~{cost.tokens.toLocaleString()} tokens</span>
-          <span className="text-fg-subtle">·</span>
-          <span className="text-fg-muted">~{Math.round(cost.seconds / 60)} min</span>
-        </div>
-        <Button onClick={onStart}>Run Council <ArrowRight className="h-4 w-4" /></Button>
-      </Card>
-
-      <button
-        onClick={onLater}
-        className="self-start text-sm text-fg-subtle hover:text-fg-muted underline underline-offset-4"
-      >
-        I&apos;ll do this later — go to dashboard
-      </button>
-    </div>
-  )
-}
-
-function RailExplainer1() {
-  return (
-    <Card variant="surface" className="p-5">
-      <div className="text-sm font-semibold text-fg mb-3">What&apos;s a product in Nexus?</div>
-      <p className="text-sm text-fg-muted leading-relaxed m-0">
-        A product is the root entity in Nexus. It owns its own sources, council sessions, and skill hierarchy — fully isolated from other products in your org.
-      </p>
-      <p className="text-sm text-fg-muted leading-relaxed mt-3 mb-0">
-        The Master Skill represents the entire product: its architecture, domain vocabulary, key entities, and team conventions.
-      </p>
-    </Card>
-  )
-}
-
-function RailExplainer2() {
-  return (
-    <Card variant="surface" className="p-5">
-      <div className="text-sm font-semibold text-fg mb-3">Best practice</div>
-      <p className="text-sm text-fg-muted leading-relaxed m-0">
-        Most teams start with their primary GitHub repo plus their ADR space (Confluence).
-      </p>
-      <p className="text-sm text-fg-muted leading-relaxed mt-3 mb-0">
-        Add Jira for tickets that capture decisions and acceptance criteria. You can always add more sources later.
-      </p>
-    </Card>
-  )
-}
-
-function RailExplainer3({ sources }: { sources: string[] }) {
-  const SAMPLE_ENTITIES = ['Runner trait', 'tokio::spawn', 'SkillFile struct', 'CouncilSession', 'IndexChunk']
-  return (
-    <Card variant="surface" className="p-5">
-      <div className="text-sm font-semibold text-fg mb-3">What we&apos;ve indexed so far</div>
-      <div className="flex flex-col gap-2 mb-3">
-        {sources.map(src => (
-          <div key={src} className="flex items-center gap-2 text-xs font-mono">
-            <BrandIcon id={src} size={14} />
-            <span className="text-fg">{src}</span>
-            <div className="flex-1" />
-            <span className="text-success">indexing</span>
-          </div>
-        ))}
-      </div>
-      {sources.length > 0 && (
-        <>
-          <div className="h-px bg-border my-3" />
-          <div className="text-xs text-fg-muted mb-2">Top entities seen:</div>
-          <div className="flex flex-wrap gap-1.5">
-            {SAMPLE_ENTITIES.map(e => (
-              <Badge key={e} variant="outline" className="font-mono">{e}</Badge>
-            ))}
-          </div>
-        </>
-      )}
-    </Card>
-  )
-}
-
-function RailExplainer4() {
-  return (
-    <Card variant="surface" className="p-5">
-      <div className="text-sm font-semibold text-fg mb-3">Why run Council now?</div>
-      <p className="text-sm text-fg-muted leading-relaxed m-0">
-        The Master Skill anchors every downstream skill. Drafting it during onboarding gives every other skill the product context it needs to compose correctly.
-      </p>
-    </Card>
-  )
-}
-
-function FormField({ label, placeholder, value, onChange, mono = false }: {
-  label: string; placeholder: string; value: string; onChange: (v: string) => void; mono?: boolean
-}) {
+function KV({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-fg-muted tracking-wide">{label}</label>
-      <Input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={cn(mono && 'font-mono')}
-      />
+      <Subtle className="font-mono uppercase tracking-wider text-xs">{label}</Subtle>
+      {children}
+    </div>
+  )
+}
+
+
+function StepFooter({
+  onBack,
+  onNext,
+  nextLabel = 'Continue',
+  nextDisabled = false,
+  busy = false,
+}: {
+  onBack?: () => void
+  onNext: () => void
+  nextLabel?: string
+  nextDisabled?: boolean
+  busy?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-2 pt-3">
+      {onBack ? (
+        <Button variant="ghost" size="sm" onClick={onBack} disabled={busy}>
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      ) : <div />}
+      <div className="flex-1" />
+      <Button onClick={onNext} disabled={nextDisabled || busy} size="sm">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        {busy ? 'Working…' : nextLabel}
+        {!busy && <ArrowRight className="h-4 w-4" />}
+      </Button>
     </div>
   )
 }

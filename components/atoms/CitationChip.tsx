@@ -1,6 +1,20 @@
 'use client'
-import { AGENT_HUE } from '@/lib/agent-colors'
+import { COUNCIL_AGENT_HUES, type AgentRole } from '@/lib/types'
 import { cn } from '@/lib/utils'
+
+const KNOWN = new Set<AgentRole>([
+  'archaeologist',
+  'domain_expert',
+  'synthesizer',
+  'adversary',
+  'security_sentinel',
+  'curator',
+])
+
+function hueFor(agent: string | undefined): string | undefined {
+  if (!agent) return undefined
+  return KNOWN.has(agent as AgentRole) ? COUNCIL_AGENT_HUES[agent as AgentRole] : undefined
+}
 
 export function CitationChip({ agent, path, line, onClick }: {
   agent?: string
@@ -8,7 +22,7 @@ export function CitationChip({ agent, path, line, onClick }: {
   line?: number | string
   onClick?: () => void
 }) {
-  const hue = agent ? AGENT_HUE[agent] : undefined
+  const hue = hueFor(agent)
   return (
     <span
       onClick={onClick}

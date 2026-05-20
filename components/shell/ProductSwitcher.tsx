@@ -1,4 +1,5 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, Plus, Settings as SettingsIcon } from 'lucide-react'
 import {
@@ -6,12 +7,22 @@ import {
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { useProduct } from '@/lib/product-context'
-import { NEXUS_PRODUCTS } from '@/lib/data'
+import { listProducts } from '@/lib/api'
+import type { Product } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export function ProductSwitcher({ onProductChange }: { onProductChange: (id: string) => void }) {
   const { currentProductId, currentProduct, perms } = useProduct()
   const router = useRouter()
+  const [products, setProducts] = useState<Product[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    listProducts()
+      .then(p => { if (!cancelled) setProducts(p) })
+      .catch(() => { if (!cancelled) setProducts([]) })
+    return () => { cancelled = true }
+  }, [])
 
   const handleSelect = (id: string) => {
     onProductChange(id)
@@ -28,7 +39,7 @@ export function ProductSwitcher({ onProductChange }: { onProductChange: (id: str
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[280px]">
         <DropdownMenuLabel>Products</DropdownMenuLabel>
-        {NEXUS_PRODUCTS.map(p => {
+        {products.map(p => {
           const active = p.id === currentProductId
           return (
             <DropdownMenuItem

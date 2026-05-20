@@ -1,40 +1,46 @@
 'use client'
 import { createContext, useContext } from 'react'
-import type { ProductId, UserRole } from './data'
-import { NEXUS_PRODUCTS, NEXUS_USERS, NEXUS_CURRENT_USER_ID } from './data'
+import type { Permissions, Product, ProductId, User, UserRole } from './types'
 
-export type ProductPerms = {
-  canManageSources: boolean
-  canRunCouncil: boolean
-  canOnboard: boolean
-  isOrgAdmin: boolean
-  settingsReadOnly: boolean
-}
+export type ProductPerms = Permissions
 
 export type ProductContextValue = {
   currentProductId: ProductId
-  currentProduct: typeof NEXUS_PRODUCTS[number] | undefined
-  currentUser: typeof NEXUS_USERS[number]
+  currentProduct: Product | undefined
+  currentUser: User
   perms: ProductPerms
   debugRole: UserRole | null
+  // True while /me + /products are loading on app boot
+  loading: boolean
 }
 
 export function getPerms(role: UserRole): ProductPerms {
   return {
     canManageSources: role !== 'sme',
-    canRunCouncil:    role !== 'sme',
-    canOnboard:       role === 'org_admin',
-    isOrgAdmin:       role === 'org_admin',
+    canRunCouncil: role !== 'sme',
+    canOnboard: role === 'org_admin',
+    isOrgAdmin: role === 'org_admin',
     settingsReadOnly: role === 'sme',
   }
 }
 
+// Sane defaults for the first paint before /me + /products resolve.
+const PLACEHOLDER_USER: User = {
+  id: 'unknown',
+  name: 'Loading...',
+  role: 'sme',
+  products: [],
+}
+
 export const ProductContext = createContext<ProductContextValue>({
   currentProductId: 'forge',
-  currentProduct: NEXUS_PRODUCTS[0],
-  currentUser: NEXUS_USERS.find(u => u.id === NEXUS_CURRENT_USER_ID)!,
-  perms: getPerms('org_admin'),
+  currentProduct: undefined,
+  currentUser: PLACEHOLDER_USER,
+  perms: getPerms('sme'),
   debugRole: null,
+  loading: true,
 })
 
-export function useProduct() { return useContext(ProductContext) }
+export function useProduct() {
+  return useContext(ProductContext)
+}

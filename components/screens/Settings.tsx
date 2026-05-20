@@ -1,24 +1,12 @@
 'use client'
-import { useState } from 'react'
-import { Zap } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { PageHeader, PageBody } from '@/components/ui/page'
-import { H1, H2, H3, Muted, Subtle, Code } from '@/components/ui/typography'
-import {
-  NEXUS_DEFAULT_MODEL_ASSIGNMENTS,
-  NEXUS_LOCAL_MODELS,
-  NEXUS_USERS,
-  COUNCIL_ROSTERS,
-  COUNCIL_AGENT_LABELS,
-  COUNCIL_AGENT_HUES,
-  COUNCIL_COST_ESTIMATES,
-  type SkillKind,
-} from '@/lib/data'
+import { H1, H3, Muted, SectionLabel, Subtle, Code } from '@/components/ui/typography'
+import { ApiError, type ProductSettings, getProductSettings } from '@/lib/api'
+import { COUNCIL_AGENT_HUES, COUNCIL_AGENT_LABELS, COUNCIL_ROSTERS } from '@/lib/types'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
 
@@ -28,7 +16,7 @@ type Tab = typeof TABS[number]
 const TAB_LABEL: Record<Tab, string> = {
   general: 'General',
   members: 'Members',
-  models:  'Model assignments',
+  models:  'Models',
   roster:  'Council roster',
 }
 
@@ -44,285 +32,201 @@ const ROLE_LABEL: Record<string, string> = {
   sme:           'SME',
 }
 
-export function Settings() {
-  const { currentProductId, currentProduct, perms } = useProduct()
-  const [tab, setTab] = useState<Tab>('general')
 
-  const readOnly = perms.settingsReadOnly
+export function Settings() {
+  const { currentProductId } = useProduct()
+  const [tab, setTab] = useState<Tab>('general')
+  const [data, setData] = useState<ProductSettings | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    try {
+      const d = await getProductSettings(currentProductId)
+      setData(d)
+      setError(null)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    }
+  }, [currentProductId])
+
+  useEffect(() => { void refresh() }, [refresh])
 
   return (
     <>
       <PageHeader>
         <H1>Settings</H1>
         <Badge variant="outline" className="font-mono">{currentProductId}</Badge>
-        {readOnly && <Badge variant="warning">Read only</Badge>}
       </PageHeader>
 
       <div className="border-b border-border bg-bg">
         <div className="mx-auto max-w-[1280px] px-8 py-3 flex items-center gap-1.5">
-          {TABS.map(t => {
-            const active = tab === t
-            return (
-              <Button
-                key={t}
-                variant={active ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setTab(t)}
-                className={cn('h-8 px-3 text-sm', active && 'border-border-strong text-fg')}
-              >
-                {TAB_LABEL[t]}
-              </Button>
-            )
-          })}
+          {TABS.map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                'h-8 px-3 rounded-md font-mono text-sm transition-colors',
+                tab === t
+                  ? 'bg-bg-active border border-border-strong text-fg'
+                  : 'text-fg-muted hover:bg-bg-active',
+              )}
+            >
+              {TAB_LABEL[t]}
+            </button>
+          ))}
         </div>
       </div>
 
       <PageBody>
-        {tab === 'general' && <GeneralPanel readOnly={readOnly} product={currentProduct} />}
-        {tab === 'members' && <MembersPanel productId={currentProductId} />}
-        {tab === 'models' && <ModelsPanel readOnly={readOnly} />}
-        {tab === 'roster' && <RosterPanel readOnly={readOnly} />}
+        {error && (
+          <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
+            <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
+            <Muted className="font-mono">{error}</Muted>
+          </Card>
+        )}
+
+        {!data && !error ? (
+          <Card variant="surface" className="px-5 py-6"><Muted>Loading…</Muted></Card>
+        ) : data ? (
+          <>
+            {tab === 'general' && <GeneralTab data={data} />}
+            {tab === 'members' && <MembersTab data={data} />}
+            {tab === 'models' && <ModelsTab data={data} />}
+            {tab === 'roster' && <RosterTab />}
+          </>
+        ) : null}
       </PageBody>
     </>
   )
 }
 
-function SectionHeader({ title, sub }: { title: string; sub?: string }) {
+
+function GeneralTab({ data }: { data: ProductSettings }) {
+  const p = data.product
   return (
-    <div className="mb-4">
-      <H2>{title}</H2>
-      {sub && <p className="text-sm font-mono text-fg-subtle m-0 mt-1">{sub}</p>}
-    </div>
+    <Card variant="surface" className="p-5 flex flex-col gap-3 max-w-2xl">
+      <H3>Product</H3>
+      <KV k="id" v={p.id} />
+      <KV k="name" v={p.name} />
+      <KV k="tagline" v={p.tagline} />
+      <KV k="onboarded" v={p.onboardedAt} />
+      <KV k="owner" v={`${p.owner.team} · ${p.owner.lead}`} />
+      <KV k="master skill" v={p.masterSkillId} />
+      <KV k="sources" v={String(p.sources)} />
+      <KV k="skills" v={String(p.skills)} />
+    </Card>
   )
 }
 
-/* ─── General ──────────────────────────────────────────────────────────── */
 
-function GeneralPanel({ readOnly, product }: {
-  readOnly: boolean
-  product: ReturnType<typeof useProduct>['currentProduct']
-}) {
-  return (
-    <div className="max-w-3xl flex flex-col gap-8">
-      <section>
-        <SectionHeader title="Product" sub="Identity used across Nexus" />
-        <Card variant="surface" className="p-6 flex flex-col gap-4">
-          <Field label="Product name" defaultValue={product?.name ?? ''} disabled={readOnly} />
-          <Separator />
-          <Field label="Tagline" defaultValue={product?.tagline ?? ''} disabled={readOnly} />
-          <Separator />
-          <Field label="Owning team" defaultValue={product?.owner.team ?? ''} disabled={readOnly} mono />
-          <Separator />
-          <Field label="Lead" defaultValue={product?.owner.lead ?? ''} disabled={readOnly} mono />
-        </Card>
-      </section>
-
-      <section>
-        <SectionHeader title="Daemon" sub="Local Nexus process configuration" />
-        <Card variant="surface" className="p-6 flex flex-col gap-4">
-          <Field label="Index path" defaultValue="~/.nexus/index" disabled={readOnly} mono />
-          <Separator />
-          <Field label="Max chunk size" defaultValue="512 tokens" disabled={readOnly} mono />
-          <Separator />
-          <Field label="Reranker top-k" defaultValue="20" disabled={readOnly} mono />
-          <Separator />
-          <Field label="MCP port" defaultValue="7477" disabled={readOnly} mono />
-        </Card>
-      </section>
-
-      <section>
-        <SectionHeader title="About" />
-        <Card variant="surface" className="p-6">
-          <div className="grid grid-cols-3 gap-4">
-            <KV label="Version" value="v0.5.2" />
-            <KV label="Build"   value="2024-11-18" />
-            <KV label="License" value="BSL 1.1" />
-          </div>
-        </Card>
-      </section>
-    </div>
-  )
-}
-
-/* ─── Members ──────────────────────────────────────────────────────────── */
-
-function MembersPanel({ productId }: { productId: string }) {
-  const members = NEXUS_USERS.filter(u => u.products.includes(productId))
-  return (
-    <div className="max-w-3xl flex flex-col gap-4">
-      <SectionHeader title="Members" sub={`${members.length} ${members.length === 1 ? 'person has' : 'people have'} access to ${productId}`} />
-      <Card variant="surface" className="overflow-hidden p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Name</TableHead>
-              <TableHead className="w-[140px]">Role</TableHead>
-              <TableHead className="w-[140px]">Products</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members.map(u => (
-              <TableRow key={u.id}>
-                <TableCell className="font-mono text-sm text-fg">{u.name}</TableCell>
-                <TableCell>
-                  <Badge variant={ROLE_VARIANT[u.role] ?? 'secondary'}>{ROLE_LABEL[u.role] ?? u.role}</Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-1.5">
-                    {u.products.map(p => (
-                      <span
-                        key={p}
-                        title={p}
-                        className={cn('h-1.5 w-1.5 rounded-full', p === productId ? 'bg-accent' : 'bg-fg-subtle')}
-                      />
-                    ))}
-                    <span className="ml-1 text-sm font-mono text-fg-subtle">{u.products.length}</span>
-                  </span>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+function MembersTab({ data }: { data: ProductSettings }) {
+  if (!data.members.length) {
+    return (
+      <Card variant="surface" className="p-5">
+        <Muted>No members assigned to this product yet.</Muted>
       </Card>
-    </div>
-  )
-}
-
-/* ─── Models ───────────────────────────────────────────────────────────── */
-
-function ModelsPanel({ readOnly }: { readOnly: boolean }) {
+    )
+  }
   return (
-    <div className="max-w-3xl flex flex-col gap-7">
-      <section>
-        <SectionHeader title="Model assignments" sub="Which models power each Nexus role" />
-        <Card variant="surface" className="overflow-hidden p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Role</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-[100px]">Provider</TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead className="w-[80px]">Billed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {NEXUS_DEFAULT_MODEL_ASSIGNMENTS.map(a => (
-                <TableRow key={a.role}>
-                  <TableCell className="text-sm font-medium text-fg">{a.role}</TableCell>
-                  <TableCell className="text-sm text-fg-muted">{a.desc}</TableCell>
-                  <TableCell className="text-sm font-mono text-fg-subtle">{a.provider}</TableCell>
-                  <TableCell>
-                    <Badge variant="accent" className="font-mono">{a.model.split('/').slice(-1)[0]}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm font-mono text-fg-subtle">{a.unit}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      </section>
-
-      <section>
-        <SectionHeader title="Local models" sub="Always-on, always local — no API calls" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {NEXUS_LOCAL_MODELS.map(m => (
-            <Card key={m.id} variant="stat" glowColor="rgba(77,212,172,0.10)" className="p-5 flex flex-col gap-1.5">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-md bg-success/15 border border-success/30 flex items-center justify-center shrink-0">
-                  <Zap className="h-4 w-4 text-success" />
-                </div>
-                <span className="text-base font-medium text-fg">{m.label}</span>
-                <div className="flex-1" />
-                <Badge variant="success">local</Badge>
-              </div>
-              <span className="text-sm font-mono text-fg mt-1">{m.model}</span>
-              <span className="text-xs font-mono text-fg-subtle">{m.note}</span>
-            </Card>
+    <Card variant="surface" className="overflow-hidden p-0 max-w-2xl">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Member</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Products</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.members.map(m => (
+            <TableRow key={m.id}>
+              <TableCell className="font-mono">{m.name}</TableCell>
+              <TableCell>
+                <Badge variant={ROLE_VARIANT[m.role] ?? 'accent'} className="font-mono">
+                  {ROLE_LABEL[m.role] ?? m.role}
+                </Badge>
+              </TableCell>
+              <TableCell className="font-mono text-sm text-fg-subtle">
+                {m.products.join(', ')}
+              </TableCell>
+            </TableRow>
           ))}
-        </div>
-      </section>
-
-      {!readOnly && (
-        <div className="flex items-center gap-2">
-          <Button variant="default" size="md">Save changes</Button>
-          <Button variant="ghost" size="md">Reset to defaults</Button>
-        </div>
-      )}
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   )
 }
 
-/* ─── Council roster ───────────────────────────────────────────────────── */
 
-function RosterPanel({ readOnly }: { readOnly: boolean }) {
+function ModelsTab({ data }: { data: ProductSettings }) {
+  const roles = Object.keys(data.models)
   return (
-    <div className="max-w-3xl flex flex-col gap-4">
-      <SectionHeader
-        title="Council roster"
-        sub="Agents that run when drafting a skill. Roster depends on the skill kind."
-      />
-      <div className="flex flex-col gap-3">
-        {(['master', 'tech_stack', 'language', 'security'] as SkillKind[]).map(kind => {
-          const roles = COUNCIL_ROSTERS[kind]
-          const cost = COUNCIL_COST_ESTIMATES[kind]
-          return (
-            <Card key={kind} variant="surface" className="p-5 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-base font-medium text-fg">{kind.replace('_', ' ')}</span>
-                <Badge variant="outline" className="font-mono">{roles.length} agents</Badge>
+    <Card variant="surface" className="overflow-hidden p-0 max-w-3xl">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Role</TableHead>
+            <TableHead>Provider</TableHead>
+            <TableHead>Model</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {roles.map(role => {
+            const m = data.models[role]
+            return (
+              <TableRow key={role}>
+                <TableCell className="font-mono">{role}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="font-mono">{m.provider}</Badge>
+                </TableCell>
+                <TableCell className="font-mono text-sm">{m.model}</TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </Card>
+  )
+}
+
+
+function RosterTab() {
+  const kinds: Array<keyof typeof COUNCIL_ROSTERS> = ['master', 'product_domain']
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+      {kinds.map(kind => (
+        <Card key={kind} variant="surface" className="p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <H3>{kind === 'master' ? 'Master skill council' : 'Product domain council'}</H3>
+            <Badge variant="outline" className="font-mono">
+              {COUNCIL_ROSTERS[kind].length} agents
+            </Badge>
+          </div>
+          <div className="flex flex-col gap-2">
+            {COUNCIL_ROSTERS[kind].map(role => (
+              <div key={role} className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: COUNCIL_AGENT_HUES[role] }} />
+                <span className="text-sm font-medium text-fg">{COUNCIL_AGENT_LABELS[role]}</span>
                 <div className="flex-1" />
-                <span className="text-xs font-mono text-fg-subtle">
-                  ~{cost.tokens.toLocaleString()} tok · ${cost.usd.toFixed(4)} · {cost.seconds}s
-                </span>
+                <Code className="text-xs text-fg-subtle">{role}</Code>
               </div>
-              <Separator />
-              <div className="flex flex-wrap gap-2">
-                {roles.map(r => (
-                  <span key={r} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-raised border border-border">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: COUNCIL_AGENT_HUES[r] }} />
-                    <span className="text-sm text-fg">{COUNCIL_AGENT_LABELS[r]}</span>
-                  </span>
-                ))}
-              </div>
-            </Card>
-          )
-        })}
-      </div>
-      {!readOnly && (
-        <p className="text-xs font-mono text-fg-subtle">
-          Roster overrides are scoped to this product. Defaults follow org policy.
-        </p>
-      )}
+            ))}
+          </div>
+          <Subtle className="font-mono text-xs">
+            max-1 redraft cycle · adversary always runs
+          </Subtle>
+        </Card>
+      ))}
     </div>
   )
 }
 
-/* ─── Helpers ──────────────────────────────────────────────────────────── */
 
-function Field({ label, defaultValue, disabled, mono = false }: {
-  label: string
-  defaultValue: string
-  disabled?: boolean
-  mono?: boolean
-}) {
+function KV({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex items-center gap-4">
-      <label className="text-sm font-medium text-fg-muted w-48 shrink-0">{label}</label>
-      <Input
-        defaultValue={defaultValue}
-        disabled={disabled}
-        className={cn('h-10 text-base', mono && 'font-mono')}
-      />
-    </div>
-  )
-}
-
-function KV({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wider font-medium text-fg-subtle">{label}</span>
-      <span className="text-sm font-mono text-fg">{value}</span>
+    <div className="flex items-baseline gap-3">
+      <Subtle className="font-mono uppercase tracking-wider text-xs w-32 shrink-0">{k}</Subtle>
+      <Code className="text-sm">{v || '—'}</Code>
     </div>
   )
 }

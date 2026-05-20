@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ChevronDown, ChevronRight, Hexagon, Search, FileText } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -9,18 +9,20 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SkillsSkeleton } from '@/components/skeletons/SkillsSkeleton'
 import { PageHeader } from '@/components/ui/page'
-import { H1, SectionLabel, Body, Subtle, Code, Small } from '@/components/ui/typography'
-import { NEXUS_SKILLS, NEXUS_MASTER_SKILL } from '@/lib/data'
+import { H1, SectionLabel, Body, Subtle, Code, Small, Muted } from '@/components/ui/typography'
+import { useProduct } from '@/lib/product-context'
+import { ApiError, listProductSkills } from '@/lib/api'
+import type { OrgSkill, ProductSkillsResponse, Skill } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type Skill = typeof NEXUS_SKILLS[number]
+type AnySkill = Skill | OrgSkill
 
-const CAP_COLOR: Record<string, string> = {
-  product: '#7C8CFF',
+const KIND_COLOR: Record<string, string> = {
+  master: '#7C8CFF',
+  product_domain: '#E8B86B',
   tech_stack: '#4DD4AC',
-  sdlc: '#E8B86B',
+  language: '#C58BFF',
   security: '#F26D6D',
-  docs: '#C58BFF',
 }
 
 function confColor(c: number) {
@@ -29,43 +31,70 @@ function confColor(c: number) {
   return 'text-success'
 }
 
-const HIERARCHY = {
-  master: NEXUS_SKILLS.filter(s => 'master' in s && s.master),
-  tech_stack: NEXUS_SKILLS.filter(s => !('master' in s) && s.cap === 'tech_stack'),
-  language: [] as Skill[],
-  security: NEXUS_SKILLS.filter(s => !('master' in s) && s.cap === 'security'),
-  practice: NEXUS_SKILLS.filter(s => !('master' in s) && (s.cap === 'sdlc' || s.cap === 'docs')),
-}
-
-const SECTION_LABELS: Record<string, string> = {
-  tech_stack: 'Tech Stack',
-  language: 'Language',
-  security: 'Security',
-  practice: 'Practice',
-}
-
 export function Skills() {
+  const { currentProductId } = useProduct()
   const sp = useSearchParams()
-  const loading = sp?.get('loading') === '1'
+  const forceLoading = sp?.get('loading') === '1'
+
+  const [data, setData] = useState<ProductSkillsResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<Skill>(NEXUS_SKILLS[0])
+  const [selected, setSelected] = useState<AnySkill | null>(null)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
-  if (loading) return <SkillsSkeleton />
+  const refresh = useCallback(async () => {
+    try {
+      const d = await listProductSkills(currentProductId)
+      setData(d)
+      setError(null)
+      // Default selection: master, else first domain, else first adopted
+      setSelected(d.master ?? d.domain[0] ?? d.adopted[0] ?? null)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    }
+  }, [currentProductId])
 
-  const toggleSection = (s: string) => setCollapsed(p => ({ ...p, [s]: !p[s] }))
-  const match = (s: Skill) => !query || s.path.toLowerCase().includes(query.toLowerCase())
+  useEffect(() => { void refresh() }, [refresh])
 
-  const totalMatches = (HIERARCHY.master.filter(match).length
-    + HIERARCHY.tech_stack.filter(match).length
-    + HIERARCHY.security.filter(match).length
-    + HIERARCHY.practice.filter(match).length)
+  const filter = useCallback(
+    (s: AnySkill) => !query || s.name.toLowerCase().includes(query.toLowerCase()),
+    [query],
+  )
+
+  const sections = useMemo(() => {
+    if (!data) return []
+    return [
+      { id: 'master', label: 'Master', items: data.master ? [data.master] : [] },
+      { id: 'domain', label: 'Product domain', items: data.domain },
+      { id: 'adopted', label: 'Adopted standards (Org Library)', items: data.adopted },
+    ]
+  }, [data])
+
+  const totalCount = (data?.master ? 1 : 0) + (data?.domain.length ?? 0) + (data?.adopted.length ?? 0)
+
+  if (forceLoading || (!data && !error)) return <SkillsSkeleton />
+
+  if (error) {
+    return (
+      <>
+        <PageHeader>
+          <H1>Skills</H1>
+        </PageHeader>
+        <div className="p-5">
+          <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
+            <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
+            <Muted className="font-mono">{error}</Muted>
+          </Card>
+        </div>
+      </>
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <PageHeader>
         <H1>Skills</H1>
-        <Badge variant="outline" className="font-mono">{NEXUS_SKILLS.length} skills</Badge>
+        <Badge variant="outline" className="font-mono">{totalCount} skills</Badge>
       </PageHeader>
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -78,83 +107,55 @@ export function Skills() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Filter skills…"
-                className="h-9 pl-9 text-sm font-mono"
+                className="pl-9 h-9 font-mono"
               />
             </div>
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-2 flex flex-col gap-0.5">
-              {totalMatches === 0 && (
-                <div className="px-3 py-6 text-center text-sm text-fg-subtle">No skills match your filter.</div>
-              )}
-
-              {/* Master skill — pinned */}
-              {HIERARCHY.master.filter(match).map(s => {
-                const isActive = selected.id === s.id
+            <div className="p-2 flex flex-col gap-3">
+              {sections.map(section => {
+                const items = section.items.filter(filter)
+                if (!items.length) return null
+                const isCollapsed = collapsed[section.id]
                 return (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelected(s)}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left transition-colors mb-1',
-                      'border bg-accent/[0.04] border-accent/15 hover:bg-accent/10',
-                      isActive && 'bg-accent/10 border-accent/40',
-                    )}
-                  >
-                    <Hexagon className="h-4 w-4 text-accent shrink-0" />
-                    <span className={cn('flex-1 text-sm font-mono font-semibold truncate', isActive ? 'text-fg' : 'text-fg-muted')}>
-                      forge <span className="text-fg-subtle">(Master)</span>
-                    </span>
-                    <span className={cn('text-xs font-mono', confColor(s.conf))}>{Math.round(s.conf * 100)}</span>
-                  </button>
-                )
-              })}
-
-              {(['tech_stack', 'language', 'security', 'practice'] as const).map(section => {
-                const skills = (HIERARCHY as Record<string, Skill[]>)[section].filter(match)
-                const isCollapsed = collapsed[section]
-                return (
-                  <div key={section} className="mt-1">
+                  <div key={section.id} className="flex flex-col">
                     <button
-                      onClick={() => toggleSection(section)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-bg-hover transition-colors text-left"
+                      onClick={() => setCollapsed(p => ({ ...p, [section.id]: !p[section.id] }))}
+                      className="flex items-center gap-1.5 px-2 py-1.5 text-xs uppercase tracking-wider font-mono text-fg-subtle hover:text-fg-muted transition-colors"
                     >
-                      {isCollapsed ? (
-                        <ChevronRight className="h-3.5 w-3.5 text-fg-subtle" />
-                      ) : (
-                        <ChevronDown className="h-3.5 w-3.5 text-fg-subtle" />
-                      )}
-                      <span className="text-sm font-medium text-fg-muted flex-1">{SECTION_LABELS[section]}</span>
-                      <span className="text-xs font-mono text-fg-subtle">{skills.length}</span>
+                      {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      <span>{section.label}</span>
+                      <span className="ml-auto">{items.length}</span>
                     </button>
-
                     {!isCollapsed && (
-                      <div className="pl-3 mt-0.5">
-                        {skills.length === 0 && (
-                          <div className="px-2.5 py-1.5 text-xs italic text-fg-faint font-mono">
-                            no {SECTION_LABELS[section].toLowerCase()} skills yet
-                          </div>
-                        )}
-                        {skills.map(s => {
-                          const isActive = selected.id === s.id
-                          const leaf = s.path.split('/').slice(-1)[0]
+                      <div className="flex flex-col gap-px">
+                        {items.map(s => {
+                          const active = selected && (selected as AnySkill).id === s.id
+                          const color = KIND_COLOR[String(s.kind)] ?? '#7C8CFF'
                           return (
                             <button
                               key={s.id}
                               onClick={() => setSelected(s)}
                               className={cn(
-                                'w-full flex items-center gap-2 pl-2 pr-2 py-2 rounded-md text-left transition-colors',
-                                isActive ? 'bg-accent/10 text-fg' : 'hover:bg-bg-hover text-fg-muted',
-                                isActive && 'border-l-2 border-accent pl-1.5',
+                                'flex items-center gap-2.5 px-3 py-2 rounded-md text-left transition-colors',
+                                active ? 'bg-bg-active' : 'hover:bg-surface',
                               )}
                             >
-                              <span
-                                className="h-1.5 w-1.5 rounded-full shrink-0"
-                                style={{ background: CAP_COLOR[s.cap] }}
+                              <Hexagon
+                                className="h-3.5 w-3.5 shrink-0"
+                                style={{ color }}
+                                fill={active ? color : 'transparent'}
                               />
-                              <span className="flex-1 text-sm font-mono truncate">{leaf}</span>
-                              <span className={cn('text-xs font-mono', confColor(s.conf))}>{Math.round(s.conf * 100)}</span>
+                              <div className="flex-1 min-w-0">
+                                <Code className="block truncate">{s.name}</Code>
+                                <Small className="block text-fg-subtle truncate">
+                                  {String(s.kind)}
+                                </Small>
+                              </div>
+                              <span className={cn('font-mono text-xs', confColor(s.confidence))}>
+                                {Math.round(s.confidence * 100)}%
+                              </span>
                             </button>
                           )
                         })}
@@ -168,196 +169,101 @@ export function Skills() {
         </aside>
 
         {/* Right detail pane */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-8 max-w-4xl flex flex-col gap-7">
-            {'master' in selected && selected.master ? (
-              <MasterSkillDetail skill={selected as typeof NEXUS_MASTER_SKILL} />
-            ) : (
-              <SkillDetail skill={selected} />
-            )}
-          </div>
-        </main>
+        <section className="flex-1 min-w-0 overflow-auto">
+          {selected ? <SkillDetail skill={selected} /> : (
+            <div className="p-8">
+              <Muted>Select a skill to view details.</Muted>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )
 }
 
-function MasterSkillDetail({ skill }: { skill: typeof NEXUS_MASTER_SKILL }) {
+
+function SkillDetail({ skill }: { skill: AnySkill }) {
+  const color = KIND_COLOR[String(skill.kind)] ?? '#7C8CFF'
+  const isOrg = (skill as OrgSkill).scope === 'org'
+  const externalSources = isOrg ? (skill as OrgSkill).external_sources : []
+
   return (
-    <>
+    <div className="p-6 flex flex-col gap-5 max-w-4xl">
+      {/* Header */}
       <div className="flex items-start gap-3">
-        <div className="h-11 w-11 rounded-lg bg-accent/15 border border-accent/30 flex items-center justify-center shrink-0">
-          <Hexagon className="h-6 w-6 text-accent" />
-        </div>
+        <Hexagon className="h-6 w-6 shrink-0 mt-1" style={{ color }} fill={color} />
         <div className="flex-1 min-w-0">
-          <H1>{skill.path}</H1>
-          <Body className="text-fg-muted mt-1.5">{skill.tagline}</Body>
-        </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <span className="text-xs uppercase tracking-wider text-fg-subtle font-mono">Confidence</span>
-          <div className="flex items-center gap-2">
-            <Progress value={skill.conf * 100} className="w-24" indicatorClassName="bg-success" />
-            <Code>{Math.round(skill.conf * 100)}%</Code>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <Code className="text-xl">{skill.name}</Code>
+            <Badge variant="outline" className="font-mono">{String(skill.kind)}</Badge>
+            <Badge variant="outline" className="font-mono">{skill.scope}</Badge>
           </div>
+          <Subtle className="font-mono">v{skill.version}</Subtle>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Team" value={skill.ownership.team} />
-        <StatCard label="Lead" value={skill.ownership.lead} />
-        <StatCard label="Repos" value={String(skill.ownership.repos)} />
-      </div>
+      {/* Confidence */}
+      <Card variant="stat" className="p-4 flex items-center gap-3">
+        <SectionLabel className="shrink-0 w-32">Confidence</SectionLabel>
+        <Progress
+          value={Math.round(skill.confidence * 100)}
+          className="flex-1"
+          indicatorClassName={skill.confidence >= 0.8 ? 'bg-success' : skill.confidence >= 0.5 ? 'bg-warning' : 'bg-danger'}
+        />
+        <Code className={cn('shrink-0 font-mono', confColor(skill.confidence))}>
+          {Math.round(skill.confidence * 100)}%
+        </Code>
+      </Card>
 
-      <section>
-        <SectionLabel className="mb-3">About</SectionLabel>
-        <Body className="max-w-3xl">{skill.about}</Body>
-      </section>
-
-      <section>
-        <SectionLabel className="mb-3">Stack</SectionLabel>
-        <div className="flex flex-wrap gap-1.5">
-          {skill.stack.map(s => (
-            <Badge key={s} variant="outline" className="font-mono">{s}</Badge>
-          ))}
-        </div>
-      </section>
-
-      <LifecycleTimeline />
-    </>
-  )
-}
-
-function SkillDetail({ skill }: { skill: Skill }) {
-  const parts = skill.path.split('/')
-  const isMaster = 'master' in skill && skill.master
-  const hasComposition = !isMaster && 'composesWith' in skill && Array.isArray(skill.composesWith) && skill.composesWith.length > 0
-  const leaf = parts[parts.length - 1]
-
-  return (
-    <>
-      <div>
-        <div className="flex items-center gap-1.5 mb-2 text-sm font-mono flex-wrap">
-          {parts.map((p, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              <span className={i === parts.length - 1 ? 'text-fg' : 'text-fg-subtle'}>{p}</span>
-              {i < parts.length - 1 && <span className="text-fg-faint">/</span>}
-            </span>
-          ))}
-        </div>
-        <H1>{leaf}</H1>
-        <div className="flex items-center gap-4 mt-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Progress value={skill.conf * 100} className="w-24" indicatorClassName={
-              skill.conf < 0.5 ? 'bg-danger' : skill.conf < 0.8 ? 'bg-warning' : 'bg-success'
-            } />
-            <Code>{Math.round(skill.conf * 100)}%</Code>
-          </div>
-          <Subtle className="font-mono">used {skill.used}</Subtle>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Capability" value={skill.cap} />
-        <StatCard label="Applies to" value={skill.glob} mono />
-        <StatCard label="Prerequisites" value={String(skill.prereq)} />
-      </div>
-
-      {hasComposition && <CompositionSection skill={skill} />}
-
-      <section>
-        <SectionLabel className="mb-3">Skill body preview</SectionLabel>
-        <Card variant="surface" className="p-5 max-w-3xl">
-          <pre className="text-sm leading-relaxed font-mono text-fg-muted m-0 whitespace-pre-wrap">
-{`# ${leaf}
-
-Applies to: ${skill.glob}
-Confidence: ${Math.round(skill.conf * 100)}%
-
-## Rules
-
-1. [Rule content from council deliberation]
-2. [Rule content from council deliberation]`}
-          </pre>
+      {/* Applies to */}
+      {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
+        <Card variant="surface" className="p-4 flex flex-col gap-2">
+          <SectionLabel>Applies to</SectionLabel>
+          {skill.applies_to.files.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {skill.applies_to.files.map(f => (
+                <Badge key={f} variant="outline" className="font-mono text-xs">{f}</Badge>
+              ))}
+            </div>
+          )}
+          {skill.applies_to.contexts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {skill.applies_to.contexts.map(c => (
+                <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
+              ))}
+            </div>
+          )}
         </Card>
-      </section>
+      )}
 
-      <LifecycleTimeline />
-    </>
-  )
-}
-
-function CompositionSection({ skill }: { skill: Skill }) {
-  const leaf = skill.path.split('/').slice(-1)[0]
-  const skillColor = CAP_COLOR[skill.cap] ?? '#A1A1AA'
-
-  return (
-    <section>
-      <SectionLabel className="mb-2.5">Composes with</SectionLabel>
-      <div className="max-w-md">
-        <svg viewBox="0 0 320 110" className="w-full overflow-visible">
-          <defs>
-            <marker id="arrow" markerWidth={8} markerHeight={8} refX={6} refY={3} orient="auto">
-              <path d="M0,0 L0,6 L6,3 z" fill="rgba(255,255,255,0.3)" />
-            </marker>
-          </defs>
-          {/* current skill */}
-          <g transform="translate(60, 50)">
-            <rect x={-52} y={-18} width={104} height={36} rx={6} fill={`${skillColor}1f`} stroke={`${skillColor}66`} strokeWidth={1.2} />
-            <text x={0} y={4} textAnchor="middle" fill={skillColor} fontSize={11} fontFamily="var(--font-mono)">{leaf}</text>
-          </g>
-          {/* arrow */}
-          <line x1={114} y1={50} x2={196} y2={50} stroke="rgba(255,255,255,0.18)" strokeWidth={1.2} markerEnd="url(#arrow)" />
-          <text x={155} y={42} textAnchor="middle" fill="#6E6E76" fontSize={9} fontFamily="var(--font-mono)">composes</text>
-          {/* master */}
-          <g transform="translate(248, 50)">
-            <path d="M0,-24 L21,-12 L21,12 L0,24 L-21,12 L-21,-12 Z" fill="rgba(124,140,255,0.12)" stroke="rgba(124,140,255,0.55)" strokeWidth={1.4} />
-            <text x={0} y={-3} textAnchor="middle" fill="#7C8CFF" fontSize={11} fontFamily="var(--font-mono)" fontWeight={600}>forge</text>
-            <text x={0} y={10} textAnchor="middle" fill="#7C8CFF" fontSize={8} fontFamily="var(--font-mono)" opacity={0.7}>master</text>
-          </g>
-          <text x={60} y={86} textAnchor="middle" fill="#6E6E76" fontSize={9} fontFamily="var(--font-mono)">{skill.cap}</text>
-          <text x={248} y={86} textAnchor="middle" fill="#6E6E76" fontSize={9} fontFamily="var(--font-mono)">product</text>
-        </svg>
-        <Small className="block mt-1.5">
-          Bundled with the forge Master skill at query time to provide full product context.
-        </Small>
-      </div>
-    </section>
-  )
-}
-
-function LifecycleTimeline() {
-  const events = [
-    { label: 'Created', time: '2024-11-12', color: 'bg-success' },
-    { label: 'Council rev 2', time: '2024-11-18', color: 'bg-accent' },
-    { label: 'Approved', time: '2024-11-18', color: 'bg-success' },
-    { label: 'Used by PR review', time: '2h ago', color: 'bg-violet' },
-  ]
-  return (
-    <section>
-      <SectionLabel className="mb-3">Lifecycle</SectionLabel>
-      <div className="flex flex-col">
-        {events.map((e, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className="flex flex-col items-center w-3 pt-1">
-              <span className={cn('h-2 w-2 rounded-full shrink-0', e.color)} />
-              {i < events.length - 1 && <span className="w-px h-6 bg-border mt-1" />}
-            </div>
-            <div className={cn('flex flex-col gap-0.5', i < events.length - 1 && 'pb-3')}>
-              <span className="text-sm text-fg">{e.label}</span>
-              <span className="text-xs font-mono text-fg-subtle">{e.time}</span>
-            </div>
+      {/* External sources (Org only) */}
+      {externalSources.length > 0 && (
+        <Card variant="surface" className="p-4 flex flex-col gap-2">
+          <SectionLabel>External sources</SectionLabel>
+          <div className="flex flex-col gap-1">
+            {externalSources.map(url => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-sm text-accent hover:underline truncate"
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{url}</span>
+              </a>
+            ))}
           </div>
-        ))}
-      </div>
-    </section>
-  )
-}
+        </Card>
+      )}
 
-function StatCard({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <Card variant="stat" glowColor="rgba(124,140,255,0.08)" className="p-5 flex flex-col gap-1.5">
-      <span className="text-xs uppercase tracking-wider font-medium text-fg-muted">{label}</span>
-      <span className={cn('text-base text-fg truncate', mono && 'font-mono')}>{value}</span>
-    </Card>
+      {/* Body */}
+      <Card variant="surface" className="p-5 flex flex-col gap-2">
+        <SectionLabel>Body</SectionLabel>
+        <Body className="font-mono whitespace-pre-wrap text-sm leading-relaxed">
+          {skill.body}
+        </Body>
+      </Card>
+    </div>
   )
 }

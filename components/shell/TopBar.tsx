@@ -10,7 +10,8 @@ import {
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { ProductSwitcher } from './ProductSwitcher'
-import { NEXUS_DAEMON_STATUS, type UserRole } from '@/lib/data'
+import { useProduct } from '@/lib/product-context'
+import type { UserRole } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const ROLES: { role: UserRole; label: string; color: string }[] = [
@@ -67,9 +68,10 @@ export function TopBar({
   debugRole: UserRole | null
   onProductChange: (id: string) => void
 }) {
+  const { loading, currentProductId } = useProduct()
   return (
     <div className="h-14 shrink-0 bg-bg border-b border-border flex items-center px-5 gap-4">
-      <Link href="/p/forge/dashboard" className="flex items-center gap-2.5 text-fg no-underline">
+      <Link href={`/p/${currentProductId}/dashboard`} className="flex items-center gap-2.5 text-fg no-underline">
         <Image src="/nexus-logo.svg" alt="" width={22} height={22} className="invert-[0.92]" priority />
         <span className="text-base font-semibold tracking-tight">nexus</span>
       </Link>
@@ -77,9 +79,10 @@ export function TopBar({
       <ProductSwitcher onProductChange={onProductChange} />
       <Separator orientation="vertical" className="h-5" />
       <Badge variant="outline" className="gap-1.5 normal-case text-sm">
-        <StatusDot status={NEXUS_DAEMON_STATUS.state} size={6} />
-        <span className="font-mono text-fg-muted">{NEXUS_DAEMON_STATUS.state}</span>
-        <span className="font-mono text-fg-subtle">· {NEXUS_DAEMON_STATUS.uptime}</span>
+        <StatusDot status={loading ? 'syncing' : 'running'} size={6} />
+        <span className="font-mono text-fg-muted">
+          {loading ? 'connecting' : 'online'}
+        </span>
       </Badge>
       <div className="flex-1" />
       <PersonaSwitch debugRole={debugRole} onChange={onDebugRoleChange} />

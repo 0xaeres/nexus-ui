@@ -7,7 +7,8 @@ import { SideNav } from './SideNav'
 import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { ProductContext, getPerms } from '@/lib/product-context'
-import { NEXUS_PRODUCTS, NEXUS_USERS, NEXUS_CURRENT_USER_ID, type UserRole } from '@/lib/data'
+import { getMe, listProducts } from '@/lib/api'
+import type { Product, User, UserRole } from '@/lib/types'
 
 const NAV_KEYS: Record<string, string> = {
   d: 'dashboard',
@@ -22,13 +23,46 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false)
   const [debugRole, setDebugRole] = useState<UserRole | null>(null)
   const [currentProductId, setCurrentProductId] = useState('forge')
+  const [user, setUser] = useState<User | null>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pendingG = useRef(false)
   const pendingGTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const baseUser = NEXUS_USERS.find(u => u.id === NEXUS_CURRENT_USER_ID)!
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [me, prods] = await Promise.all([getMe(), listProducts()])
+        if (cancelled) return
+        setUser(me.user)
+        setProducts(prods)
+        if (prods.length && !prods.find(p => p.id === currentProductId)) {
+          setCurrentProductId(prods[0].id)
+        }
+      } catch {
+        // Backend unreachable — keep placeholder state so screens can render
+        // their own error UIs. The TopBar product switcher shows no options.
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const baseUser: User =
+    user ?? {
+      id: 'unknown',
+      name: 'Loading...',
+      role: 'sme',
+      products: [],
+    }
   const effectiveRole = debugRole ?? baseUser.role
-  const currentProduct = NEXUS_PRODUCTS.find(p => p.id === currentProductId)
+  const currentProduct = products.find(p => p.id === currentProductId)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -101,6 +135,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         currentUser: { ...baseUser, role: effectiveRole },
         perms: getPerms(effectiveRole),
         debugRole,
+        loading,
       }}>
         <div className="flex flex-col h-screen overflow-hidden">
           <TopBar

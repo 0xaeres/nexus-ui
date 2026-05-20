@@ -1,7 +1,14 @@
 import { redirect } from 'next/navigation'
-import { NEXUS_PRODUCTS } from '@/lib/data'
+import { listProducts } from '@/lib/api'
 
-export default function Home() {
-  if (NEXUS_PRODUCTS.length === 0) redirect('/onboarding')
-  redirect(`/p/${NEXUS_PRODUCTS[0].id}/dashboard`)
+export const dynamic = 'force-dynamic'
+
+export default async function Home() {
+  try {
+    const products = await listProducts()
+    if (!products.length) redirect('/onboarding')
+    redirect(`/p/${products[0].id}/dashboard`)
+  } catch {
+    redirect('/onboarding')
+  }
 }

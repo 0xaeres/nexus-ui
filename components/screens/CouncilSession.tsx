@@ -1,142 +1,230 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import { StatusDot } from '@/components/ui/status-dot'
-import { CitationChip } from '@/components/atoms/CitationChip'
 import { PageHeader } from '@/components/ui/page'
-import { H1, Subtle } from '@/components/ui/typography'
-import { AGENT_HUE, AGENT_LABEL } from '@/lib/agent-colors'
+import { H1, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { useEventStream } from '@/lib/hooks/useEventStream'
 import {
-  NEXUS_DELIBERATION,
-  NEXUS_DRAFT_SKILL,
-  COUNCIL_ROSTERS,
-  COUNCIL_AGENT_LABELS,
+  approveProposal,
+  getProposal,
+  getSession,
+  rejectProposal,
+  sessionStreamUrl,
+} from '@/lib/api'
+import {
   COUNCIL_AGENT_HUES,
-  COUNCIL_COST_ESTIMATES,
+  COUNCIL_AGENT_LABELS,
+  COUNCIL_ROSTERS,
+  type AgentCost,
+  type AgentRole,
+  type DeliberationMessage,
   type SkillKind,
-} from '@/lib/data'
+  type SkillProposal,
+} from '@/lib/types'
+import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
 
-type DelibEntry = typeof NEXUS_DELIBERATION[number]
+const KNOWN_AGENTS = new Set<AgentRole>([
+  'archaeologist',
+  'domain_expert',
+  'synthesizer',
+  'adversary',
+  'security_sentinel',
+  'curator',
+])
 
-function buildDynamicRoster(kind: SkillKind, msgCount: number) {
-  const roles = COUNCIL_ROSTERS[kind]
-  return roles.map((role, i) => {
-    const status: 'done' | 'thinking' | 'idle' =
-      i === 0 ? (msgCount >= 2 ? 'done' : 'thinking')
-      : i < roles.length - 1 ? (msgCount >= 3 ? 'thinking' : 'idle')
-      : 'idle'
-    return {
-      role,
-      label: COUNCIL_AGENT_LABELS[role],
-      hue: COUNCIL_AGENT_HUES[role],
-      status,
-      elapsed: status === 'done' ? '6.4s' : status === 'thinking' ? '3.1s' : '—',
-      tokens: status === 'done' ? '0.9k' : status === 'thinking' ? '0.4k' : '—',
-      note: status === 'done' ? 'analysis complete' : status === 'thinking' ? 'processing…' : 'queued',
-    }
-  })
+function asAgentRole(value: string): AgentRole | null {
+  return KNOWN_AGENTS.has(value as AgentRole) ? (value as AgentRole) : null
 }
 
-export function CouncilSession({ skillKind = 'tech_stack' }: { skillKind?: SkillKind }) {
+function agentHue(name: string): string {
+  const role = asAgentRole(name)
+  return role ? COUNCIL_AGENT_HUES[role] : '#7C8CFF'
+}
+
+function agentLabel(name: string): string {
+  const role = asAgentRole(name)
+  return role ? COUNCIL_AGENT_LABELS[role] : name
+}
+
+export function CouncilSession({ sessionId }: { sessionId: string }) {
+  const { currentUser } = useProduct()
   const [leftOpen, setLeftOpen] = useState(true)
   const [rightOpen, setRightOpen] = useState(true)
-  const [messages, setMessages] = useState<DelibEntry[]>([])
-  const [typing, setTyping] = useState<string | null>(null)
+  const [messages, setMessages] = useState<DeliberationMessage[]>([])
+  const [costs, setCosts] = useState<AgentCost[]>([])
+  const [topic, setTopic] = useState<string>('')
+  const [skillKind, setSkillKind] = useState<SkillKind>('product_domain')
+  const [proposalId, setProposalId] = useState<string | null>(null)
+  const [proposal, setProposal] = useState<SkillProposal | null>(null)
+  const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
   const [validated, setValidated] = useState<'approved' | 'rejected' | null>(null)
-  const [tokensUsed, setTokensUsed] = useState(0)
-  const [usdUsed, setUsdUsed] = useState(0)
+  const [ended, setEnded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const idxRef = useRef(0)
-
-  const costEstimate = COUNCIL_COST_ESTIMATES[skillKind]
 
   useEffect(() => {
-    if (idxRef.current >= NEXUS_DELIBERATION.length) return
-    const tick = () => {
-      const entry = NEXUS_DELIBERATION[idxRef.current]
-      if (!entry) { setTyping(null); return }
-      setTyping(entry.agent)
-      setTimeout(() => {
-        setMessages(prev => [...prev, entry])
-        setTyping(null)
-        const tokDelta = 80 + Math.floor(Math.random() * 120)
-        setTokensUsed(t => t + tokDelta)
-        setUsdUsed(u => u + tokDelta * (costEstimate.usd / costEstimate.tokens))
-        idxRef.current++
-        if (idxRef.current < NEXUS_DELIBERATION.length) setTimeout(tick, 900 + Math.random() * 600)
-      }, 700 + Math.random() * 400)
+    let cancelled = false
+    getSession(sessionId)
+      .then(sess => {
+        if (cancelled || !sess) return
+        setTopic(sess.topic ?? '')
+        if (sess.skill_kind === 'master' || sess.skill_kind === 'product_domain') {
+          setSkillKind(sess.skill_kind)
+        }
+        if (sess.deliberation?.length) setMessages(sess.deliberation as DeliberationMessage[])
+        if (sess.costs?.length) setCosts(sess.costs as AgentCost[])
+        if (sess.proposal_id) setProposalId(sess.proposal_id)
+      })
+      .catch(() => {/* not yet persisted */})
+    return () => { cancelled = true }
+  }, [sessionId])
+
+  const { events, status } = useEventStream(sessionStreamUrl(sessionId))
+
+  useEffect(() => {
+    for (const ev of events) {
+      if (ev.event === 'message' && typeof ev.data === 'object') {
+        setMessages(prev => prev.concat(ev.data as DeliberationMessage))
+      } else if (ev.event === 'cost' && typeof ev.data === 'object') {
+        setCosts(prev => prev.concat(ev.data as AgentCost))
+      } else if (ev.event === 'critique' && typeof ev.data === 'object') {
+        const sev = (ev.data as { severity?: string }).severity
+        if (sev) setCritiqueSeverity(sev)
+      } else if (
+        (ev.event === 'proposal' || ev.event === 'proposal_preview') &&
+        typeof ev.data === 'object'
+      ) {
+        const d = ev.data as { proposal_id?: string; id?: string }
+        const pid = d.proposal_id ?? d.id
+        if (pid) setProposalId(pid)
+      } else if (ev.event === 'session_start' && typeof ev.data === 'object') {
+        const d = ev.data as { topic?: string; skill_kind?: string }
+        if (d.topic) setTopic(d.topic)
+        if (d.skill_kind === 'master' || d.skill_kind === 'product_domain') {
+          setSkillKind(d.skill_kind)
+        }
+      } else if (ev.event === 'session_end') {
+        setEnded(true)
+      }
     }
-    const t = setTimeout(tick, 400)
-    return () => clearTimeout(t)
-  }, [costEstimate.usd, costEstimate.tokens])
+  }, [events])
+
+  useEffect(() => {
+    if (!proposalId) return
+    let cancelled = false
+    getProposal(proposalId)
+      .then(p => { if (!cancelled) setProposal(p) })
+      .catch(() => {/* ignore */})
+    return () => { cancelled = true }
+  }, [proposalId])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages, typing])
+  }, [messages])
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const handler = async (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'a') setValidated('approved')
-      if (e.key === 'r') setValidated('rejected')
+      if (validated || !proposalId) return
+      if (e.key === 'a') await handleApprove()
+      if (e.key === 'r') await handleReject()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalId, validated])
 
-  const dynamicRoster = buildDynamicRoster(skillKind, messages.length)
+  const handleApprove = async () => {
+    if (!proposalId) return
+    try {
+      await approveProposal(proposalId, currentUser?.name ?? 'unknown')
+      setValidated('approved')
+    } catch {/* */}
+  }
+
+  const handleReject = async () => {
+    if (!proposalId) return
+    const reason = window.prompt('Reason for rejection?') || ''
+    if (!reason) return
+    try {
+      await rejectProposal(proposalId, reason)
+      setValidated('rejected')
+    } catch {/* */}
+  }
+
+  const totalTokens = useMemo(
+    () => costs.reduce((sum, c) => sum + (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0), 0),
+    [costs],
+  )
+
+  const roster = useMemo(() => {
+    const roles = COUNCIL_ROSTERS[skillKind] ?? COUNCIL_ROSTERS.product_domain
+    const seen = new Set(messages.map(m => m.agent))
+    return roles.map(role => ({
+      role,
+      label: COUNCIL_AGENT_LABELS[role],
+      hue: COUNCIL_AGENT_HUES[role],
+      status: (seen.has(role) ? 'done' : ended ? 'idle' : 'thinking') as
+        | 'done' | 'thinking' | 'idle',
+    }))
+  }, [skillKind, messages, ended])
+
+  const streamLive = status === 'open' || status === 'connecting'
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <PageHeader>
         <Users className="h-5 w-5 text-fg-muted" />
         <H1>Council</H1>
-        <Badge variant="violet">live</Badge>
-        <Subtle className="font-mono truncate">forge/tech_stack/rust/tokio-spawn-patterns</Subtle>
+        {streamLive && !ended ? (
+          <Badge variant="violet">live</Badge>
+        ) : (
+          <Badge variant="outline">replay</Badge>
+        )}
+        <Subtle className="font-mono truncate">{topic || sessionId}</Subtle>
         <div className="flex-1" />
-        {tokensUsed > 0 && (
+        {totalTokens > 0 && (
           <Badge variant="outline" className="font-mono">
-            ${usdUsed.toFixed(4)} · {tokensUsed.toLocaleString()} tok
+            {totalTokens.toLocaleString()} tok
           </Badge>
         )}
-        <Button variant="ghost" size="sm">End session</Button>
+        <Badge variant="outline" className="font-mono">{skillKind}</Badge>
       </PageHeader>
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* LEFT — Roster */}
         {leftOpen ? (
           <aside className="w-[260px] shrink-0 border-r border-border flex flex-col bg-bg">
             <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wider font-semibold text-fg-muted">Agents</span>
-              <span className="text-xs font-mono text-fg-subtle">{dynamicRoster.length} · {skillKind}</span>
+              <SectionLabel>Agents</SectionLabel>
+              <Subtle className="font-mono">{roster.length}</Subtle>
               <div className="flex-1" />
               <button onClick={() => setLeftOpen(false)} className="text-fg-subtle hover:text-fg p-0.5">
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
             </div>
             <div className="flex-1 overflow-auto p-3 flex flex-col gap-2">
-              {dynamicRoster.map(a => (
-                <Card key={a.role} variant="surface" className="p-3 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: a.hue }} />
-                    <span className="text-sm font-medium text-fg">{a.label}</span>
-                    <div className="flex-1" />
-                    <StatusDot status={a.status} size={5} />
-                  </div>
-                  <div className="flex gap-2 text-xs font-mono text-fg-subtle">
-                    <span>{a.elapsed}</span>
-                    <span>·</span>
-                    <span>{a.tokens}</span>
-                  </div>
-                  <span className="text-xs text-fg-muted">{a.note}</span>
-                </Card>
-              ))}
+              {roster.map(a => {
+                const agentCost = costs.find(c => c.agent === a.role)
+                const tokens = agentCost ? (agentCost.prompt_tokens + agentCost.completion_tokens) : 0
+                return (
+                  <Card key={a.role} variant="surface" className="p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: a.hue }} />
+                      <span className="text-sm font-medium text-fg">{a.label}</span>
+                      <div className="flex-1" />
+                      <StatusDot status={a.status} size={5} />
+                    </div>
+                    <Small className="font-mono text-fg-subtle">
+                      {tokens > 0 ? `${tokens.toLocaleString()} tok` : a.status}
+                    </Small>
+                  </Card>
+                )
+              })}
             </div>
           </aside>
         ) : (
@@ -147,43 +235,39 @@ export function CouncilSession({ skillKind = 'tech_stack' }: { skillKind?: Skill
           </div>
         )}
 
-        {/* CENTER — Deliberation */}
         <div className="flex-1 min-w-0 flex flex-col bg-bg">
           <div ref={scrollRef} className="flex-1 overflow-auto px-8 py-6 flex flex-col gap-4">
+            {messages.length === 0 && !ended && (
+              <Muted className="font-mono text-center py-12">
+                {streamLive ? 'Waiting for first agent message…' : 'Loading session…'}
+              </Muted>
+            )}
             {messages.map((msg, i) => <DeliberationMsg key={i} msg={msg} />)}
-            {typing && (
-              <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-surface border border-border">
-                <span
-                  className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
-                  style={{ background: AGENT_HUE[typing] }}
-                />
-                <span className="text-xs text-fg-muted">{AGENT_LABEL[typing]} is thinking</span>
-                <span className="inline-flex gap-0.5 ml-1">
-                  {[0, 1, 2].map(j => (
-                    <span
-                      key={j}
-                      className="h-1 w-1 rounded-full"
-                      style={{ background: AGENT_HUE[typing], animation: `nexus-dot 1.2s ease-in-out ${j * 0.2}s infinite` }}
-                    />
-                  ))}
-                </span>
-              </div>
+            {ended && messages.length > 0 && (
+              <Muted className="text-center py-4 font-mono">— session ended —</Muted>
             )}
           </div>
         </div>
 
-        {/* RIGHT — Validator */}
         {rightOpen ? (
           <aside className="w-[460px] shrink-0 border-l border-border flex flex-col bg-bg">
             <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wider font-semibold text-fg-muted">Draft skill</span>
+              <SectionLabel>Draft skill</SectionLabel>
               <div className="flex-1" />
-              <Progress
-                value={NEXUS_DRAFT_SKILL.confidence * 100}
-                className="w-20"
-                indicatorClassName="bg-success"
-              />
-              <span className="font-mono text-sm">{Math.round(NEXUS_DRAFT_SKILL.confidence * 100)}%</span>
+              {proposal && (
+                <>
+                  <Progress
+                    value={Math.round(proposal.confidence * 100)}
+                    className="w-20"
+                    indicatorClassName={
+                      proposal.confidence >= 0.7 ? 'bg-success'
+                      : proposal.confidence >= 0.5 ? 'bg-warning'
+                      : 'bg-danger'
+                    }
+                  />
+                  <span className="font-mono text-sm">{Math.round(proposal.confidence * 100)}%</span>
+                </>
+              )}
               <button onClick={() => setRightOpen(false)} className="text-fg-subtle hover:text-fg p-0.5">
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
@@ -195,84 +279,63 @@ export function CouncilSession({ skillKind = 'tech_stack' }: { skillKind?: Skill
                   {validated === 'approved' ? '✓' : '✕'}
                 </span>
                 <span className={cn('text-base font-medium', validated === 'approved' ? 'text-success' : 'text-danger')}>
-                  Skill {validated === 'approved' ? 'approved' : 'rejected'}
+                  Proposal {validated}
                 </span>
-                <span className="text-xs font-mono text-fg-subtle">Skill committed to forge/tech_stack/rust/</span>
-                <Button variant="ghost" size="sm" onClick={() => setValidated(null)}>Review another →</Button>
+              </div>
+            ) : !proposal ? (
+              <div className="flex-1 flex items-center justify-center p-6">
+                <Muted className="font-mono">
+                  {streamLive ? 'Drafting…' : 'No proposal produced.'}
+                </Muted>
               </div>
             ) : (
               <div className="flex-1 overflow-auto flex flex-col">
                 <div className="px-5 py-4 border-b border-border">
-                  <span className="text-sm font-mono text-fg break-all">{NEXUS_DRAFT_SKILL.name}</span>
-                  <div className="flex gap-4 mt-2 text-xs">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-xs uppercase tracking-wider font-mono text-fg-subtle">glob</span>
-                      <span className="font-mono text-fg-muted">{NEXUS_DRAFT_SKILL.appliesTo}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-xs uppercase tracking-wider font-mono text-fg-subtle">prereq</span>
-                      <span className="font-mono text-fg-muted">{NEXUS_DRAFT_SKILL.prerequisites[0]}</span>
-                    </div>
+                  <span className="text-sm font-mono text-fg break-all">{proposal.name}</span>
+                  <div className="flex gap-2 mt-2 text-xs">
+                    <Badge variant="outline" className="font-mono">{proposal.skill_kind}</Badge>
+                    <Badge variant="outline" className="font-mono">
+                      {proposal.citations.length} citations
+                    </Badge>
                   </div>
                 </div>
 
-                <div className="px-5 py-4 border-b border-border flex flex-col gap-2">
-                  <span className="text-xs uppercase tracking-wider font-semibold text-fg-muted">Rules</span>
-                  {NEXUS_DRAFT_SKILL.rules.map(r => (
-                    <div key={r.n} className="flex gap-2.5 px-3 py-2.5 rounded-md bg-success/[0.05] border border-success/20">
-                      <span className="text-xs font-mono text-fg-subtle">{r.n}.</span>
-                      <span className="text-sm text-fg leading-relaxed">{r.text}</span>
-                    </div>
-                  ))}
+                <div className="px-5 py-4 flex-1 overflow-auto">
+                  <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted leading-relaxed">
+                    {proposal.body}
+                  </pre>
                 </div>
 
-                <div className="px-5 py-4 border-b border-border flex flex-col gap-2">
-                  <span className="text-xs uppercase tracking-wider font-semibold text-fg-muted">Citations</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {NEXUS_DRAFT_SKILL.citations.map(c => (
-                      <CitationChip key={c.id} agent={c.agent} path={c.path} line={String(c.line)} />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="px-5 py-4 border-b border-border">
-                  <div className="p-3 rounded-md bg-high/[0.06] border border-high/30">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
-                        style={{ background: AGENT_HUE.adversary }}
-                      />
-                      <span className="text-xs font-medium text-high">Adversary · cycle 1 of 1</span>
+                {critiqueSeverity && critiqueSeverity !== 'minor' && (
+                  <div className="px-5 py-4 border-t border-border">
+                    <div className="p-3 rounded-md bg-high/[0.06] border border-high/30">
+                      <Small className="font-medium text-high">
+                        Adversary critique: {critiqueSeverity}
+                      </Small>
                     </div>
-                    <span className="text-sm text-fg leading-relaxed">
-                      Rule #2 weakened: &quot;store handle unless caller is a trace-only path&quot;. Accepted into revision 2.
-                    </span>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
-            {!validated && (
+            {!validated && proposal && (
               <div className="px-5 py-3 border-t border-border flex items-center gap-2">
                 <Button
                   size="sm"
-                  onClick={() => setValidated('approved')}
+                  onClick={handleApprove}
                   className="bg-success/15 text-success border border-success/35 hover:bg-success/25"
                 >
                   Approve <kbd className="ml-1 text-xs font-mono opacity-70">A</kbd>
                 </Button>
-                <Button size="sm" className="bg-warning/15 text-warning border border-warning/35 hover:bg-warning/25">
-                  Edit <kbd className="ml-1 text-xs font-mono opacity-70">E</kbd>
-                </Button>
                 <Button
                   size="sm"
-                  onClick={() => setValidated('rejected')}
+                  onClick={handleReject}
                   className="bg-danger/15 text-danger border border-danger/35 hover:bg-danger/25"
                 >
                   Reject <kbd className="ml-1 text-xs font-mono opacity-70">R</kbd>
                 </Button>
                 <div className="flex-1" />
-                <span className="text-xs font-mono text-fg-subtle">rev 2 of 2</span>
+                <Subtle className="font-mono">rev {proposal.adversary_critique ? 2 : 1}</Subtle>
               </div>
             )}
           </aside>
@@ -288,34 +351,22 @@ export function CouncilSession({ skillKind = 'tech_stack' }: { skillKind?: Skill
   )
 }
 
-function DeliberationMsg({ msg }: { msg: DelibEntry }) {
+function DeliberationMsg({ msg }: { msg: DeliberationMessage }) {
   return (
     <Card variant="surface" className="p-5 flex flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
       <div className="flex items-center gap-2 flex-wrap">
         <span
           className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
-          style={{ background: AGENT_HUE[msg.agent] }}
+          style={{ background: agentHue(msg.agent) }}
         />
-        <span className="text-sm font-medium" style={{ color: AGENT_HUE[msg.agent] }}>
-          {AGENT_LABEL[msg.agent]}
+        <span className="text-sm font-medium" style={{ color: agentHue(msg.agent) }}>
+          {agentLabel(msg.agent)}
         </span>
-        <span className="text-xs font-mono text-fg-subtle">{msg.t}</span>
-        {msg.isDraft && (
-          <Badge variant="success">draft{msg.revision ? ` · rev ${msg.revision}` : ''}</Badge>
-        )}
-        {msg.severity && (
-          <Badge variant={msg.severity === 'low' ? 'warning' : 'danger'}>{msg.severity}</Badge>
-        )}
+        <span className="text-xs font-mono text-fg-subtle">
+          {msg.timestamp?.slice(11, 19) ?? ''}
+        </span>
       </div>
-      <p className="m-0 text-sm text-fg leading-relaxed">{msg.body}</p>
-      {msg.cites && msg.cites.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {msg.cites.map((c, i) => (
-            <CitationChip key={i} agent={msg.agent} path={c.path} line={String(c.line)} />
-          ))}
-        </div>
-      )}
+      <p className="m-0 text-sm text-fg leading-relaxed whitespace-pre-wrap">{msg.body}</p>
     </Card>
   )
 }
-
