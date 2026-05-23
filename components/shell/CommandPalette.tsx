@@ -9,7 +9,6 @@ import {
   Users,
   ClipboardCheck,
   BookOpen,
-  Settings,
   Plus,
   type LucideIcon,
 } from 'lucide-react'
@@ -40,7 +39,6 @@ function buildCommands(base: string | null): Cmd[] {
       { id: 'nav-review',  group: 'Navigate', label: 'Review',   href: `${base}/review`,   icon: ClipboardCheck,  shortcut: 'g r', chord: 'r' },
       { id: 'nav-skill',   group: 'Navigate', label: 'Skill',    href: `${base}/skill`,    icon: BookOpen,        shortcut: 'g k', chord: 'k' },
       { id: 'nav-sources', group: 'Navigate', label: 'Sources',  href: `${base}/sources`,  icon: Plug,            shortcut: 'g s', chord: 's' },
-      { id: 'nav-settings', group: 'Navigate', label: 'Settings', href: `${base}/settings`, icon: Settings },
       { id: 'act-source',  group: 'Quick actions', label: 'Add source', href: `${base}/sources/new`, icon: Plus },
     )
   }

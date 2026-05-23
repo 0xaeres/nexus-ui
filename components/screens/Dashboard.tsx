@@ -161,7 +161,7 @@ export function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {pending.slice(0, 6).map(p => (
-                <Link key={p.id} href={`${base}/proposals`} className="group">
+                <Link key={p.id} href={`${base}/review`} className="group">
                   <Card variant="stat" glowColor={ACCENT_GLOW} className="p-5 flex flex-col gap-3 transition-transform hover:-translate-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className={cn('h-1.5 w-1.5 rounded-full', ACCENT_DOT[p.kind] ?? ACCENT_DOT.default)} />
@@ -191,10 +191,6 @@ export function Dashboard() {
           <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
             <ActivityIcon className="h-4 w-4 text-fg-muted" />
             <H3>Recent activity</H3>
-            <div className="flex-1" />
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`${base}/activity`}>View all →</Link>
-            </Button>
           </div>
           {activity.length === 0 ? (
             <div className="px-5 py-6">

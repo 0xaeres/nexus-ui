@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Plus, Settings as SettingsIcon } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
@@ -55,21 +55,13 @@ export function ProductSwitcher({ onProductChange }: { onProductChange: (id: str
             </DropdownMenuItem>
           )
         })}
-        {(perms.canOnboard || perms.isOrgAdmin) && (
+        {perms.canOnboard && (
           <>
             <DropdownMenuSeparator />
-            {perms.canOnboard && (
-              <DropdownMenuItem onSelect={() => router.push('/new')}>
-                <Plus className="h-4 w-4" />
-                New product
-              </DropdownMenuItem>
-            )}
-            {perms.isOrgAdmin && (
-              <DropdownMenuItem onSelect={() => router.push('/settings/org')}>
-                <SettingsIcon className="h-4 w-4" />
-                Org overview
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onSelect={() => router.push('/new')}>
+              <Plus className="h-4 w-4" />
+              New product
+            </DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>

@@ -33,52 +33,11 @@ const CONNECTOR_OPTIONS: Array<{
     ],
   },
   {
-    id: 'confluence',
-    name: 'Confluence',
-    auth: 'token',
-    desc: 'Pages, ADRs, design docs',
-    fields: [
-      { key: 'base_url', placeholder: 'https://myorg.atlassian.net/wiki' },
-      { key: 'token', placeholder: 'API token', secret: true },
-      { key: 'spaces', placeholder: 'ENG, ARCH (space keys)' },
-    ],
-  },
-  {
-    id: 'jira',
-    name: 'Jira',
-    auth: 'token',
-    desc: 'Issues, sprints',
-    fields: [
-      { key: 'base_url', placeholder: 'https://myorg.atlassian.net' },
-      { key: 'token', placeholder: 'API token', secret: true },
-      { key: 'projects', placeholder: 'NEX, PLAT' },
-    ],
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    auth: 'token',
-    desc: 'Channels, threads',
-    fields: [
-      { key: 'token', placeholder: 'xoxb-...', secret: true },
-      { key: 'channels', placeholder: '#eng-decisions, #incidents' },
-    ],
-  },
-  {
     id: 'filesystem',
     name: 'Local filesystem',
     auth: 'command',
-    desc: 'A local directory served by the official filesystem MCP server',
+    desc: 'A local directory walked by Nexus directly',
     fields: [{ key: 'roots', placeholder: '/path/to/code' }],
-  },
-  {
-    id: 'custom',
-    name: 'Custom MCP',
-    auth: 'command',
-    desc: 'Any custom MCP server reachable via stdio',
-    fields: [
-      { key: 'command', placeholder: 'python, -m, my_mcp.server' },
-    ],
   },
 ]
 
