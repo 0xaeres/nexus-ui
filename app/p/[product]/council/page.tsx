@@ -1,5 +1,10 @@
-import { CouncilLanding } from '@/components/screens/CouncilLanding'
+import { CouncilStage } from '@/components/screens/CouncilStage'
 
-export default function CouncilPage() {
-  return <CouncilLanding />
+export default async function CouncilPage({
+  params,
+}: {
+  params: Promise<{ product: string }>
+}) {
+  const { product } = await params
+  return <CouncilStage productId={product} />
 }

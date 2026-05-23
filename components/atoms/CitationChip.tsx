@@ -28,7 +28,7 @@ export function CitationChip({ agent, path, line, onClick }: {
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-surface',
-        'font-mono text-[11px] text-fg transition-colors',
+        'font-mono text-xs text-fg transition-colors',
         onClick ? 'cursor-pointer hover:bg-bg-hover hover:border-border-strong' : 'cursor-default',
       )}
     >

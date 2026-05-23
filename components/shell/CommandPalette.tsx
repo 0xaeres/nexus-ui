@@ -3,14 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Search,
-  LayoutDashboard,
+  Compass,
   Plug,
-  Hexagon,
-  Activity as ActivityIcon,
+  Database,
   Users,
+  ClipboardCheck,
+  BookOpen,
   Settings,
   Plus,
-  PlayCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -28,23 +28,29 @@ type Cmd = {
   chord?: string
 }
 
-function buildCommands(base: string): Cmd[] {
-  return [
-    { id: 'nav-dashboard', group: 'Navigate', label: 'Dashboard', href: `${base}/dashboard`, icon: LayoutDashboard, shortcut: 'g d', chord: 'd' },
-    { id: 'nav-council',   group: 'Navigate', label: 'Council',   href: `${base}/council`,   icon: Users,           shortcut: 'g c', chord: 'c' },
-    { id: 'nav-skills',    group: 'Navigate', label: 'Skills',    href: `${base}/skills`,    icon: Hexagon,         shortcut: 'g s', chord: 's' },
-    { id: 'nav-activity',  group: 'Navigate', label: 'Activity',  href: `${base}/activity`,  icon: ActivityIcon,    shortcut: 'g a', chord: 'a' },
-    { id: 'nav-sources',   group: 'Navigate', label: 'Sources',   href: `${base}/sources`,   icon: Plug,            shortcut: 'g n', chord: 'n' },
-    { id: 'nav-settings',  group: 'Navigate', label: 'Settings',  href: `${base}/settings`,  icon: Settings },
-    { id: 'act-source',    group: 'Quick actions', label: 'Add source',          href: `${base}/sources/new`, icon: Plus },
-    { id: 'act-council',   group: 'Quick actions', label: 'New council session', href: `${base}/council`,     icon: PlayCircle },
+function buildCommands(base: string | null): Cmd[] {
+  const cmds: Cmd[] = [
+    { id: 'nav-home',    group: 'Navigate', label: 'Products',    href: '/',     icon: Compass, shortcut: 'g h', chord: 'h' },
+    { id: 'act-new',     group: 'Quick actions', label: 'New product', href: '/new', icon: Plus,    shortcut: 'g n', chord: 'n' },
   ]
+  if (base) {
+    cmds.push(
+      { id: 'nav-ingest',  group: 'Navigate', label: 'Ingest',   href: `${base}/ingest`,   icon: Database,        shortcut: 'g i', chord: 'i' },
+      { id: 'nav-council', group: 'Navigate', label: 'Council',  href: `${base}/council`,  icon: Users,           shortcut: 'g c', chord: 'c' },
+      { id: 'nav-review',  group: 'Navigate', label: 'Review',   href: `${base}/review`,   icon: ClipboardCheck,  shortcut: 'g r', chord: 'r' },
+      { id: 'nav-skill',   group: 'Navigate', label: 'Skill',    href: `${base}/skill`,    icon: BookOpen,        shortcut: 'g k', chord: 'k' },
+      { id: 'nav-sources', group: 'Navigate', label: 'Sources',  href: `${base}/sources`,  icon: Plug,            shortcut: 'g s', chord: 's' },
+      { id: 'nav-settings', group: 'Navigate', label: 'Settings', href: `${base}/settings`, icon: Settings },
+      { id: 'act-source',  group: 'Quick actions', label: 'Add source', href: `${base}/sources/new`, icon: Plus },
+    )
+  }
+  return cmds
 }
 
 export function CommandPalette({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const { currentProductId } = useProduct()
-  const base = `/p/${currentProductId}`
+  const base = currentProductId ? `/p/${currentProductId}` : null
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)

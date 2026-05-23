@@ -104,11 +104,11 @@ The five demo moments that earn that reaction:
 
 | # | Moment | Where |
 |---|---|---|
-| 1 | **Onboarding wizard** that takes a brand-new product from name → sources → ingestion → first council session for the master skill, end-to-end | `/onboarding` |
+| 1 | **Onboarding wizard** — 3 sequential steps: identity → connect & ingest (live SSE log, delta summary) → council kickoff (council form only appears after ingest succeeds; on failure the user can retry or go back to fix the source) | `/onboarding` |
 | 2 | **Product switcher** in the TopBar — flip between products, watch every screen re-scope; SME persona hides admin affordances | TopBar + persona-switch debug widget |
 | 3 | **Council session** with a dynamic roster (4 agents for Master, 3 for Tech-Stack / Language / Security) and a live **cost meter** in the header | `/p/[product]/council/[sessionId]` |
 | 4 | **Skill composition view** — open a non-master skill, see the explicit composition graph back to Master + prerequisite stacks | `/p/[product]/skills/[id]` |
-| 5 | **Live ingestion log** in onboarding (and in source detail) — simulated SSE that conveys "we are reading your code right now" | reused from `ConnectorDetail.tsx` |
+| 5 | **Live ingestion log** in onboarding (and in source detail) — real SSE stream (`EventSource`) that shows per-stage log lines and a terminal delta summary (added / updated / removed / unchanged) | inline in `Onboarding.tsx`; source detail uses `ConnectorDetail.tsx` |
 
 If a design proposal does not strengthen one of these five moments, it is
 probably scope creep.
@@ -119,7 +119,7 @@ probably scope creep.
 
 ```
 /                       → first-run gate
-/onboarding             → product onboarding wizard (4 steps)
+/onboarding             → product onboarding wizard (3 sequential steps)
 /p/[product]
   ├── /dashboard        → product-scoped overview (pipeline, pending, activity, council mini)
   ├── /sources          → product-scoped connectors + ingestion runs (was /connectors)
@@ -129,6 +129,7 @@ probably scope creep.
   │   └── /[sessionId]  → active deliberation (3-pane, roster adapts to skill kind)
   ├── /skills           → hierarchy tree (Master pinned to top)
   │   └── /[id]         → skill detail + composition graph
+  ├── /assistant        → conversational + action chat panel (Jira/Confluence)
   ├── /activity         → product-scoped activity timeline
   └── /settings         → product-level (members, roster overrides, model assignments)
 /settings/org           → org-level settings (admins, billing placeholder, daemon)
@@ -155,6 +156,10 @@ confidence: 0..1
 applies_to: { globs, contexts }
 provenance: { council_session, validated_by, validated_at, revision }
 composes_with: []   # master has no parents
+provenance:
+  revision_count: 0 | 1          # per-session adversary loop cap (binary)
+  cumulative_revisions: <number> # monotonic across council sessions; used by priors badge
+  evidence_chunks: [chunk_id…]   # capped per session; see §7.4
 ---
 
 # {Product Name}
@@ -199,6 +204,126 @@ Cost engineering rules to surface in the UI:
   revision needed" in the validator panel.
 - Master sessions are the expensive ones — fired once per product, during
   onboarding. Every other kind is 3-agent.
+
+### 7.1 Resync cadence and delta-only ingestion
+
+Sources re-sync on a backend-owned cadence (default: every 30 minutes; the daemon
+owns the schedule, the UI does not let users configure it).
+
+**Each resync computes a delta against the existing vector partition, not a full
+re-ingest.** This is standard RAG practice; full re-ingest on every tick is the
+non-negotiable thing we explicitly avoid:
+
+- For each chunk pulled from the connector: compute a content hash (`path + anchor + content`).
+- Compare against the stored hash table for that source.
+- **Added** (hash not in store) → embed + insert.
+- **Updated** (path/anchor in store, hash differs) → re-embed + upsert.
+- **Removed** (in store, not in current pull) → delete from index.
+- **Untouched** → no-op (the dominant case, where the cost win comes from).
+
+Contract:
+
+- `POST /products/{id}/sources/{sid}/sync` returns `{ ok: true, delta: { added, updated, removed, unchanged } }`.
+- The SSE sync-log stream at `sourceLogUrl` emits a terminal `delta` event with the same shape, plus per-chunk `added path:line` / `updated path:line` / `removed path:line` lines.
+- `Source.lastDelta` and `Source.nextSync` are persisted on the row and read via `listSources` / `getSource`.
+
+UI surfaces:
+
+- **Sources screen**: each card grows a "next sync · HH:MM" line and a "last delta · +N ~M -K" line.
+- **Source detail**: a "Next sync" stat tile next to Resources / Last sync / Status, and three delta counters (added / updated / removed) at the top of the Sync log card.
+- **Activity feed**: ingest rows read `Re-sync: N added, M updated, K removed` — no new `ActivityType` needed.
+
+### 7.2 Change-gated council cadence
+
+Council does **not** fire on every resync. Three layers, all backend-side:
+
+- **Gate** — after each ingestion delta, intersect the changed-chunk IDs with each
+  skill's `provenance.evidence_chunks`. If the overlap exceeds a configured threshold,
+  enqueue a council run for that skill.
+- **Cap** — at most one council run per `(product, skill)` per 7 days. Multiple gate
+  trips inside the window coalesce into one richer session that uses the union of
+  changed chunks.
+- **Override** — `POST /products/{id}/council/sessions` accepts `{ force: true, skill_id }`.
+  When true, the cap is bypassed. Admin perms required.
+
+The backend exposes `nextCouncilEligibleAt` per skill in the skill detail response.
+The Dashboard reads `DashboardData.cadence.nextSyncAt` / `nextCouncilAt` / `nextCouncilSkill`
+and shows a quiet one-line hint above the pipeline strip — non-interactive.
+
+`createSession` accepts `{ force?: boolean; skill_id?: string }` and returns
+`{ session_id, status, priors? }` where `priors = { revision, corrections, rejections }`.
+Activity rows for council events are suffixed `(gated)` or `(manual override)` so
+audit is clear.
+
+### 7.3 Council priors (the SME-burden mechanism)
+
+Every council session is seeded with three priors derived from prior interactions
+on the same product + skill. The goal: SMEs see less of the council over time, not more.
+
+- **Starting revision** — if a current approved skill exists, the council is launched
+  with that skill body as input. Sections that re-derive identically carry
+  `inherited: true` in the proposal payload and render with a subtle "inherited"
+  pill so SMEs can visually skip them.
+- **Corrections corpus** — every `editProposal` call captures a (council-draft → SME-edit)
+  diff against `(product_id, skill_kind)`. Recent corrections (default cap: 10) plus a
+  **distilled summary** of older ones (see §7.4) are rendered into the system prompt as
+  house rules ("Past SMEs have said: …").
+- **Rejection log** — `SkillProposal.reject_reason = { reason: string; category? }`
+  persists every SME rejection. Surfaced via `GET /skills/{id}/rejections` and rendered
+  on the skill detail page; fed back into the next session's prompt as anti-priors.
+- **Per-agent edit-rate** (stretch, not yet implemented) — if a specific agent's drafts
+  get rewritten consistently on a product, upweight its persona prompt with the actual
+  correction examples on the next run.
+
+Two revision counters, not one — easy to confuse:
+
+| Field | Scope | Capped? | Purpose |
+|---|---|---|---|
+| `provenance.revision_count` | within a single council session | `0 \| 1` (hard) | input to the confidence formula `adversary_passes = 1.0 if 0 \| 0.7 if 1` |
+| `provenance.cumulative_revisions` | across all sessions for this skill | monotonic, uncapped | the "rev N" shown in the Council session header's priors badge and on the skill provenance row |
+
+The UI's "Priors loaded · rev N · M corr · K rej" badge reads `cumulative_revisions`
+(via session.priors), never the per-session counter.
+
+### 7.4 Corrections compaction (prevents the token bomb)
+
+Without compaction, every SME edit accumulates forever in the council's system
+prompt. A master skill with 200 approved edits over 6 months would carry 50K+
+tokens of "house rules" prepended to every run, with the volume growing linearly
+with usage. We compact.
+
+Contract — `GET /skills/{id}/corrections` returns:
+
+```ts
+{
+  corrections: Correction[],           // recent, raw; capped at ~10 by default
+  distilled: {                         // older corrections, folded into a summary
+    rules: string,                     // the condensed house-rules text actually injected into prompts
+    from_count: number,                // how many raw corrections were folded in
+    last_compacted_at: string,
+  } | null,                            // null until the first compaction happens
+  total: number,                       // total raw corrections ever recorded
+}
+```
+
+Compaction policy is owned by the backend (e.g. "compact when raw count > 25, fold
+all but the most recent 10"). The UI surfaces both: a "Distilled rules" accent panel
+on top of a list of recent raw corrections, with a "showing 10 of 47 (older folded
+into distilled rules)" subtitle. SMEs always have the raw audit trail available
+via the recent list, but the *injected prompt context stays bounded*.
+
+### 7.5 Evidence chunks per session cap
+
+The synthesizer's prompt is also bounded on the citation side:
+`EVIDENCE_CHUNKS_PER_SESSION_CAP = 20` ([lib/types.ts](lib/types.ts)).
+
+Above this, the reranker's top-K decides which chunks survive into the prompt; the
+rest are dropped for that session. The cap is enforced backend-side. The UI surfaces
+it on the skill provenance row as `N / 20 cap` so the budget is visible to SMEs.
+
+If a skill's stored `provenance.evidence_chunks` ever exceeds the cap, that's a
+historical artifact (cap was raised previously, then lowered). Display the actual
+length; the cap is a constant the prompt assembler enforces, not a hard storage limit.
 
 ---
 
@@ -321,13 +446,23 @@ without a product decision.
 
 ### 9.7 Ingestion progress UX
 
-The reusable `components/sources/IngestionProgress.tsx` block (progress bar
-+ streaming sync log) is the single source of truth for "we are reading
-your code right now." It is used in:
+The `IngestProgress` block (scrolling SSE log + status header + delta summary)
+is the single source of truth for "we are reading your code right now."
 
-- Onboarding step 3 (full progress + log)
-- Sources screen — embedded in any source card whose `state === 'syncing'`
-- Sources screen — opened from a "View live sync log" link inside a Dialog
+**Current location:** inlined as a local component inside
+`components/screens/Onboarding.tsx`. It is not yet extracted to a standalone
+file. If the Sources screen needs to embed the same block, extract it to
+`components/sources/IngestionProgress.tsx` at that point — do not duplicate
+the implementation.
+
+It is used in:
+
+- **Onboarding Step 3** — full scrolling log, per-level icons (›/✓/✗),
+  spinner/done/error header, delta counter row (added / updated / removed /
+  unchanged). The council form is hidden beneath it until the stream closes
+  with `level: done`.
+- **Source detail** (`ConnectorDetail.tsx`) — a separate sync log panel
+  already exists there; align its UI to `IngestProgress` when next touched.
 
 The Dashboard does **not** host live ingestion content. If sources are
 syncing, the Dashboard shows a single inline strip that links into Sources.
@@ -351,7 +486,7 @@ syncing, the Dashboard shows a single inline strip that links into Sources.
 | `components/shell/{Shell,TopBar,SideNav,ProductSwitcher,CommandPalette,ShortcutsHelp}.tsx` | Tailwind |
 | `components/ui/{page,typography}.tsx` | New: page chrome + canonical type scale |
 | `components/pipeline/Pipeline.tsx` | Tailwind |
-| `components/screens/{Dashboard,Skills,Sources,CouncilLanding,CouncilSession,Onboarding,Activity,Settings,ConnectorNew,ConnectorDetail}.tsx` | Tailwind |
+| `components/screens/{Dashboard,Skills,SkillDetailPage,Sources,CouncilLanding,CouncilSession,Onboarding,Activity,Settings,ConnectorNew,ConnectorDetail,Assistant}.tsx` | Tailwind |
 | `components/sources/IngestionProgress.tsx` | Tailwind |
 | `components/skeletons/*` | Tailwind |
 | `components/icons/BrandIcon.tsx` | simple-icons wrapper for GitHub/Jira/Confluence |
@@ -385,6 +520,7 @@ events originating in inputs/textareas/contentEditable and suspends the
 | `g` then `d` | Dashboard (product-scoped) |
 | `g` then `c` | Council |
 | `g` then `s` | Skills |
+| `g` then `i` | Assistant |
 | `g` then `a` | Activity |
 | `g` then `n` | Sources |
 
@@ -394,9 +530,9 @@ so shortcuts respect the active tenant.
 
 Inside the command palette (`CommandPalette.tsx`), while the search box is
 empty: `1`–`9` jump to the Nth visible result, and a single letter
-(`d/c/s/a/n`) runs the matching Navigate command. `↑↓` move the selection,
+(`d/c/s/i/a/n`) runs the matching Navigate command. `↑↓` move the selection,
 `↵` runs it. The palette itself is product-aware — its hrefs are built from
-`useProduct()`, not hardcoded to `forge`.
+`useProduct()`, not hardcoded to a product id.
 
 ### 9.12 Command palette glass treatment
 
@@ -458,4 +594,4 @@ cards and dialogs stay flat (see 9.2).
 - A real markdown editor for skill bodies.
 - Billing UI.
 - Org overview dashboard for org admins (stub to "coming soon" if needed).
-- Any backend wiring. Everything is mock data + `setTimeout`-driven simulation.
+- Re-implementing backend wiring (all screens are live-connected; see `nexus/docs/UI-CUTOVER-STATUS.md`).

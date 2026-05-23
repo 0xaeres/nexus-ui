@@ -68,10 +68,10 @@ export function TopBar({
   debugRole: UserRole | null
   onProductChange: (id: string) => void
 }) {
-  const { loading, currentProductId } = useProduct()
+  const { loading } = useProduct()
   return (
     <div className="h-14 shrink-0 bg-bg border-b border-border flex items-center px-5 gap-4">
-      <Link href={`/p/${currentProductId}/dashboard`} className="flex items-center gap-2.5 text-fg no-underline">
+      <Link href="/" className="flex items-center gap-2.5 text-fg no-underline">
         <Image src="/nexus-logo.svg" alt="" width={22} height={22} className="invert-[0.92]" priority />
         <span className="text-base font-semibold tracking-tight">nexus</span>
       </Link>

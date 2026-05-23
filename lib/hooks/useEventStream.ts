@@ -93,7 +93,8 @@ export function useEventStream(
       }
     }
 
-    // Named events used by /council/sessions/{sid}/stream
+    // Named events used by /council/sessions/{sid}/stream and
+    // /products/{p}/sources/{s}/log (sync log emits `delta` as its terminal event).
     const KNOWN_EVENTS = [
       'session_start',
       'message',
@@ -103,6 +104,7 @@ export function useEventStream(
       'proposal',
       'error',
       'session_end',
+      'delta',
     ]
     KNOWN_EVENTS.forEach((name) => {
       source.addEventListener(name, (e) => handle(e as MessageEvent, name))

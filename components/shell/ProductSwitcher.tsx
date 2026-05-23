@@ -26,7 +26,7 @@ export function ProductSwitcher({ onProductChange }: { onProductChange: (id: str
 
   const handleSelect = (id: string) => {
     onProductChange(id)
-    router.push(`/p/${id}/dashboard`)
+    router.push(`/p/${id}`)
   }
 
   return (
@@ -59,9 +59,9 @@ export function ProductSwitcher({ onProductChange }: { onProductChange: (id: str
           <>
             <DropdownMenuSeparator />
             {perms.canOnboard && (
-              <DropdownMenuItem onSelect={() => router.push('/onboarding')}>
+              <DropdownMenuItem onSelect={() => router.push('/new')}>
                 <Plus className="h-4 w-4" />
-                Onboard new product
+                New product
               </DropdownMenuItem>
             )}
             {perms.isOrgAdmin && (

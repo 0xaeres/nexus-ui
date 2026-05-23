@@ -33,7 +33,7 @@ const PLACEHOLDER_USER: User = {
 }
 
 export const ProductContext = createContext<ProductContextValue>({
-  currentProductId: 'forge',
+  currentProductId: '',
   currentProduct: undefined,
   currentUser: PLACEHOLDER_USER,
   perms: getPerms('sme'),

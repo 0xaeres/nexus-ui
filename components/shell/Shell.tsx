@@ -10,19 +10,23 @@ import { ProductContext, getPerms } from '@/lib/product-context'
 import { getMe, listProducts } from '@/lib/api'
 import type { Product, User, UserRole } from '@/lib/types'
 
-const NAV_KEYS: Record<string, string> = {
-  d: 'dashboard',
+// Vim-style "g then x" chords. `h` = home (org dashboard); the rest are
+// product-scoped and only fire when a current product is set.
+const PRODUCT_CHORDS: Record<string, string> = {
+  o: '',           // overview (stage page)
+  i: 'ingest',
   c: 'council',
-  s: 'skills',
-  a: 'activity',
-  n: 'sources',
+  r: 'review',
+  k: 'skill',
+  s: 'sources',
+  t: 'settings',
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [debugRole, setDebugRole] = useState<UserRole | null>(null)
-  const [currentProductId, setCurrentProductId] = useState('forge')
+  const [currentProductId, setCurrentProductId] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -110,12 +114,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
       }
 
       if (pendingG.current) {
-        const dest = NAV_KEYS[e.key.toLowerCase()]
+        const key = e.key.toLowerCase()
         pendingG.current = false
         if (pendingGTimer.current) clearTimeout(pendingGTimer.current)
-        if (dest) {
+        if (key === 'h') {
           e.preventDefault()
-          router.push(`/p/${currentProductId}/${dest}`)
+          router.push('/')
+          return
+        }
+        if (key === 'n') {
+          e.preventDefault()
+          router.push('/new')
+          return
+        }
+        const dest = PRODUCT_CHORDS[key]
+        if (dest !== undefined && currentProductId) {
+          e.preventDefault()
+          router.push(dest ? `/p/${currentProductId}/${dest}` : `/p/${currentProductId}`)
         }
       }
     }

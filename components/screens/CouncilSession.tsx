@@ -22,7 +22,9 @@ import {
   COUNCIL_ROSTERS,
   type AgentCost,
   type AgentRole,
+  type CouncilPriors,
   type DeliberationMessage,
+  type ProposalSection,
   type SkillKind,
   type SkillProposal,
 } from '@/lib/types'
@@ -65,6 +67,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
   const [validated, setValidated] = useState<'approved' | 'rejected' | null>(null)
   const [ended, setEnded] = useState(false)
+  const [priors, setPriors] = useState<CouncilPriors | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -79,6 +82,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         if (sess.deliberation?.length) setMessages(sess.deliberation as DeliberationMessage[])
         if (sess.costs?.length) setCosts(sess.costs as AgentCost[])
         if (sess.proposal_id) setProposalId(sess.proposal_id)
+        if (sess.priors) setPriors(sess.priors)
       })
       .catch(() => {/* not yet persisted */})
     return () => { cancelled = true }
@@ -152,7 +156,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
     const reason = window.prompt('Reason for rejection?') || ''
     if (!reason) return
     try {
-      await rejectProposal(proposalId, reason)
+      await rejectProposal(proposalId, { reason, actor: currentUser?.name ?? 'unknown' })
       setValidated('rejected')
     } catch {/* */}
   }
@@ -188,6 +192,11 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         )}
         <Subtle className="font-mono truncate">{topic || sessionId}</Subtle>
         <div className="flex-1" />
+        {priors && (priors.revision > 0 || priors.corrections > 0 || priors.rejections > 0) && (
+          <Badge variant="outline" className="font-mono" title="Priors carried into this session">
+            priors · rev {priors.revision} · {priors.corrections} corr · {priors.rejections} rej
+          </Badge>
+        )}
         {totalTokens > 0 && (
           <Badge variant="outline" className="font-mono">
             {totalTokens.toLocaleString()} tok
@@ -300,10 +309,16 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                   </div>
                 </div>
 
-                <div className="px-5 py-4 flex-1 overflow-auto">
-                  <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted leading-relaxed">
-                    {proposal.body}
-                  </pre>
+                <div className="px-5 py-4 flex-1 overflow-auto flex flex-col gap-4">
+                  {proposal.sections && proposal.sections.length > 0 ? (
+                    proposal.sections.map((sec, i) => (
+                      <DraftSection key={i} section={sec} />
+                    ))
+                  ) : (
+                    <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted leading-relaxed">
+                      {proposal.body}
+                    </pre>
+                  )}
                 </div>
 
                 {critiqueSeverity && critiqueSeverity !== 'minor' && (
@@ -335,7 +350,9 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                   Reject <kbd className="ml-1 text-xs font-mono opacity-70">R</kbd>
                 </Button>
                 <div className="flex-1" />
-                <Subtle className="font-mono">rev {proposal.adversary_critique ? 2 : 1}</Subtle>
+                <Subtle className="font-mono">
+                  rev {priors ? priors.revision + 1 : proposal.adversary_critique ? 2 : 1}
+                </Subtle>
               </div>
             )}
           </aside>
@@ -347,6 +364,29 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function DraftSection({ section }: { section: ProposalSection }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-mono uppercase tracking-wider text-fg-muted">
+          {section.heading}
+        </span>
+        {section.inherited && (
+          <Badge variant="outline" className="font-mono text-xs py-0 px-1.5" title="Carried over unchanged from the prior revision">
+            inherited
+          </Badge>
+        )}
+      </div>
+      <pre className={cn(
+        'text-xs font-mono whitespace-pre-wrap leading-relaxed',
+        section.inherited ? 'text-fg-subtle' : 'text-fg-muted',
+      )}>
+        {section.body}
+      </pre>
     </div>
   )
 }

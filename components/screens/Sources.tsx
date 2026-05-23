@@ -10,7 +10,7 @@ import { SourcesSkeleton } from '@/components/skeletons/SourcesSkeleton'
 import { PageHeader, PageBody } from '@/components/ui/page'
 import { H1, H3, SectionLabel, Muted, Subtle, Code } from '@/components/ui/typography'
 import { useProduct } from '@/lib/product-context'
-import { ApiError, listSources } from '@/lib/api'
+import { ApiError, listSources, syncSource } from '@/lib/api'
 import type { Source } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -41,10 +41,17 @@ export function Sources() {
 
   useEffect(() => { void refresh() }, [refresh])
 
-  // Visual-only spin until POST /sources/{id}/sync wiring lands
-  const handleIngestAll = () => {
+  const handleIngestAll = async () => {
+    if (!sources || sources.length === 0) return
     setIngesting(true)
-    setTimeout(() => setIngesting(false), 1200)
+    try {
+      await Promise.allSettled(
+        sources.map(s => syncSource(currentProductId, s.id)),
+      )
+      await refresh()
+    } finally {
+      setIngesting(false)
+    }
   }
 
   if (sources === null && !error) return <SourcesSkeleton />
@@ -145,6 +152,20 @@ function SourceCard({ src, base }: { src: Source; base: string }) {
             <div className="flex justify-between items-baseline">
               <Subtle className="font-mono uppercase tracking-wider text-xs">last sync</Subtle>
               <Code className="text-xs">{src.lastSync.slice(0, 19)}</Code>
+            </div>
+          )}
+          {src.nextSync && (
+            <div className="flex justify-between items-baseline">
+              <Subtle className="font-mono uppercase tracking-wider text-xs">next sync</Subtle>
+              <Code className="text-xs">{src.nextSync.slice(11, 16)}</Code>
+            </div>
+          )}
+          {src.lastDelta && (
+            <div className="flex justify-between items-baseline">
+              <Subtle className="font-mono uppercase tracking-wider text-xs">last delta</Subtle>
+              <Code className="text-xs">
+                +{src.lastDelta.added} ~{src.lastDelta.updated} -{src.lastDelta.removed}
+              </Code>
             </div>
           )}
         </div>

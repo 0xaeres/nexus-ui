@@ -32,7 +32,7 @@ export default function ErrorBoundary({ error, reset }: { error: Error & { diges
             <RefreshCw className="h-3.5 w-3.5" /> Try again
           </Button>
           <Button asChild>
-            <Link href="/p/forge/dashboard">Go to dashboard</Link>
+            <Link href="/">Back to products</Link>
           </Button>
         </div>
       </div>

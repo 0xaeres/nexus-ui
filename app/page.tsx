@@ -1,14 +1,17 @@
 import { redirect } from 'next/navigation'
-import { listProducts } from '@/lib/api'
+import { getSetupStatus } from '@/lib/api'
+import { ProjectsDashboard } from '@/components/screens/ProjectsDashboard'
 
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {
+  // Block everything until the org-wide skills_repo is set up.
   try {
-    const products = await listProducts()
-    if (!products.length) redirect('/onboarding')
-    redirect(`/p/${products[0].id}/dashboard`)
+    const status = await getSetupStatus()
+    if (!status.configured) redirect('/setup')
   } catch {
-    redirect('/onboarding')
+    redirect('/setup')
   }
+
+  return <ProjectsDashboard />
 }

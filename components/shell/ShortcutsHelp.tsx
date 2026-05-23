@@ -14,11 +14,14 @@ const GROUPS: { label: string; items: { keys: string[]; desc: string }[] }[] = [
   {
     label: 'Navigate',
     items: [
-      { keys: ['g', 'd'], desc: 'Dashboard' },
+      { keys: ['g', 'h'], desc: 'Products (home)' },
+      { keys: ['g', 'n'], desc: 'New product' },
+      { keys: ['g', 'i'], desc: 'Ingest' },
       { keys: ['g', 'c'], desc: 'Council' },
-      { keys: ['g', 's'], desc: 'Skills' },
-      { keys: ['g', 'a'], desc: 'Activity' },
-      { keys: ['g', 'n'], desc: 'Sources' },
+      { keys: ['g', 'r'], desc: 'Review' },
+      { keys: ['g', 'k'], desc: 'Skill' },
+      { keys: ['g', 's'], desc: 'Sources' },
+      { keys: ['g', 't'], desc: 'Settings' },
     ],
   },
   {

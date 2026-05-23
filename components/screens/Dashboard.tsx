@@ -99,6 +99,22 @@ export function Dashboard() {
           </Card>
         )}
 
+        {/* Cadence hint — quiet, non-interactive */}
+        {data?.cadence && (data.cadence.nextSyncAt || data.cadence.nextCouncilAt) && (
+          <Subtle className="font-mono text-xs">
+            {data.cadence.nextSyncAt && (
+              <>Next sync: {data.cadence.nextSyncAt.slice(11, 16)}</>
+            )}
+            {data.cadence.nextSyncAt && data.cadence.nextCouncilAt && ' · '}
+            {data.cadence.nextCouncilAt && (
+              <>
+                Next council eligible: {data.cadence.nextCouncilAt.slice(11, 16)}
+                {data.cadence.nextCouncilSkill && ` (${data.cadence.nextCouncilSkill})`}
+              </>
+            )}
+          </Subtle>
+        )}
+
         {/* Pipeline strip */}
         <section>
           <div className="flex items-center gap-2.5 mb-4">
@@ -152,7 +168,7 @@ export function Dashboard() {
                       <Muted>{p.kind}</Muted>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <span className={cn('text-lg font-medium font-mono leading-tight truncate', ACCENT_TEXT[p.kind] ?? ACCENT_TEXT.default)}>
+                      <span className={cn('text-base font-medium font-mono leading-tight truncate', ACCENT_TEXT[p.kind] ?? ACCENT_TEXT.default)}>
                         {p.label}
                       </span>
                       <Small className="font-mono text-fg-subtle">

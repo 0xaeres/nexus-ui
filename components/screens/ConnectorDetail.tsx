@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { StatusDot } from '@/components/ui/status-dot'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { PageHeader, PageBody } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Code, Subtle } from '@/components/ui/typography'
-import { ApiError, getSource } from '@/lib/api'
+import { ApiError, getSource, syncSource, sourceLogUrl } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
-import type { Source } from '@/lib/types'
+import { useEventStream } from '@/lib/hooks/useEventStream'
+import type { Source, SyncDelta } from '@/lib/types'
 
 const STATE_VARIANT: Record<string, 'success' | 'accent' | 'warning' | 'danger'> = {
   connected: 'success',
@@ -24,6 +26,18 @@ export function ConnectorDetail({ name }: { name: string }) {
   const base = `/p/${currentProductId}`
   const [source, setSource] = useState<Source | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [logUrl, setLogUrl] = useState<string | null>(null)
+
+  const { events: logEvents, status: logStatus } = useEventStream(logUrl, { enabled: !!logUrl })
+
+  // Extract the most recent delta event from the live stream; fall back to the
+  // persisted snapshot on the source row so the counters show after the stream closes.
+  const streamDelta = logEvents
+    .filter(e => e.event === 'delta' && typeof e.data === 'object' && e.data)
+    .map(e => e.data as SyncDelta)
+    .pop()
+  const delta: SyncDelta | null = streamDelta ?? source?.lastDelta ?? null
 
   const refresh = useCallback(async () => {
     try {
@@ -36,6 +50,24 @@ export function ConnectorDetail({ name }: { name: string }) {
   }, [currentProductId, name])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  const handleSync = useCallback(async () => {
+    if (!source) return
+    setSyncing(true)
+    setLogUrl(null)
+    try {
+      await syncSource(currentProductId, source.name)
+      setLogUrl(sourceLogUrl(currentProductId, source.name))
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    } finally {
+      setSyncing(false)
+    }
+  }, [currentProductId, source])
+
+  useEffect(() => {
+    if (logStatus === 'closed') void refresh()
+  }, [logStatus, refresh])
 
   if (error) {
     return (
@@ -93,19 +125,24 @@ export function ConnectorDetail({ name }: { name: string }) {
         <Badge variant={badge}>{source.status}</Badge>
         <Badge variant="outline" className="font-mono">{source.type}</Badge>
         <div className="flex-1" />
-        <Button variant="outline" size="sm" disabled>
-          <RefreshCw className="h-4 w-4" />
-          Sync now
+        <Button variant="outline" size="sm" disabled={syncing} onClick={handleSync}>
+          <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Starting…' : 'Sync now'}
         </Button>
       </PageHeader>
 
       <PageBody>
         {/* Overview stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Stat label="Resources" value={source.resourceCount.toLocaleString()} />
           <Stat
             label="Last sync"
             value={source.lastSync ? source.lastSync.slice(0, 19) : '—'}
+            mono
+          />
+          <Stat
+            label="Next sync"
+            value={source.nextSync ? source.nextSync.slice(0, 19) : '—'}
             mono
           />
           <Stat label="Status" value={source.status} mono>
@@ -122,20 +159,77 @@ export function ConnectorDetail({ name }: { name: string }) {
           </pre>
         </Card>
 
-        {/* Sync log - placeholder until backend SSE endpoint lands */}
         <Card variant="surface" className="p-5 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <H3>Sync log</H3>
-            <Subtle className="font-mono">live</Subtle>
-            <div className="flex-1" />
+            {logStatus === 'open' && (
+              <StatusDot status="syncing" size={6} />
+            )}
+            {logStatus === 'closed' && logEvents.length > 0 && (
+              <Badge variant="outline" className="font-mono text-xs">done</Badge>
+            )}
           </div>
-          <Muted className="font-mono text-sm">
-            Live sync events will appear here once the daemon publishes to
-            <Code className="ml-1">/products/{currentProductId}/sources/{source.name}/log</Code>.
-          </Muted>
+          {delta && (
+            <div className="grid grid-cols-3 gap-3">
+              <DeltaTile label="added" value={delta.added} tone="success" />
+              <DeltaTile label="updated" value={delta.updated} tone="accent" />
+              <DeltaTile label="removed" value={delta.removed} tone="danger" />
+            </div>
+          )}
+          {logEvents.length === 0 && !logUrl && (
+            <Muted className="font-mono text-sm">
+              Click <strong>Sync now</strong> to start an ingestion run and watch live progress.
+            </Muted>
+          )}
+          {(logUrl || logEvents.length > 0) && (
+            <ScrollArea className="h-56 rounded-md bg-bg-active p-3">
+              <div className="flex flex-col gap-1 font-mono text-xs">
+                {logEvents.map((e, i) => {
+                  const d = e.data as { level?: string; msg?: string; ts?: string } | string
+                  const level = typeof d === 'object' ? (d.level ?? 'info') : 'info'
+                  const msg = typeof d === 'object' ? (d.msg ?? e.raw) : e.raw
+                  const color =
+                    level === 'success' ? 'text-success' :
+                    level === 'done' ? 'text-fg-muted' :
+                    level === 'error' ? 'text-danger' : 'text-fg-muted'
+                  return (
+                    <div key={i} className={`flex gap-2 ${color}`}>
+                      <span className="text-fg-subtle shrink-0">›</span>
+                      <span>{msg}</span>
+                    </div>
+                  )
+                })}
+                {logStatus === 'open' && (
+                  <div className="flex gap-2 text-fg-subtle animate-pulse">
+                    <span>›</span><span>Streaming…</span>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
         </Card>
       </PageBody>
     </>
+  )
+}
+
+function DeltaTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone: 'success' | 'accent' | 'danger'
+}) {
+  const color =
+    tone === 'success' ? 'text-success' :
+    tone === 'danger' ? 'text-danger' : 'text-accent'
+  return (
+    <div className="rounded-md bg-bg-active px-3 py-2 flex flex-col gap-0.5">
+      <Subtle className="font-mono uppercase tracking-wider text-xs">{label}</Subtle>
+      <span className={`font-mono text-base font-medium ${color}`}>{value}</span>
+    </div>
   )
 }
 

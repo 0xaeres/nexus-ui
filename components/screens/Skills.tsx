@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, ChevronRight, Hexagon, Search, FileText } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, ChevronRight, Hexagon, Search, FileText } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -170,7 +171,7 @@ export function Skills() {
 
         {/* Right detail pane */}
         <section className="flex-1 min-w-0 overflow-auto">
-          {selected ? <SkillDetail skill={selected} /> : (
+          {selected ? <SkillDetail skill={selected} productId={currentProductId} /> : (
             <div className="p-8">
               <Muted>Select a skill to view details.</Muted>
             </div>
@@ -182,7 +183,7 @@ export function Skills() {
 }
 
 
-function SkillDetail({ skill }: { skill: AnySkill }) {
+function SkillDetail({ skill, productId }: { skill: AnySkill; productId: string }) {
   const color = KIND_COLOR[String(skill.kind)] ?? '#7C8CFF'
   const isOrg = (skill as OrgSkill).scope === 'org'
   const externalSources = isOrg ? (skill as OrgSkill).external_sources : []
@@ -200,6 +201,13 @@ function SkillDetail({ skill }: { skill: AnySkill }) {
           </div>
           <Subtle className="font-mono">v{skill.version}</Subtle>
         </div>
+        <Link
+          href={`/p/${productId}/skills/${encodeURIComponent(skill.id)}`}
+          className="flex items-center gap-1 text-xs text-accent hover:underline shrink-0"
+        >
+          Full detail
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
       {/* Confidence */}
