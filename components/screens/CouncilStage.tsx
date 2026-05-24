@@ -18,7 +18,7 @@ import {
 import {
   COUNCIL_AGENT_HUES,
   COUNCIL_AGENT_LABELS,
-  COUNCIL_ROSTERS,
+  COUNCIL_ROSTER,
   type AgentCost,
   type AgentRole,
   type DeliberationMessage,
@@ -26,14 +26,7 @@ import {
   type ProductStatus,
 } from '@/lib/types'
 
-const KNOWN_AGENTS = new Set<AgentRole>([
-  'archaeologist',
-  'domain_expert',
-  'synthesizer',
-  'adversary',
-  'security_sentinel',
-  'curator',
-])
+const KNOWN_AGENTS = new Set<AgentRole>(['drafter', 'critic', 'reviser'])
 
 const asAgentRole = (v: string): AgentRole | null =>
   KNOWN_AGENTS.has(v as AgentRole) ? (v as AgentRole) : null
@@ -94,7 +87,6 @@ export function CouncilStage({ productId }: { productId: string }) {
     try {
       const { session_id } = await createSession(productId, {
         topic: `${product?.name ?? productId} overview`,
-        skill_kind: 'master',
       })
       setSessionId(session_id)
     } catch (e: unknown) {
@@ -137,7 +129,6 @@ function KickoffCard({
   busy: boolean
   productName: string
 }) {
-  const roster = COUNCIL_ROSTERS.master
   return (
     <Card variant="surface" className="max-w-2xl mx-auto p-6 flex flex-col gap-5">
       <div className="flex items-center gap-3">
@@ -146,12 +137,12 @@ function KickoffCard({
         </div>
         <div>
           <H3>Run the Council</H3>
-          <Muted>Four agents will deliberate the Master Skill for {productName}.</Muted>
+          <Muted>Three agents will draft → critique → revise the skill for {productName}.</Muted>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {roster.map((r) => (
+        {COUNCIL_ROSTER.map((r) => (
           <span
             key={r}
             className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-raised border border-border text-xs font-mono"

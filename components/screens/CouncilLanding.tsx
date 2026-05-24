@@ -16,9 +16,8 @@ import { ApiError, createSession, listSessions } from '@/lib/api'
 import {
   COUNCIL_AGENT_HUES,
   COUNCIL_AGENT_LABELS,
-  COUNCIL_ROSTERS,
+  COUNCIL_ROSTER,
   type CouncilSessionSummary,
-  type SkillKind,
 } from '@/lib/types'
 import { useProduct } from '@/lib/product-context'
 
@@ -30,12 +29,6 @@ const STATUS_VARIANT: Record<string, 'accent' | 'warning' | 'success' | 'danger'
   failed: 'danger',
   rejected: 'danger',
 }
-
-const KIND_LABELS: Record<SkillKind, string> = {
-  master: 'Master',
-  product_domain: 'Product domain',
-}
-
 
 export function CouncilLanding() {
   const { currentProductId, perms } = useProduct()
@@ -103,7 +96,6 @@ export function CouncilLanding() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-[160px]">Started</TableHead>
-                    <TableHead className="w-[140px]">Kind</TableHead>
                     <TableHead className="w-[120px]">Status</TableHead>
                     <TableHead>Topic</TableHead>
                   </TableRow>
@@ -117,11 +109,6 @@ export function CouncilLanding() {
                     >
                       <TableCell className="font-mono text-sm text-fg-subtle">
                         {s.started_at?.slice(0, 19) ?? '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {s.skill_kind}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={STATUS_VARIANT[s.status] ?? 'accent'}>
@@ -167,7 +154,6 @@ function NewSessionDialog({
   onCreated: (sid: string) => void
 }) {
   const [topic, setTopic] = useState('')
-  const [kind, setKind] = useState<SkillKind>('product_domain')
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -177,7 +163,7 @@ function NewSessionDialog({
     setSubmitting(true)
     setErr(null)
     try {
-      const r = await createSession(productId, { topic: topic.trim(), skill_kind: kind })
+      const r = await createSession(productId, { topic: topic.trim() })
       onCreated(r.session_id)
     } catch (e: unknown) {
       setErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
@@ -186,15 +172,14 @@ function NewSessionDialog({
     }
   }
 
-  const roster = COUNCIL_ROSTERS[kind]
-
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Start a council session</DialogTitle>
           <DialogDescription>
-            Pick a skill kind and topic. The council runs in the background.
+            Drafter → Critic → Reviser. Runs in the background; you'll be redirected
+            to the live deliberation view.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -209,28 +194,9 @@ function NewSessionDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <SectionLabel>Kind</SectionLabel>
-            <div className="flex gap-2">
-              {(Object.keys(KIND_LABELS) as SkillKind[]).map(k => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k)}
-                  className={`px-3 py-2 rounded-md border font-mono text-sm transition-colors ${
-                    kind === k
-                      ? 'bg-bg-active border-border-strong text-fg'
-                      : 'bg-surface border-border text-fg-muted hover:bg-bg-active'
-                  }`}
-                >
-                  {KIND_LABELS[k]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <SectionLabel>Roster preview</SectionLabel>
+            <SectionLabel>Roster</SectionLabel>
             <div className="flex flex-wrap gap-2">
-              {roster.map(r => (
+              {COUNCIL_ROSTER.map(r => (
                 <span
                   key={r}
                   className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface border border-border text-xs font-mono"
@@ -244,7 +210,7 @@ function NewSessionDialog({
               ))}
             </div>
             <Small className="text-fg-subtle font-mono">
-              {roster.length} agents · max-1 redraft cycle
+              {COUNCIL_ROSTER.length} agents · max-1 revision pass
             </Small>
           </div>
           {err && (

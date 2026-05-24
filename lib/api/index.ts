@@ -8,7 +8,6 @@ import type {
   CouncilSession,
   CouncilSessionSummary,
   DashboardData,
-  OrgSkill,
   Permissions,
   Product,
   ProductSkillsResponse,
@@ -57,7 +56,7 @@ export const listProductSkills = (productId: string) =>
   api.get<ProductSkillsResponse>(`/products/${productId}/skills`)
 
 export const getSkill = (skillId: string) =>
-  api.get<Skill | OrgSkill>(`/skills/${encodeURIComponent(skillId)}`)
+  api.get<Skill>(`/skills/${encodeURIComponent(skillId)}`)
 
 export const listSkillCorrections = (skillId: string) =>
   api.get<CorrectionsResponse>(`/skills/${encodeURIComponent(skillId)}/corrections`)
@@ -112,13 +111,12 @@ export const listSessions = (productId: string) =>
 
 export const createSession = (
   productId: string,
-  body: { topic: string; skill_kind?: string; force?: boolean; skill_id?: string },
+  body: { topic: string; skill_id?: string },
 ) =>
-  api.post<{
-    session_id: string
-    status: string
-    priors?: { revision: number; corrections: number; rejections: number }
-  }>(`/products/${productId}/council/sessions`, body)
+  api.post<{ session_id: string; status: string }>(
+    `/products/${productId}/council/sessions`,
+    body,
+  )
 
 export const getSession = (sessionId: string) =>
   api.get<CouncilSession>(`/council/sessions/${sessionId}`)

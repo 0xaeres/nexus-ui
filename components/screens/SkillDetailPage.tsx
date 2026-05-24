@@ -30,26 +30,16 @@ import {
 } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
 import {
-  COUNCIL_ROSTERS,
+  COUNCIL_ROSTER,
   EVIDENCE_CHUNKS_PER_SESSION_CAP,
   type CorrectionsResponse,
   type CouncilSessionSummary,
-  type OrgSkill,
   type Skill,
-  type SkillKind,
   type SkillProposal,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type AnySkill = Skill | OrgSkill
-
-const KIND_COLOR: Record<string, string> = {
-  master: '#7C8CFF',
-  product_domain: '#E8B86B',
-  tech_stack: '#4DD4AC',
-  language: '#C58BFF',
-  security: '#F26D6D',
-}
+const SKILL_COLOR = '#7C8CFF'
 
 function confColor(c: number) {
   if (c < 0.5) return 'text-danger'
@@ -61,7 +51,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
   const { currentProductId, perms } = useProduct()
   const router = useRouter()
   const base = `/p/${currentProductId}`
-  const [skill, setSkill] = useState<AnySkill | null>(null)
+  const [skill, setSkill] = useState<Skill | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<CouncilSessionSummary[]>([])
   const [corrections, setCorrections] = useState<CorrectionsResponse | null>(null)
@@ -73,7 +63,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
   const load = useCallback(async () => {
     try {
       const s = await getSkill(skillId)
-      setSkill(s as AnySkill)
+      setSkill(s)
       setError(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
@@ -104,12 +94,9 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
     if (!skill) return
     setRerunBusy(true); setRerunError(null)
     try {
-      const skillKind = String(skill.kind) as SkillKind
       const { session_id } = await createSession(currentProductId, {
         topic: `${skill.name} — manual re-run`,
-        skill_kind: skillKind,
         skill_id: skill.id,
-        force: true,
       })
       router.push(`${base}/council/${session_id}`)
     } catch (e: unknown) {
@@ -153,22 +140,17 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
     )
   }
 
-  const color = KIND_COLOR[String(skill.kind)] ?? '#7C8CFF'
-  const isOrg = (skill as OrgSkill).scope === 'org'
-
   return (
     <>
       <PageHeader>
         <Button asChild variant="ghost" size="sm">
           <Link href={`${base}/skills`}><ChevronLeft className="h-4 w-4" />Skills</Link>
         </Button>
-        <Hexagon className="h-5 w-5 shrink-0" style={{ color }} fill={color} />
+        <Hexagon className="h-5 w-5 shrink-0" style={{ color: SKILL_COLOR }} fill={SKILL_COLOR} />
         <H1>{skill.name}</H1>
-        <Badge variant="outline" className="font-mono">{String(skill.kind)}</Badge>
-        <Badge variant="outline" className="font-mono">{skill.scope}</Badge>
         <Subtle className="font-mono ml-1">v{skill.version}</Subtle>
         <div className="flex-1" />
-        {!isOrg && perms.canRunCouncil && (
+        {perms.canRunCouncil && (
           <Button
             variant="outline"
             size="sm"
@@ -198,17 +180,6 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
           </Code>
         </Card>
 
-        {/* Composition graph */}
-        {skill.composes_with.length > 0 && (
-          <Card variant="surface" className="p-5 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-fg-muted" />
-              <H3>Composition</H3>
-            </div>
-            <CompositionGraph skill={skill} base={base} />
-          </Card>
-        )}
-
         {/* Applies to */}
         {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
           <Card variant="surface" className="p-5 flex flex-col gap-3">
@@ -231,28 +202,28 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
         )}
 
         {/* Provenance */}
-        {!isOrg && (skill as Skill).provenance && (
+        {skill.provenance && (
           <Card variant="surface" className="p-5 flex flex-col gap-3">
             <SectionLabel>Provenance</SectionLabel>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <ProvenanceRow label="Validated by" value={(skill as Skill).provenance.validated_by} />
-              <ProvenanceRow label="Validated at" value={(skill as Skill).provenance.validated_at?.slice(0, 19)} />
-              {(skill as Skill).provenance.council_session && (
-                <ProvenanceRow label="Council session" value={(skill as Skill).provenance.council_session ?? ''} mono />
+              <ProvenanceRow label="Validated by" value={skill.provenance.validated_by} />
+              <ProvenanceRow label="Validated at" value={skill.provenance.validated_at?.slice(0, 19)} />
+              {skill.provenance.council_session && (
+                <ProvenanceRow label="Council session" value={skill.provenance.council_session ?? ''} mono />
               )}
               <ProvenanceRow
-                label="Revisions"
-                value={String((skill as Skill).provenance.cumulative_revisions ?? (skill as Skill).provenance.revision_count)}
+                label="Revision"
+                value={String(skill.provenance.revision_count)}
               />
               <ProvenanceRow
                 label="Evidence chunks"
-                value={`${(skill as Skill).provenance.evidence_chunks?.length ?? 0} / ${EVIDENCE_CHUNKS_PER_SESSION_CAP} cap`}
+                value={`${skill.provenance.evidence_chunks?.length ?? 0} / ${EVIDENCE_CHUNKS_PER_SESSION_CAP} cap`}
               />
             </div>
-            {(skill as Skill).provenance.adversary_critique && (
+            {skill.provenance.adversary_critique && (
               <div className="mt-2 rounded-md bg-warning/10 border border-warning/30 px-3 py-2">
-                <Small className="text-warning font-mono">Adversary critique</Small>
-                <Body className="text-sm mt-1">{(skill as Skill).provenance.adversary_critique}</Body>
+                <Small className="text-warning font-mono">Critic note</Small>
+                <Body className="text-sm mt-1">{skill.provenance.adversary_critique}</Body>
               </div>
             )}
           </Card>
@@ -383,22 +354,13 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
           <DialogHeader>
             <DialogTitle>Re-run council for {skill.name}?</DialogTitle>
             <DialogDescription>
-              Manually triggers a new council session. This bypasses the weekly cap and
-              charges for a full agent run.
+              Manually triggers a new council session for this skill.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex items-center gap-2">
-              <Subtle className="font-mono uppercase tracking-wider text-xs w-32">Roster</Subtle>
-              <Code className="text-xs">
-                {(COUNCIL_ROSTERS[String(skill.kind) as SkillKind] ?? []).join(', ') || '—'}
-              </Code>
-            </div>
-            <div className="flex items-center gap-2">
-              <Subtle className="font-mono uppercase tracking-wider text-xs w-32">Est. cost</Subtle>
-              <Code className="text-xs">
-                ~${(skill.kind === 'master' ? 0.012 : 0.009).toFixed(3)} · 6–8 min
-              </Code>
+              <Subtle className="font-mono uppercase tracking-wider text-xs w-32">Nodes</Subtle>
+              <Code className="text-xs">{COUNCIL_ROSTER.join(' → ')}</Code>
             </div>
             {rerunError && <Small className="text-danger font-mono">{rerunError}</Small>}
           </div>
@@ -426,48 +388,3 @@ function ProvenanceRow({ label, value, mono = false }: { label: string; value: s
   )
 }
 
-function CompositionGraph({ skill, base }: { skill: AnySkill; base: string }) {
-  return (
-    <div className="flex items-center gap-0 overflow-x-auto py-2">
-      {/* Parents (what this skill composes with) */}
-      <div className="flex flex-col gap-2 shrink-0">
-        {skill.composes_with.map(parentId => (
-          <Link
-            key={parentId}
-            href={`${base}/skills/${encodeURIComponent(parentId)}`}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-border bg-surface hover:bg-surface-raised transition-colors"
-          >
-            <Hexagon
-              className="h-3.5 w-3.5 shrink-0"
-              style={{ color: KIND_COLOR['master'] }}
-              fill={KIND_COLOR['master']}
-            />
-            <Code className="text-xs">{parentId}</Code>
-          </Link>
-        ))}
-      </div>
-
-      {/* Arrow */}
-      <div className="flex items-center px-4 text-fg-subtle shrink-0">
-        <div className="h-px w-8 bg-border" />
-        <span className="text-xs font-mono ml-1 text-fg-subtle">composes</span>
-        <div className="h-px w-4 bg-border ml-1" />
-        <svg width="8" height="12" viewBox="0 0 8 12" className="text-border">
-          <path d="M0 0 L8 6 L0 12" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
-      </div>
-
-      {/* This skill */}
-      <div className="flex items-center gap-1.5 px-3 py-2 rounded-md border-2 bg-surface-raised shrink-0"
-        style={{ borderColor: KIND_COLOR[String(skill.kind)] ?? '#7C8CFF' }}>
-        <Hexagon
-          className="h-4 w-4 shrink-0"
-          style={{ color: KIND_COLOR[String(skill.kind)] ?? '#7C8CFF' }}
-          fill={KIND_COLOR[String(skill.kind)] ?? '#7C8CFF'}
-        />
-        <Code>{skill.name}</Code>
-        <Badge variant="outline" className="font-mono text-xs ml-1">{String(skill.kind)}</Badge>
-      </div>
-    </div>
-  )
-}

@@ -116,9 +116,6 @@ export function ReviewStage({ productId }: { productId: string }) {
               <Badge variant="outline" className="font-mono">
                 {proposal.citations.length} citations
               </Badge>
-              <Badge variant="outline" className="font-mono">
-                {proposal.skill_kind}
-              </Badge>
             </div>
             {proposal.adversary_critique && proposal.adversary_critique.severity !== 'minor' && (
               <div className="px-3 py-2 rounded-md border border-warning/30 bg-warning/5">

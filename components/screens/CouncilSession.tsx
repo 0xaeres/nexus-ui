@@ -19,26 +19,18 @@ import {
 import {
   COUNCIL_AGENT_HUES,
   COUNCIL_AGENT_LABELS,
-  COUNCIL_ROSTERS,
+  COUNCIL_ROSTER,
   type AgentCost,
   type AgentRole,
   type CouncilPriors,
   type DeliberationMessage,
   type ProposalSection,
-  type SkillKind,
   type SkillProposal,
 } from '@/lib/types'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
 
-const KNOWN_AGENTS = new Set<AgentRole>([
-  'archaeologist',
-  'domain_expert',
-  'synthesizer',
-  'adversary',
-  'security_sentinel',
-  'curator',
-])
+const KNOWN_AGENTS = new Set<AgentRole>(['drafter', 'critic', 'reviser'])
 
 function asAgentRole(value: string): AgentRole | null {
   return KNOWN_AGENTS.has(value as AgentRole) ? (value as AgentRole) : null
@@ -61,7 +53,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
   const [costs, setCosts] = useState<AgentCost[]>([])
   const [topic, setTopic] = useState<string>('')
-  const [skillKind, setSkillKind] = useState<SkillKind>('product_domain')
   const [proposalId, setProposalId] = useState<string | null>(null)
   const [proposal, setProposal] = useState<SkillProposal | null>(null)
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
@@ -76,9 +67,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
       .then(sess => {
         if (cancelled || !sess) return
         setTopic(sess.topic ?? '')
-        if (sess.skill_kind === 'master' || sess.skill_kind === 'product_domain') {
-          setSkillKind(sess.skill_kind)
-        }
         if (sess.deliberation?.length) setMessages(sess.deliberation as DeliberationMessage[])
         if (sess.costs?.length) setCosts(sess.costs as AgentCost[])
         if (sess.proposal_id) setProposalId(sess.proposal_id)
@@ -107,11 +95,8 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         const pid = d.proposal_id ?? d.id
         if (pid) setProposalId(pid)
       } else if (ev.event === 'session_start' && typeof ev.data === 'object') {
-        const d = ev.data as { topic?: string; skill_kind?: string }
+        const d = ev.data as { topic?: string }
         if (d.topic) setTopic(d.topic)
-        if (d.skill_kind === 'master' || d.skill_kind === 'product_domain') {
-          setSkillKind(d.skill_kind)
-        }
       } else if (ev.event === 'session_end') {
         setEnded(true)
       }
@@ -167,16 +152,15 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   )
 
   const roster = useMemo(() => {
-    const roles = COUNCIL_ROSTERS[skillKind] ?? COUNCIL_ROSTERS.product_domain
     const seen = new Set(messages.map(m => m.agent))
-    return roles.map(role => ({
+    return COUNCIL_ROSTER.map(role => ({
       role,
       label: COUNCIL_AGENT_LABELS[role],
       hue: COUNCIL_AGENT_HUES[role],
       status: (seen.has(role) ? 'done' : ended ? 'idle' : 'thinking') as
         | 'done' | 'thinking' | 'idle',
     }))
-  }, [skillKind, messages, ended])
+  }, [messages, ended])
 
   const streamLive = status === 'open' || status === 'connecting'
 
@@ -202,7 +186,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
             {totalTokens.toLocaleString()} tok
           </Badge>
         )}
-        <Badge variant="outline" className="font-mono">{skillKind}</Badge>
       </PageHeader>
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -302,7 +285,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                 <div className="px-5 py-4 border-b border-border">
                   <span className="text-sm font-mono text-fg break-all">{proposal.name}</span>
                   <div className="flex gap-2 mt-2 text-xs">
-                    <Badge variant="outline" className="font-mono">{proposal.skill_kind}</Badge>
                     <Badge variant="outline" className="font-mono">
                       {proposal.citations.length} citations
                     </Badge>

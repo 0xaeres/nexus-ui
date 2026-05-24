@@ -109,7 +109,6 @@ export function Dashboard() {
             {data.cadence.nextCouncilAt && (
               <>
                 Next council eligible: {data.cadence.nextCouncilAt.slice(11, 16)}
-                {data.cadence.nextCouncilSkill && ` (${data.cadence.nextCouncilSkill})`}
               </>
             )}
           </Subtle>
@@ -164,11 +163,11 @@ export function Dashboard() {
                 <Link key={p.id} href={`${base}/review`} className="group">
                   <Card variant="stat" glowColor={ACCENT_GLOW} className="p-5 flex flex-col gap-3 transition-transform hover:-translate-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className={cn('h-1.5 w-1.5 rounded-full', ACCENT_DOT[p.kind] ?? ACCENT_DOT.default)} />
-                      <Muted>{p.kind}</Muted>
+                      <span className={cn('h-1.5 w-1.5 rounded-full', ACCENT_DOT.default)} />
+                      <Muted>pending</Muted>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <span className={cn('text-base font-medium font-mono leading-tight truncate', ACCENT_TEXT[p.kind] ?? ACCENT_TEXT.default)}>
+                      <span className={cn('text-base font-medium font-mono leading-tight truncate', ACCENT_TEXT.default)}>
                         {p.label}
                       </span>
                       <Small className="font-mono text-fg-subtle">

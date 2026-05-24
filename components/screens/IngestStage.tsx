@@ -61,7 +61,6 @@ export function IngestStage({ productId }: { productId: string }) {
     try {
       const { session_id } = await createSession(productId, {
         topic: `${product?.name ?? productId} overview`,
-        skill_kind: 'master',
       })
       router.push(`/p/${productId}/council?session=${session_id}`)
     } catch (e: unknown) {

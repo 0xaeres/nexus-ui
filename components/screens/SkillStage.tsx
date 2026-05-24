@@ -34,13 +34,14 @@ export function SkillStage({ productId }: { productId: string }) {
         if (cancelled) return
         setProduct(p)
         setStatus(s)
-        if (!hier.master) {
+        const first = hier.skills[0]
+        if (!first) {
           if (s.currentStage === 'review') router.replace(`/p/${productId}/review`)
           else if (s.hasEmbeddings) router.replace(`/p/${productId}/council`)
           else router.replace(`/p/${productId}/ingest`)
           return
         }
-        setSkill(hier.master)
+        setSkill(first)
       })
       .catch((e: unknown) => {
         if (cancelled) return
@@ -76,12 +77,11 @@ export function SkillStage({ productId }: { productId: string }) {
             </div>
             <div className="flex flex-col gap-1 min-w-0 flex-1">
               <H3>{skill.name}</H3>
-              <Muted>Approved master skill for {product?.name ?? productId}</Muted>
+              <Muted>Approved skill for {product?.name ?? productId}</Muted>
             </div>
             <div className="flex flex-wrap items-center gap-2 justify-end">
               <Badge variant="success">{Math.round(skill.confidence * 100)}% confidence</Badge>
               <Badge variant="outline" className="font-mono">v{skill.version}</Badge>
-              <Badge variant="outline" className="font-mono">{skill.kind}</Badge>
             </div>
           </Card>
 
