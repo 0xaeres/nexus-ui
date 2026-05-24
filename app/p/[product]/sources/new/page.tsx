@@ -1,5 +1,10 @@
 import { ConnectorNew } from '@/components/screens/ConnectorNew'
 
-export default function SourcesNewPage() {
-  return <ConnectorNew />
+export default async function SourcesNewPage({
+  params,
+}: {
+  params: Promise<{ product: string }>
+}) {
+  const { product } = await params
+  return <ConnectorNew productId={product} />
 }

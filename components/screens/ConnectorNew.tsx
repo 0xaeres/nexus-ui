@@ -42,11 +42,12 @@ const CONNECTOR_OPTIONS: Array<{
 ]
 
 
-export function ConnectorNew() {
+export function ConnectorNew({ productId }: { productId?: string }) {
   const router = useRouter()
   const sp = useSearchParams()
   const { currentProductId, perms } = useProduct()
-  const base = `/p/${currentProductId}`
+  const activeProductId = productId || currentProductId
+  const base = `/p/${activeProductId}`
   const typeParam = sp?.get('type') ?? null
 
   const [selected, setSelected] = useState(
@@ -91,7 +92,7 @@ export function ConnectorNew() {
     }
 
     try {
-      await addSource(currentProductId, {
+      await addSource(activeProductId, {
         name: name.trim(),
         type: selected.id,
         config: parsedConfig,

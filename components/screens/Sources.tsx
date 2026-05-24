@@ -21,23 +21,25 @@ const STATE_BADGE: Record<string, 'success' | 'accent' | 'warning' | 'danger'> =
   error: 'danger',
 }
 
-export function Sources() {
+export function Sources({ productId }: { productId?: string }) {
   const { currentProductId, perms } = useProduct()
-  const base = `/p/${currentProductId}`
+  const activeProductId = productId || currentProductId
+  const base = `/p/${activeProductId}`
   const [sources, setSources] = useState<Source[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ingesting, setIngesting] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
-      const list = await listSources(currentProductId)
+      if (!activeProductId) return
+      const list = await listSources(activeProductId)
       setSources(list)
       setError(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
       setSources([])
     }
-  }, [currentProductId])
+  }, [activeProductId])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -46,7 +48,7 @@ export function Sources() {
     setIngesting(true)
     try {
       await Promise.allSettled(
-        sources.map(s => syncSource(currentProductId, s.id)),
+        sources.map(s => syncSource(activeProductId, s.id)),
       )
       await refresh()
     } finally {
@@ -60,7 +62,7 @@ export function Sources() {
     <>
       <PageHeader>
         <H1>Sources</H1>
-        <Badge variant="outline" className="font-mono">{currentProductId}</Badge>
+        <Badge variant="outline" className="font-mono">{activeProductId}</Badge>
         <div className="flex-1" />
         {perms.canManageSources && (
           <>

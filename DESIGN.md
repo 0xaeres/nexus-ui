@@ -183,9 +183,12 @@ grep -rn 'text-\[1[01]px\]\|<h1\|<h2\|<h3' components/screens components/shell a
 
 `components/ui/page.tsx`:
 
-- `<PageHeader>` — fixed 64px header, `border-b`, content in a
-  `max-w-[1280px]` `px-8` container.
-- `<PageBody>` — scrollable region, same max-width/padding, `py-8 space-y-8`.
+- `<PageHeader>` — fixed 56px header, `border-b`, full-width `px-8`
+  row. Do not center this region; it is navigation chrome, not page
+  content. Header `H1` text is compacted to `text-xl` at the primitive
+  level; header buttons/links use compact `text-xs` treatment.
+- `<PageBody>` — scrollable centered content region, `max-w-[1280px]`,
+  `px-8`, `py-8 space-y-8`.
 - `<PageGrid>` — 12-column grid (`grid-cols-12 gap-6`).
 
 **Exceptions:** `Skills` and `CouncilSession` keep their custom

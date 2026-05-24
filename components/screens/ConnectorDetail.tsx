@@ -22,9 +22,10 @@ const STATE_VARIANT: Record<string, 'success' | 'accent' | 'warning' | 'danger'>
   error: 'danger',
 }
 
-export function ConnectorDetail({ name }: { name: string }) {
+export function ConnectorDetail({ productId, name }: { productId?: string; name: string }) {
   const { currentProductId } = useProduct()
-  const base = `/p/${currentProductId}`
+  const activeProductId = productId || currentProductId
+  const base = `/p/${activeProductId}`
   const [source, setSource] = useState<Source | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
@@ -40,13 +41,14 @@ export function ConnectorDetail({ name }: { name: string }) {
 
   const refresh = useCallback(async () => {
     try {
-      const s = await getSource(currentProductId, name)
+      if (!activeProductId) return
+      const s = await getSource(activeProductId, name)
       setSource(s)
       setError(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
     }
-  }, [currentProductId, name])
+  }, [activeProductId, name])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -55,14 +57,14 @@ export function ConnectorDetail({ name }: { name: string }) {
     setSyncing(true)
     setLogUrl(null)
     try {
-      await syncSource(currentProductId, source.name)
-      setLogUrl(sourceLogUrl(currentProductId, source.name))
+      await syncSource(activeProductId, source.name)
+      setLogUrl(sourceLogUrl(activeProductId, source.name))
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
     } finally {
       setSyncing(false)
     }
-  }, [currentProductId, source])
+  }, [activeProductId, source])
 
   useEffect(() => {
     if (logStatus === 'closed') void refresh()
