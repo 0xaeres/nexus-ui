@@ -7,7 +7,7 @@ export type UserRole = 'org_admin' | 'product_admin' | 'sme'
 export type AgentRole = 'drafter' | 'critic' | 'reviser'
 
 export type SessionStatus = 'drafting' | 'awaiting_approval' | 'completed' | 'failed'
-export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'edited'
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'edited' | 'revision_requested'
 export type RejectCategory = 'factual' | 'out-of-scope' | 'duplicate' | 'other'
 
 export interface RejectReason {

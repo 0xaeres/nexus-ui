@@ -156,6 +156,15 @@ export const rejectProposal = (
   body: { reason: string; category?: RejectCategory; actor?: string },
 ) => api.post<{ ok: boolean }>(`/proposals/${id}/reject`, body)
 
+export const reviseProposal = (
+  id: string,
+  body: { summary: string; actor?: string; comments?: Array<{ line?: number | null; body: string }> },
+) =>
+  api.post<{ session_id: string; status: string }>(
+    `/proposals/${id}/revise`,
+    body,
+  )
+
 export const editProposal = (id: string, body: string, actor: string) =>
   api.post<{ ok: boolean }>(`/proposals/${id}/edit`, { body, actor })
 

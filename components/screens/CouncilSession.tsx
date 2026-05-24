@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Users } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, ChevronLeft, ChevronRight, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,10 +11,8 @@ import { PageHeader } from '@/components/ui/page'
 import { H1, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { useEventStream } from '@/lib/hooks/useEventStream'
 import {
-  approveProposal,
   getProposal,
   getSession,
-  rejectProposal,
   sessionStreamUrl,
 } from '@/lib/api'
 import {
@@ -47,7 +46,7 @@ function agentLabel(name: string): string {
 }
 
 export function CouncilSession({ sessionId }: { sessionId: string }) {
-  const { currentUser } = useProduct()
+  const { currentProductId } = useProduct()
   const [leftOpen, setLeftOpen] = useState(true)
   const [rightOpen, setRightOpen] = useState(true)
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
@@ -56,7 +55,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   const [proposalId, setProposalId] = useState<string | null>(null)
   const [proposal, setProposal] = useState<SkillProposal | null>(null)
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
-  const [validated, setValidated] = useState<'approved' | 'rejected' | null>(null)
   const [ended, setEnded] = useState(false)
   const [priors, setPriors] = useState<CouncilPriors | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -115,36 +113,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages])
-
-  useEffect(() => {
-    const handler = async (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (validated || !proposalId) return
-      if (e.key === 'a') await handleApprove()
-      if (e.key === 'r') await handleReject()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalId, validated])
-
-  const handleApprove = async () => {
-    if (!proposalId) return
-    try {
-      await approveProposal(proposalId, currentUser?.name ?? 'unknown')
-      setValidated('approved')
-    } catch (e) { console.error(e) }
-  }
-
-  const handleReject = async () => {
-    if (!proposalId) return
-    const reason = window.prompt('Reason for rejection?') || ''
-    if (!reason) return
-    try {
-      await rejectProposal(proposalId, { reason, actor: currentUser?.name ?? 'unknown' })
-      setValidated('rejected')
-    } catch (e) { console.error(e) }
-  }
 
   const totalTokens = useMemo(
     () => costs.reduce((sum, c) => sum + (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0), 0),
@@ -205,15 +173,19 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                 const tokens = agentCost ? (agentCost.prompt_tokens + agentCost.completion_tokens) : 0
                 return (
                   <Card key={a.role} variant="glass" className="p-3 flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: a.hue }} />
-                      <span className="text-sm font-medium text-fg">{a.label}</span>
-                      <div className="flex-1" />
-                      <StatusDot status={a.status} size={5} />
+                    <div className="flex items-stretch gap-3">
+                      <span className="w-1 rounded-full" style={{ background: a.hue }} />
+                      <div className="min-w-0 flex-1 py-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-fg">{a.label}</span>
+                          <div className="flex-1" />
+                          <StatusDot status={a.status} size={5} />
+                        </div>
+                        <Small className="font-mono text-fg-subtle">
+                          {tokens > 0 ? `${tokens.toLocaleString()} tok` : a.status}
+                        </Small>
+                      </div>
                     </div>
-                    <Small className="font-mono text-fg-subtle">
-                      {tokens > 0 ? `${tokens.toLocaleString()} tok` : a.status}
-                    </Small>
                   </Card>
                 )
               })}
@@ -265,16 +237,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
               </button>
             </div>
 
-            {validated ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-10 text-center">
-                <span className={cn('text-4xl', validated === 'approved' ? 'text-success' : 'text-danger')}>
-                  {validated === 'approved' ? '✓' : '✕'}
-                </span>
-                <span className={cn('text-base font-medium', validated === 'approved' ? 'text-success' : 'text-danger')}>
-                  Proposal {validated}
-                </span>
-              </div>
-            ) : !proposal ? (
+            {!proposal ? (
               <div className="flex-1 flex items-center justify-center p-6">
                 <Muted className="font-mono">
                   {streamLive ? 'Drafting…' : 'No proposal produced.'}
@@ -315,21 +278,13 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
-            {!validated && proposal && (
-              <div className="px-5 py-3 border-t border-border flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleApprove}
-                  className="bg-success/15 text-success border border-success/35 hover:bg-success/25"
-                >
-                  Approve <kbd className="ml-1 text-xs font-mono opacity-70">A</kbd>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleReject}
-                  className="bg-danger/15 text-danger border border-danger/35 hover:bg-danger/25"
-                >
-                  Reject <kbd className="ml-1 text-xs font-mono opacity-70">R</kbd>
+            {proposal && (
+              <div className="border-t border-border bg-surface px-5 py-3 flex items-center gap-2">
+                <Button asChild size="sm">
+                  <Link href={`/p/${currentProductId}/review`}>
+                    Review proposal
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </Button>
                 <div className="flex-1" />
                 <Subtle className="font-mono">
@@ -375,20 +330,22 @@ function DraftSection({ section }: { section: ProposalSection }) {
 
 function DeliberationMsg({ msg }: { msg: DeliberationMessage }) {
   return (
-    <Card variant="glass" className="p-5 flex flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span
-          className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
-          style={{ background: agentHue(msg.agent) }}
-        />
-        <span className="text-sm font-medium" style={{ color: agentHue(msg.agent) }}>
-          {agentLabel(msg.agent)}
-        </span>
-        <span className="text-xs font-mono text-fg-subtle">
-          {msg.timestamp?.slice(11, 19) ?? ''}
-        </span>
+    <div className="relative pl-5 animate-[nexus-msg-in_0.22s_ease-out]">
+      <span
+        className="absolute left-1 top-2 bottom-2 w-0.5 rounded-full"
+        style={{ background: agentHue(msg.agent) }}
+      />
+      <div className="rounded-md px-2 py-1.5 hover:bg-bg-hover">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium" style={{ color: agentHue(msg.agent) }}>
+            {agentLabel(msg.agent)}
+          </span>
+          <span className="text-xs font-mono text-fg-subtle">
+            {msg.timestamp?.slice(11, 19) ?? ''}
+          </span>
+        </div>
+        <p className="m-0 text-sm text-fg leading-relaxed whitespace-pre-wrap">{msg.body}</p>
       </div>
-      <p className="m-0 text-sm text-fg leading-relaxed whitespace-pre-wrap">{msg.body}</p>
-    </Card>
+    </div>
   )
 }
