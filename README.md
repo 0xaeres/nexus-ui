@@ -1,7 +1,7 @@
 # Nexus UI
 
 Next.js 16 (App Router, TypeScript) web interface for
-[Nexus](../nexus) — the sovereign, MCP-native context engine.
+[Nexus](../nexus) — the MCP-native context engine.
 
 ## Quick start
 
