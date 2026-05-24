@@ -11,6 +11,8 @@
   --color-surface: #111114;
   --color-surface-raised: #17171B;
   --color-surface-sunk: #08080A;
+  --color-surface-glass: rgba(17, 17, 20, 0.55);
+  --color-surface-glass-raised: rgba(23, 23, 27, 0.72);
   --color-bg-hover: rgba(255,255,255,0.04);
   --color-bg-active: rgba(255,255,255,0.07);
   --color-bg-selected: rgba(124,140,255,0.10);
@@ -23,6 +25,7 @@
 
   --color-border: rgba(255,255,255,0.08);
   --color-border-strong: rgba(255,255,255,0.14);
+  --color-border-glow: rgba(124,140,255,0.18);
 
   --color-accent: #7C8CFF;
   --color-accent-hover: #95A2FF;
@@ -46,8 +49,12 @@
   --font-mono: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, 'SF Mono', 'Menlo', monospace;
 
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-card-raised: 0 4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-glow: 0 0 40px rgba(124,140,255,0.08);
 
   --animate-pulse-slow: nexus-pulse 2.4s ease-in-out infinite;
   --animate-flow: nexus-flow 2s linear infinite;
@@ -71,14 +78,16 @@ html, body {
   font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: 'cv05','cv11','ss01';
   height: 100%;
 }
 
 * { scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 *:hover::-webkit-scrollbar-thumb { background: var(--color-border); }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
 

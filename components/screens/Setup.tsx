@@ -3,10 +3,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Loader2, GitBranch, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { PageHeader } from '@/components/ui/page'
-import { H1, H2, Muted, SectionLabel, Small } from '@/components/ui/typography'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
+import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import {
   ApiError,
   setupSkillsRepoCreate,
@@ -19,8 +19,8 @@ type Mode = 'pick' | 'create' | 'existing' | 'done'
 /**
  * First-run wizard: configures the org-wide skills_repo.
  * Two paths — create a new GitHub repo for the org, or attach to an existing one.
- * On success Nexus seeds `shared/` with the bundled starter pack (13 skills)
- * so the org boots with sensible defaults, then routes to /onboarding.
+ * On success Nexus verifies it can clone the repo, stores the URL, and routes
+ * to the product dashboard. Skill files are written later after approval.
  */
 export function Setup() {
   const router = useRouter()
@@ -68,81 +68,100 @@ export function Setup() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full">
       <PageHeader>
         <H1>Set up your skills repository</H1>
-        <Muted>
-          One Git repo per org holds all product skills under their own directory and
-          shared standards under <code>shared/</code>. This is a one-time setup.
-        </Muted>
       </PageHeader>
 
-      <div className="px-8 pb-12 max-w-2xl">
-        {error && (
-          <div className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
+      <PageBody>
+        <PageGrid>
+          <div className="col-span-12 md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
+            <Muted>
+              One Git repo per org holds approved product skills under their own
+              directory. Nexus starts empty and writes skills only after review.
+            </Muted>
           </div>
-        )}
 
-        {mode === 'pick' && <PickPath onSelect={setMode} />}
+          {error && (
+            <div className="col-span-12 md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3 rounded-md border border-danger/40 bg-danger/10 px-4 py-3">
+              <Small className="font-mono text-danger">{error}</Small>
+            </div>
+          )}
 
-        {mode === 'create' && (
-          <CreateForm
-            org={org}
-            setOrg={setOrg}
-            repoName={repoName}
-            setRepoName={setRepoName}
-            busy={busy}
-            onBack={() => setMode('pick')}
-            onSubmit={runCreate}
-          />
-        )}
+          {mode === 'pick' && (
+            <>
+              <div className="col-span-12 md:col-span-5 md:col-start-2 lg:col-span-4 lg:col-start-3">
+                <Card
+                  variant="action"
+                  className="h-full cursor-pointer"
+                  onClick={() => setMode('create')}
+                >
+                  <CardContent className="flex h-full flex-col gap-3">
+                    <Plus className="h-5 w-5 text-accent" />
+                    <div className="space-y-1.5">
+                      <H3>Create a new repo</H3>
+                      <Muted className="block">
+                        Nexus creates a private GitHub repo and verifies it can clone it.
+                        Requires <code>GITHUB_TOKEN</code> in env.
+                      </Muted>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="col-span-12 md:col-span-5 lg:col-span-4">
+                <Card
+                  variant="action"
+                  className="h-full cursor-pointer"
+                  onClick={() => setMode('existing')}
+                >
+                  <CardContent className="flex h-full flex-col gap-3">
+                    <GitBranch className="h-5 w-5 text-accent" />
+                    <div className="space-y-1.5">
+                      <H3>Use an existing repo</H3>
+                      <Muted className="block">
+                        Point Nexus at a repo you already have. Nexus verifies clone access
+                        and leaves existing contents untouched.
+                      </Muted>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
 
-        {mode === 'existing' && (
-          <ExistingForm
-            url={existingUrl}
-            setUrl={setExistingUrl}
-            busy={busy}
-            onBack={() => setMode('pick')}
-            onSubmit={runExisting}
-          />
-        )}
+          {mode === 'create' && (
+            <div className="col-span-12 md:col-span-8 md:col-start-3 lg:col-span-6 lg:col-start-4">
+              <CreateForm
+                org={org}
+                setOrg={setOrg}
+                repoName={repoName}
+                setRepoName={setRepoName}
+                busy={busy}
+                onBack={() => setMode('pick')}
+                onSubmit={runCreate}
+              />
+            </div>
+          )}
 
-        {mode === 'done' && result && (
-          <DoneCard result={result} onContinue={() => router.push('/')} />
-        )}
-      </div>
-    </div>
-  )
-}
+          {mode === 'existing' && (
+            <div className="col-span-12 md:col-span-8 md:col-start-3 lg:col-span-6 lg:col-start-4">
+              <ExistingForm
+                url={existingUrl}
+                setUrl={setExistingUrl}
+                busy={busy}
+                onBack={() => setMode('pick')}
+                onSubmit={runExisting}
+              />
+            </div>
+          )}
 
-function PickPath({ onSelect }: { onSelect: (m: Mode) => void }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <Card
-        variant="action"
-        className="p-5 cursor-pointer"
-        onClick={() => onSelect('create')}
-      >
-        <Plus className="h-5 w-5 mb-3 text-accent" />
-        <H2>Create a new repo</H2>
-        <Muted className="mt-1">
-          Nexus creates a private GitHub repo and seeds it with the starter pack
-          (13 curated shared skills). Requires <code>GITHUB_TOKEN</code> in env.
-        </Muted>
-      </Card>
-      <Card
-        variant="action"
-        className="p-5 cursor-pointer"
-        onClick={() => onSelect('existing')}
-      >
-        <GitBranch className="h-5 w-5 mb-3 text-accent" />
-        <H2>Use an existing repo</H2>
-        <Muted className="mt-1">
-          Point Nexus at a repo you already have. Starter pack will be added to
-          <code>shared/</code> only if it&apos;s missing.
-        </Muted>
-      </Card>
+          {mode === 'done' && result && (
+            <div className="col-span-12 md:col-span-8 md:col-start-3 lg:col-span-6 lg:col-start-4">
+              <DoneCard result={result} onContinue={() => router.push('/')} />
+            </div>
+          )}
+        </PageGrid>
+      </PageBody>
     </div>
   )
 }
@@ -157,36 +176,40 @@ function CreateForm(props: {
   onSubmit: () => void
 }) {
   return (
-    <Card variant="surface" className="p-6 space-y-4">
-      <div>
-        <SectionLabel>GitHub org (optional)</SectionLabel>
-        <Input
-          value={props.org}
-          onChange={(e) => props.setOrg(e.target.value)}
-          placeholder="leave blank to create under your user account"
-          disabled={props.busy}
-        />
-        <Small className="text-fg-subtle mt-1 block">
-          The PAT must have <code>repo</code> + (if creating in an org) <code>write:org</code>.
-        </Small>
-      </div>
-      <div>
-        <SectionLabel>Repo name</SectionLabel>
-        <Input
-          value={props.repoName}
-          onChange={(e) => props.setRepoName(e.target.value)}
-          placeholder="nexus-skills"
-          disabled={props.busy}
-        />
-      </div>
-      <div className="flex justify-between pt-2">
+    <Card variant="surface">
+      <CardHeader>
+        <H3>Create a skills repository</H3>
+        <Muted>Nexus will create a private GitHub repo and verify clone access.</Muted>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-5">
+        <Field label="GitHub org (optional)">
+          <Input
+            value={props.org}
+            onChange={(e) => props.setOrg(e.target.value)}
+            placeholder="leave blank to create under your user account"
+            disabled={props.busy}
+          />
+          <Small className="block text-fg-subtle">
+            The PAT must have <code>repo</code> + (if creating in an org) <code>write:org</code>.
+          </Small>
+        </Field>
+        <Field label="Repo name">
+          <Input
+            value={props.repoName}
+            onChange={(e) => props.setRepoName(e.target.value)}
+            placeholder="nexus-skills"
+            disabled={props.busy}
+          />
+        </Field>
+      </CardContent>
+      <CardFooter className="flex-col items-stretch justify-between gap-3 border-t border-border p-5 sm:flex-row sm:items-center">
         <Button variant="ghost" onClick={props.onBack} disabled={props.busy}>
           Back
         </Button>
         <Button onClick={props.onSubmit} disabled={props.busy || !props.repoName.trim()}>
           {props.busy ? (
             <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Creating + seeding…
+              <Loader2 className="h-4 w-4 animate-spin" /> Creating + verifying…
             </span>
           ) : (
             <span className="inline-flex items-center gap-2">
@@ -194,7 +217,7 @@ function CreateForm(props: {
             </span>
           )}
         </Button>
-      </div>
+      </CardFooter>
     </Card>
   )
 }
@@ -207,28 +230,33 @@ function ExistingForm(props: {
   onSubmit: () => void
 }) {
   return (
-    <Card variant="surface" className="p-6 space-y-4">
-      <div>
-        <SectionLabel>Repo URL</SectionLabel>
-        <Input
-          value={props.url}
-          onChange={(e) => props.setUrl(e.target.value)}
-          placeholder="https://github.com/myorg/nexus-skills.git"
-          disabled={props.busy}
-        />
-        <Small className="text-fg-subtle mt-1 block">
-          HTTPS recommended — Nexus uses <code>GITHUB_TOKEN</code> for auth. SSH URLs
-          work too if the host has matching keys.
-        </Small>
-      </div>
-      <div className="flex justify-between pt-2">
+    <Card variant="surface">
+      <CardHeader>
+        <H3>Attach an existing repository</H3>
+        <Muted>Nexus verifies clone access and leaves existing files untouched.</Muted>
+      </CardHeader>
+      <CardContent>
+        <Field label="Repo URL">
+          <Input
+            value={props.url}
+            onChange={(e) => props.setUrl(e.target.value)}
+            placeholder="https://github.com/myorg/nexus-skills.git"
+            disabled={props.busy}
+          />
+          <Small className="block text-fg-subtle">
+            HTTPS recommended — Nexus uses <code>GITHUB_TOKEN</code> for auth. SSH URLs
+            work too if the host has matching keys.
+          </Small>
+        </Field>
+      </CardContent>
+      <CardFooter className="flex-col items-stretch justify-between gap-3 border-t border-border p-5 sm:flex-row sm:items-center">
         <Button variant="ghost" onClick={props.onBack} disabled={props.busy}>
           Back
         </Button>
         <Button onClick={props.onSubmit} disabled={props.busy || !props.url.trim()}>
           {props.busy ? (
             <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Cloning + seeding…
+              <Loader2 className="h-4 w-4 animate-spin" /> Verifying clone…
             </span>
           ) : (
             <span className="inline-flex items-center gap-2">
@@ -236,7 +264,7 @@ function ExistingForm(props: {
             </span>
           )}
         </Button>
-      </div>
+      </CardFooter>
     </Card>
   )
 }
@@ -244,30 +272,53 @@ function ExistingForm(props: {
 function DoneCard(props: { result: SetupSkillsRepoResult; onContinue: () => void }) {
   const { result } = props
   return (
-    <Card variant="surface" className="p-6 space-y-4">
-      <H2>Skills repository configured</H2>
-      <dl className="text-sm grid grid-cols-[10rem_1fr] gap-y-2">
-        <dt className="text-fg-subtle">Repo URL</dt>
-        <dd className="font-mono break-all">{result.skills_repo_url}</dd>
-        <dt className="text-fg-subtle">Starter skills seeded</dt>
-        <dd>{result.files_seeded}</dd>
-        {result.commit_sha && (
-          <>
-            <dt className="text-fg-subtle">Initial commit</dt>
-            <dd className="font-mono">{result.commit_sha.slice(0, 12)}</dd>
-          </>
-        )}
-        <dt className="text-fg-subtle">Created repo</dt>
-        <dd>{result.created_repo ? 'yes' : 'no — attached to existing'}</dd>
-      </dl>
-      <div className="flex justify-end pt-2">
+    <Card variant="surface">
+      <CardHeader>
+        <H3>Skills repository configured</H3>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-x-5 gap-y-3 sm:grid-cols-[12rem_minmax(0,1fr)]">
+          <dt className="text-fg-subtle">Repo URL</dt>
+          <dd className="min-w-0 break-all font-mono text-sm text-fg">{result.skills_repo_url}</dd>
+          <dt className="text-fg-subtle">Initial files added</dt>
+          <dd>{result.files_seeded}</dd>
+          {result.commit_sha && (
+            <>
+              <dt className="text-fg-subtle">Initial commit</dt>
+              <dd className="font-mono">{result.commit_sha.slice(0, 12)}</dd>
+            </>
+          )}
+          <dt className="text-fg-subtle">Created repo</dt>
+          <dd>{result.created_repo ? 'yes' : 'no — attached to existing'}</dd>
+        </dl>
+      </CardContent>
+      <CardFooter className="justify-end border-t border-border p-5">
         <Button onClick={props.onContinue}>
           <span className="inline-flex items-center gap-2">
             Continue to product setup <ArrowRight className="h-4 w-4" />
           </span>
         </Button>
-      </div>
+      </CardFooter>
     </Card>
   )
 }
 
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <SectionLabel>{label}</SectionLabel>
+        {hint && <Subtle className="font-mono text-xs">{hint}</Subtle>}
+      </div>
+      {children}
+    </div>
+  )
+}

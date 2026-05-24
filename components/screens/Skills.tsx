@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ArrowUpRight, Hexagon, Search } from 'lucide-react'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
@@ -138,7 +138,6 @@ export function Skills() {
   )
 }
 
-
 function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) {
   return (
     <div className="p-6 flex flex-col gap-5 max-w-4xl">
@@ -159,7 +158,7 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
         </Link>
       </div>
 
-      <Card variant="stat" className="p-4 flex items-center gap-3">
+      <Card variant="glass" className="p-4 flex items-center gap-3">
         <SectionLabel className="shrink-0 w-32">Confidence</SectionLabel>
         <Progress
           value={Math.round(skill.confidence * 100)}
@@ -172,30 +171,38 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
       </Card>
 
       {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
-        <Card variant="surface" className="p-4 flex flex-col gap-2">
-          <SectionLabel>Applies to</SectionLabel>
-          {skill.applies_to.files.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {skill.applies_to.files.map(f => (
-                <Badge key={f} variant="outline" className="font-mono text-xs">{f}</Badge>
-              ))}
-            </div>
-          )}
-          {skill.applies_to.contexts.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {skill.applies_to.contexts.map(c => (
-                <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
-              ))}
-            </div>
-          )}
+        <Card variant="surface">
+          <CardHeader>
+            <SectionLabel>Applies to</SectionLabel>
+          </CardHeader>
+          <CardContent>
+            {skill.applies_to.files.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {skill.applies_to.files.map(f => (
+                  <Badge key={f} variant="outline" className="font-mono text-xs">{f}</Badge>
+                ))}
+              </div>
+            )}
+            {skill.applies_to.contexts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {skill.applies_to.contexts.map(c => (
+                  <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
         </Card>
       )}
 
-      <Card variant="surface" className="p-5 flex flex-col gap-2">
-        <SectionLabel>Body</SectionLabel>
-        <Body className="font-mono whitespace-pre-wrap text-sm leading-relaxed">
-          {skill.body}
-        </Body>
+      <Card variant="surface">
+        <CardHeader>
+          <SectionLabel>Body</SectionLabel>
+        </CardHeader>
+        <CardContent>
+          <Body className="font-mono whitespace-pre-wrap text-sm leading-relaxed">
+            {skill.body}
+          </Body>
+        </CardContent>
       </Card>
     </div>
   )

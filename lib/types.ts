@@ -16,32 +16,21 @@ export interface RejectReason {
 }
 
 export interface Correction {
-  id: string
-  skill_id: string
-  from_revision: number
-  edited_by: UserId
-  edited_at: string
-  diff: string
-  applied_as_rule?: string | null
-}
-
-export interface DistilledRules {
-  rules: string
-  from_count: number
-  last_compacted_at: string
+  proposal_id: string
+  created_at: string | null
+  adversary_critique: Critique
 }
 
 export interface CorrectionsResponse {
   corrections: Correction[]
-  distilled: DistilledRules | null
-  total: number
+  adversary_critique: string | null
 }
 
 export type SourceStatus = 'connected' | 'watching' | 'syncing' | 'error'
 
 export interface Owner {
-  team: string
-  lead: UserId
+  team?: string
+  lead?: UserId
 }
 
 export interface Product {
@@ -236,10 +225,6 @@ export interface DashboardData {
     confidence: number
   }>
   recentActivity: Activity[]
-  cadence?: {
-    nextSyncAt: string | null
-    nextCouncilAt: string | null
-  }
 }
 
 // Per-session cap on evidence chunks fed to the council's prompt.

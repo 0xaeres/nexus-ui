@@ -3,15 +3,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
-import { PageHeader, PageBody } from '@/components/ui/page'
-import { H1, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
+import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { ApiError, createSession, listSessions } from '@/lib/api'
 import {
   COUNCIL_AGENT_HUES,
@@ -66,65 +66,73 @@ export function CouncilLanding() {
       </PageHeader>
 
       <PageBody>
-        {error && (
-          <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
-            <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
-            <Muted className="font-mono">{error}</Muted>
-          </Card>
-        )}
+        <PageGrid>
+          {error && (
+            <div className="col-span-12">
+              <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
+                <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
+                <Muted className="font-mono">{error}</Muted>
+              </Card>
+            </div>
+          )}
 
-        <section>
-          <div className="flex items-center gap-2.5 mb-4">
-            <SectionLabel>Recent sessions</SectionLabel>
-            <Subtle className="font-mono">{sessions?.length ?? 0}</Subtle>
+          <div className="col-span-12">
+            <div className="flex items-center gap-2.5 mb-4">
+              <SectionLabel>Recent sessions</SectionLabel>
+              <Subtle className="font-mono">{sessions?.length ?? 0}</Subtle>
+            </div>
           </div>
 
           {(!sessions || sessions.length === 0) ? (
-            <Card variant="surface" className="p-8 flex flex-col items-center gap-3 text-center">
-              <Users className="h-8 w-8 text-fg-subtle" />
-              <Muted>No council sessions yet for this product.</Muted>
-              {perms.canRunCouncil && (
-                <Button onClick={() => setOpen(true)} size="sm">
-                  <Plus className="h-4 w-4" />
-                  Start the first one
-                </Button>
-              )}
-            </Card>
+            <div className="col-span-12">
+              <Card variant="glass" className="p-8 flex flex-col items-center gap-3 text-center">
+                <Users className="h-8 w-8 text-fg-subtle" />
+                <Muted>No council sessions yet for this product.</Muted>
+                {perms.canRunCouncil && (
+                  <Button onClick={() => setOpen(true)} size="sm">
+                    <Plus className="h-4 w-4" />
+                    Start the first one
+                  </Button>
+                )}
+              </Card>
+            </div>
           ) : (
-            <Card variant="surface" className="overflow-hidden p-0">
-              <Table className="text-base">
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[160px]">Started</TableHead>
-                    <TableHead className="w-[120px]">Status</TableHead>
-                    <TableHead>Topic</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sessions.map(s => (
-                    <TableRow
-                      key={s.id}
-                      onClick={() => router.push(`${base}/council/${s.id}`)}
-                      className="cursor-pointer"
-                    >
-                      <TableCell className="font-mono text-sm text-fg-subtle">
-                        {s.started_at?.slice(0, 19) ?? '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[s.status] ?? 'accent'}>
-                          {s.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm text-fg truncate max-w-[480px]">
-                        {s.topic}
-                      </TableCell>
+            <div className="col-span-12">
+              <Card variant="surface" className="overflow-hidden p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[160px]">Started</TableHead>
+                      <TableHead className="w-[120px]">Status</TableHead>
+                      <TableHead>Topic</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {sessions.map(s => (
+                      <TableRow
+                        key={s.id}
+                        onClick={() => router.push(`${base}/council/${s.id}`)}
+                        className="cursor-pointer"
+                      >
+                        <TableCell className="font-mono text-sm text-fg-subtle">
+                          {s.started_at?.slice(0, 19) ?? '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[s.status] ?? 'accent'}>
+                            {s.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-fg truncate max-w-[480px]">
+                          {s.topic}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
           )}
-        </section>
+        </PageGrid>
       </PageBody>
 
       <NewSessionDialog
@@ -140,7 +148,6 @@ export function CouncilLanding() {
     </>
   )
 }
-
 
 function NewSessionDialog({
   open,

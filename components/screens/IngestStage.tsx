@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight, Database, Loader2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { H3, Muted, Small } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import { IngestionProgress, type IngestStatus } from '@/components/sources/IngestionProgress'
@@ -105,7 +105,7 @@ export function IngestStage({ productId }: { productId: string }) {
       {error && <StageError message={error} />}
 
       {sources && sources.length === 0 && (
-        <Card variant="surface" className="p-8 flex flex-col items-center text-center gap-4 max-w-xl mx-auto">
+        <Card variant="glass" className="p-8 flex flex-col items-center text-center gap-4 max-w-xl mx-auto">
           <div className="h-12 w-12 rounded-full bg-bg-active text-accent flex items-center justify-center">
             <Database className="h-5 w-5" />
           </div>

@@ -1,30 +1,99 @@
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all
+differ from your training data. Read the relevant guide in
+`node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
 ---
 
-# Nexus product & design context
+# Nexus UI — agent & contributor context
 
-**Before touching any screen, component, or route, read `DESIGN.md` at the repo root.** Every screen is live-connected to the FastAPI backend — there is no mock data. `DESIGN.md` defines:
+Web UI for [Nexus](../nexus) — the sovereign, MCP-native context engine.
 
-- What Nexus is (sovereign, MCP-native skill server for engineering orgs)
-- The product-first mental model: Product → Sources → Council → Skills (with composition)
-- Hard tenancy isolation per product; RBAC personas (Org Admin / Product Admin / SME)
-- The locked information architecture (`/p/[product]/...` namespaced routes)
-- Model-agnostic skill file structure (master / tech_stack / language / security)
-- LLM Council rosters per skill kind, with cost estimates (cost transparency is a UX requirement)
-- **§7.1–7.5** — the runtime mechanics: delta-only ingestion, change-gated council cadence with weekly cap + override, the priors mechanism (starting revision + corrections corpus + rejection log), corrections compaction, and the `EVIDENCE_CHUNKS_PER_SESSION_CAP`. Read these before changing anything that touches sources, council, proposals, or skill detail — backend and UI are wired against the contracts described there.
-- Design system rules: **Tailwind v4 + shadcn-style primitives** (migration complete 2026-05-15), fixed design tokens and agent hues
-- Pointers to the canonical plan files in `~/.claude/plans/`
+**Before touching any screen, component, or route, read [`DESIGN.md`](./DESIGN.md).**
+Every screen is live-connected to the FastAPI backend — there is no mock data.
 
-The redesign is complete. `DESIGN.md` is the durable source of truth for all design decisions; the plan files are historical context.
+## Read first
 
-**Two revision counters, easy to confuse** (see DESIGN.md §7.3):
+- [`DESIGN.md`](./DESIGN.md) — what Nexus is, the locked information
+  architecture, the design system rules.
+- [`README.md`](./README.md) — quick start.
+- [`../nexus/AGENTS.md`](../nexus/AGENTS.md) — backend invariants.
 
-- `provenance.revision_count` is per-session, hard-capped at `0 | 1`, used by the confidence formula.
-- `provenance.cumulative_revisions` is across all sessions for a skill, monotonic, used by the priors badge.
+## The two invariants — never break these
 
-Do not collapse them into one field.
+1. **Product = root entity.** Every screen is product-scoped under
+   `/p/[product]/...`. There is no cross-product view. Business unit is
+   display metadata (`owner.team`) only, not a route or access boundary.
+2. **Humans approve, agents draft.** The council writes proposals; the UI
+   surfaces them at `/p/[product]/review`. Nothing becomes a skill without
+   an explicit user action.
+
+## What the backend actually serves
+
+Backend was deliberately slimmed down (see `../nexus/ENGINEERING.md §13`).
+**Don't reintroduce UI surface for cut features:**
+
+- No Assistant chat (`/p/[product]/assistant` is gone).
+- No org library (`/settings/org` is gone; no Adopted Standards section in
+  Skills; no composition graph on skill detail).
+- No Activity timeline route, no Proposals power-user route, no Settings
+  route.
+- No skill kinds or scopes — `Skill` is flat: `{name, product, version,
+  confidence, applies_to, provenance, body}`.
+- No `composes_with` field.
+- No `cumulative_revisions` counter — only `provenance.revision_count`
+  (capped at `0 | 1`).
+
+## Council shape
+
+The council is a 3-node Reflexion graph:
+
+```
+Drafter → Critic → (severity == blocking?) → Reviser → END
+                  ↘ (else) → END
+```
+
+`COUNCIL_ROSTER` in `lib/types.ts` is the canonical list:
+`['drafter', 'critic', 'reviser']`. No more master-vs-product_domain
+rosters; one shape applies to every session.
+
+## Product onboarding
+
+`/new` creates product metadata and a required GitHub source. It collects a
+product service-account PAT plus one or more GitHub repo URLs. Do not add
+Confluence/Jira fields to onboarding until their source sync paths exist; they
+belong in Sources later.
+
+## Design system (locked)
+
+Tailwind v4 + shadcn-style primitives + `lucide-react` for affordances +
+`simple-icons` for vendor brands (GitHub etc).
+
+Design tokens live in `app/globals.css` (`@theme inline` block). **Don't
+add raw hex / rgb / hsl literals in component code** — use the tokens.
+
+Typography is a fixed scale: H1 / H2 / H3 / Body / Muted / Subtle / Code /
+Small / SectionLabel. **Don't write inline `text-lg`, `text-[10px]`,
+`text-[11px]`** — use the scale primitives or `text-base` / `text-xs`.
+
+## Conventions
+
+- Next.js App Router; one screen component per file under
+  `components/screens/`.
+- API access goes through `lib/api/index.ts` — one typed function per
+  endpoint, no business logic.
+- Types live in `lib/types.ts`. Don't re-declare backend types in
+  component files.
+- `useProduct()` is the canonical hook for current product + permissions.
+
+## Before you commit
+
+```bash
+npm run build           # type-check + production build; must be clean
+```
+
+There's no separate `tsc --noEmit` — the build runs it. Visual smoke-test
+the screens you touched in `npm run dev`.

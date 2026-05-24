@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Plus, Loader2, Sparkles, CheckCircle2, Inbox, Database, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { PageBody, PageHeader } from '@/components/ui/page'
+import { PageBody, PageHeader, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, Small } from '@/components/ui/typography'
 import { ApiError, getProductStatus, listProducts } from '@/lib/api'
 import type { Product, ProductStage, ProductStatus } from '@/lib/types'
@@ -135,25 +135,29 @@ export function ProjectsDashboard() {
       </PageHeader>
 
       <PageBody>
-        {listError && (
-          <Card variant="surface" className="p-4 border-danger/30 bg-danger/5">
-            <Small className="font-mono text-danger">
-              Could not reach backend: {listError}
-            </Small>
-          </Card>
-        )}
+        <PageGrid>
+          {listError && (
+            <div className="col-span-12">
+              <Card variant="surface" className="p-4 border-danger/30 bg-danger/5">
+                <Small className="font-mono text-danger">
+                  Could not reach backend: {listError}
+                </Small>
+              </Card>
+            </div>
+          )}
 
-        {products && products.length === 0 && !listError && (
-          <EmptyState />
-        )}
+          {products && products.length === 0 && !listError && (
+            <div className="col-span-12">
+              <EmptyState />
+            </div>
+          )}
 
-        {products && products.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} state={statuses[p.id] ?? null} />
-            ))}
-          </div>
-        )}
+          {products && products.length > 0 && products.map((p) => (
+            <div key={p.id} className="col-span-12 md:col-span-6 xl:col-span-4">
+              <ProductCard product={p} state={statuses[p.id] ?? null} />
+            </div>
+          ))}
+        </PageGrid>
       </PageBody>
     </>
   )
@@ -188,7 +192,7 @@ function ProductCard({ product, state }: { product: Product; state: CardState })
 
   if (isLoading || isError) {
     return (
-      <Card variant="action" className="p-5 flex flex-col gap-3 min-h-[180px]">
+      <Card variant="surface" className="p-5 flex flex-col gap-3 min-h-[180px]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1 min-w-0">
             <H3 className="truncate">{product.name}</H3>
@@ -214,12 +218,14 @@ function ProductCard({ product, state }: { product: Product; state: CardState })
   const spin = status.currentStage === 'ingesting' || (status.currentStage === 'council' && status.councilInProgress)
 
   return (
-    <Card variant="action" className="p-5 flex flex-col gap-3 min-h-[180px]">
+    <Card variant="glassAction" className="p-5 flex flex-col gap-4 min-h-[180px]">
       <div className="flex items-start justify-between gap-3">
         <Link href={`/p/${product.id}`} className="flex flex-col gap-1 min-w-0 no-underline">
           <H3 className="truncate text-fg hover:text-accent transition-colors">{product.name}</H3>
           {product.tagline ? (
             <Muted className="truncate">{product.tagline}</Muted>
+          ) : product.owner?.team ? (
+            <Small className="font-mono text-fg-subtle truncate">{product.owner.team}</Small>
           ) : (
             <Small className="font-mono text-fg-subtle">{product.id}</Small>
           )}

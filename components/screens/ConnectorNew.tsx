@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, Check, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { PageHeader, PageBody } from '@/components/ui/page'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { ApiError, addSource } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
@@ -26,10 +26,10 @@ const CONNECTOR_OPTIONS: Array<{
     id: 'github',
     name: 'GitHub',
     auth: 'token',
-    desc: 'Code, pull requests, issues, discussions',
+    desc: 'Product code repositories',
     fields: [
       { key: 'token', placeholder: 'ghp_...', secret: true },
-      { key: 'repos', placeholder: 'myorg/repo, myorg/other (comma-separated)' },
+      { key: 'repos', placeholder: 'https://github.com/myorg/repo, https://github.com/myorg/other' },
     ],
   },
   {
@@ -83,8 +83,8 @@ export function ConnectorNew() {
     for (const field of selected.fields) {
       const raw = (config[field.key] ?? '').trim()
       if (!raw) continue
-      if (raw.includes(',')) {
-        parsedConfig[field.key] = raw.split(',').map(s => s.trim()).filter(Boolean)
+      if (raw.includes(',') || raw.includes('\n')) {
+        parsedConfig[field.key] = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
       } else {
         parsedConfig[field.key] = raw
       }
@@ -118,15 +118,16 @@ export function ConnectorNew() {
       </PageHeader>
 
       <PageBody>
-        {/* Step 1: pick connector type */}
-        <section className="flex flex-col gap-3">
-          <SectionLabel>1. Connector type</SectionLabel>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {CONNECTOR_OPTIONS.map(c => {
-              const active = selected?.id === c.id
-              return (
+        <PageGrid>
+          {/* Step 1: pick connector type */}
+          <div className="col-span-12">
+            <SectionLabel className="mb-3">1. Connector type</SectionLabel>
+          </div>
+          {CONNECTOR_OPTIONS.map(c => {
+            const active = selected?.id === c.id
+            return (
+              <div key={c.id} className="col-span-12 md:col-span-6 lg:col-span-4">
                 <button
-                  key={c.id}
                   type="button"
                   onClick={() => {
                     setSelected(c)
@@ -134,10 +135,10 @@ export function ConnectorNew() {
                     setConfig({})
                   }}
                   className={cn(
-                    'text-left transition-colors',
-                    'rounded-md border p-4 flex flex-col gap-2',
+                    'text-left transition-colors w-full h-full',
+                    'rounded-lg border p-4 flex flex-col gap-2',
                     active
-                      ? 'border-accent bg-bg-active'
+                      ? 'border-accent/60 bg-accent/10'
                       : 'border-border bg-surface hover:bg-bg-active',
                   )}
                 >
@@ -148,55 +149,62 @@ export function ConnectorNew() {
                   </div>
                   <Small className="text-fg-subtle">{c.desc}</Small>
                 </button>
-              )
-            })}
-          </div>
-        </section>
+              </div>
+            )
+          })}
 
-        {/* Step 2: config */}
-        {selected && (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <SectionLabel>2. {selected.name} configuration</SectionLabel>
-            <Card variant="surface" className="p-5 flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Subtle className="font-mono uppercase tracking-wider text-xs">
-                  name
-                </Subtle>
-                <Input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. github"
-                  required
-                />
+          {/* Step 2: config */}
+          {selected && (
+            <>
+              <div className="col-span-12">
+                <SectionLabel className="mb-3">2. {selected.name} configuration</SectionLabel>
               </div>
-              {selected.fields.map(field => (
-                <div key={field.key} className="flex flex-col gap-1.5">
-                  <Subtle className="font-mono uppercase tracking-wider text-xs">
-                    {field.key}
-                  </Subtle>
-                  <Input
-                    type={field.secret ? 'password' : 'text'}
-                    value={config[field.key] ?? ''}
-                    onChange={e => setConfig(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    placeholder={field.placeholder}
-                    autoComplete={field.secret ? 'new-password' : 'off'}
-                  />
-                </div>
-              ))}
-              {error && <Small className="text-danger font-mono">{error}</Small>}
-              <div className="flex items-center gap-2 pt-1">
-                <div className="flex-1" />
-                <Button asChild type="button" variant="ghost" size="sm">
-                  <Link href={`${base}/sources`}>Cancel</Link>
-                </Button>
-                <Button type="submit" size="sm" disabled={submitting || done}>
-                  {done ? <Check className="h-4 w-4" /> : submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {done ? 'Added' : submitting ? 'Adding…' : 'Add source'}
-                </Button>
+              <div className="col-span-12 md:col-span-8 lg:col-span-6">
+                <form onSubmit={handleSubmit}>
+                  <Card variant="surface">
+                    <CardContent className="p-5 flex flex-col gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <Subtle className="font-mono uppercase tracking-wider text-xs">
+                          name
+                        </Subtle>
+                        <Input
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          placeholder="e.g. github"
+                          required
+                        />
+                      </div>
+                      {selected.fields.map(field => (
+                        <div key={field.key} className="flex flex-col gap-1.5">
+                          <Subtle className="font-mono uppercase tracking-wider text-xs">
+                            {field.key}
+                          </Subtle>
+                          <Input
+                            type={field.secret ? 'password' : 'text'}
+                            value={config[field.key] ?? ''}
+                            onChange={e => setConfig(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            placeholder={field.placeholder}
+                            autoComplete={field.secret ? 'new-password' : 'off'}
+                          />
+                        </div>
+                      ))}
+                      {error && <Small className="text-danger font-mono">{error}</Small>}
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-2">
+                      <Button asChild type="button" variant="ghost" size="sm">
+                        <Link href={`${base}/sources`}>Cancel</Link>
+                      </Button>
+                      <Button type="submit" size="sm" disabled={submitting || done}>
+                        {done ? <Check className="h-4 w-4" /> : submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        {done ? 'Added' : submitting ? 'Adding…' : 'Add source'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </form>
               </div>
-            </Card>
-          </form>
-        )}
+            </>
+          )}
+        </PageGrid>
       </PageBody>
     </>
   )

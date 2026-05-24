@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
@@ -130,7 +130,7 @@ function KickoffCard({
   productName: string
 }) {
   return (
-    <Card variant="surface" className="max-w-2xl mx-auto p-6 flex flex-col gap-5">
+    <Card variant="glass" className="max-w-2xl mx-auto p-6 flex flex-col gap-5">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-accent/15 text-accent flex items-center justify-center">
           <Sparkles className="h-5 w-5" />
@@ -255,7 +255,7 @@ function CouncilLive({
           </Muted>
         )}
         {messages.map((m, i) => (
-          <Card key={i} variant="surface" className="p-4 flex flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
+          <Card key={i} variant="glass" className="p-4 flex flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
             <div className="flex items-center gap-2">
               <span
                 className="h-1.5 w-1.5 rounded-full shrink-0"

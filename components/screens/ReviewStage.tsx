@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Edit3, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
@@ -106,29 +106,31 @@ export function ReviewStage({ productId }: { productId: string }) {
 
       {proposal && (
         <div className="max-w-3xl mx-auto w-full flex flex-col gap-4">
-          <Card variant="surface" className="p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <H3>{proposal.name}</H3>
-              <div className="flex-1" />
-              <Badge variant="outline" className="font-mono">
-                {Math.round(proposal.confidence * 100)}% confidence
-              </Badge>
-              <Badge variant="outline" className="font-mono">
-                {proposal.citations.length} citations
-              </Badge>
-            </div>
-            {proposal.adversary_critique && proposal.adversary_critique.severity !== 'minor' && (
-              <div className="px-3 py-2 rounded-md border border-warning/30 bg-warning/5">
-                <Small className="font-medium text-warning">
-                  Adversary critique: {proposal.adversary_critique.severity} —{' '}
-                  {proposal.adversary_critique.recommendation || 'see issues'}
-                </Small>
+          <Card variant="glass">
+            <CardContent className="p-5 flex flex-col gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <H3>{proposal.name}</H3>
+                <div className="flex-1" />
+                <Badge variant="outline" className="font-mono">
+                  {Math.round(proposal.confidence * 100)}% confidence
+                </Badge>
+                <Badge variant="outline" className="font-mono">
+                  {proposal.citations.length} citations
+                </Badge>
               </div>
-            )}
+              {proposal.adversary_critique && proposal.adversary_critique.severity !== 'minor' && (
+                <div className="px-3 py-2 rounded-md border border-warning/30 bg-warning/5">
+                  <Small className="font-medium text-warning">
+                    Adversary critique: {proposal.adversary_critique.severity} —{' '}
+                    {proposal.adversary_critique.recommendation || 'see issues'}
+                  </Small>
+                </div>
+              )}
+            </CardContent>
           </Card>
 
           <Card variant="surface" className="p-0 overflow-hidden">
-            <div className="flex items-center px-4 py-2 border-b border-border">
+            <CardHeader className="flex flex-row items-center border-b border-border">
               <Subtle className="font-mono text-xs uppercase tracking-wider">
                 {editing ? 'Editing draft' : 'Draft body'}
               </Subtle>
@@ -151,12 +153,12 @@ export function ReviewStage({ productId }: { productId: string }) {
                   Cancel
                 </Button>
               )}
-            </div>
+            </CardHeader>
             {editing ? (
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                className="block w-full min-h-[420px] bg-bg text-fg font-mono text-sm p-4 outline-none resize-vertical"
+                className="block w-full min-h-[420px] bg-bg text-fg font-mono text-sm p-4 outline-none resize-vertical border-0"
                 spellCheck={false}
               />
             ) : (

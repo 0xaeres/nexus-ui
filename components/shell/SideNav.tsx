@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Compass, Plug, Terminal } from 'lucide-react'
+import { Compass, Plug, Settings, Terminal } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
@@ -16,7 +16,7 @@ export function SideNav() {
   const base = productSlug ? `/p/${productSlug}` : ''
 
   return (
-    <nav className="w-[260px] shrink-0 bg-bg border-r border-border px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+    <nav className="w-[260px] shrink-0 bg-surface-glass/50 backdrop-blur-md border-r border-border px-3 py-4 flex flex-col gap-1 overflow-y-auto">
       <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-fg-subtle">
         workspace
       </div>
@@ -36,6 +36,13 @@ export function SideNav() {
       <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-fg-subtle">
         system
       </div>
+
+      <NavLink
+        href="/setup"
+        icon={Settings}
+        label="Setup"
+        active={pathname === '/setup'}
+      />
 
       <div className="flex items-center gap-3 px-3 py-2 rounded-md text-base text-fg-muted hover:bg-bg-hover transition-colors cursor-pointer">
         <Terminal className="h-[18px] w-[18px]" />
@@ -72,7 +79,7 @@ function NavLink({
       <div
         className={cn(
           'relative flex items-center gap-3 px-3 py-2 rounded-md text-base transition-colors',
-          active ? 'bg-accent/10 text-fg' : 'text-fg-muted hover:bg-bg-hover hover:text-fg',
+          active ? 'bg-accent/[0.12] text-fg backdrop-blur-sm border border-accent/20' : 'text-fg-muted hover:bg-bg-hover hover:text-fg',
         )}
       >
         {active && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-r" />}

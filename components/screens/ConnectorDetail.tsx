@@ -4,15 +4,16 @@ import Link from 'next/link'
 import { ChevronLeft, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { StatusDot } from '@/components/ui/status-dot'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { PageHeader, PageBody } from '@/components/ui/page'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Code, Subtle } from '@/components/ui/typography'
 import { ApiError, getSource, syncSource, sourceLogUrl } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
 import { useEventStream } from '@/lib/hooks/useEventStream'
 import type { Source, SyncDelta } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 const STATE_VARIANT: Record<string, 'success' | 'accent' | 'warning' | 'danger'> = {
   connected: 'success',
@@ -31,8 +32,6 @@ export function ConnectorDetail({ name }: { name: string }) {
 
   const { events: logEvents, status: logStatus } = useEventStream(logUrl, { enabled: !!logUrl })
 
-  // Extract the most recent delta event from the live stream; fall back to the
-  // persisted snapshot on the source row so the counters show after the stream closes.
   const streamDelta = logEvents
     .filter(e => e.event === 'delta' && typeof e.data === 'object' && e.data)
     .map(e => e.data as SyncDelta)
@@ -126,88 +125,101 @@ export function ConnectorDetail({ name }: { name: string }) {
         <Badge variant="outline" className="font-mono">{source.type}</Badge>
         <div className="flex-1" />
         <Button variant="outline" size="sm" disabled={syncing} onClick={handleSync}>
-          <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
           {syncing ? 'Starting…' : 'Sync now'}
         </Button>
       </PageHeader>
 
       <PageBody>
-        {/* Overview stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Stat label="Resources" value={source.resourceCount.toLocaleString()} />
-          <Stat
-            label="Last sync"
-            value={source.lastSync ? source.lastSync.slice(0, 19) : '—'}
-            mono
-          />
-          <Stat
-            label="Next sync"
-            value={source.nextSync ? source.nextSync.slice(0, 19) : '—'}
-            mono
-          />
-          <Stat label="Status" value={source.status} mono>
-            <StatusDot status={source.status === 'syncing' ? 'syncing' : 'done'} size={6} />
-          </Stat>
-          <Stat label="Product" value={source.product} mono />
-        </div>
-
-        {/* Connector config */}
-        <Card variant="surface" className="p-5">
-          <SectionLabel className="mb-3">Configuration</SectionLabel>
-          <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted bg-bg-active rounded-md p-3 overflow-x-auto">
-            {JSON.stringify(source.config, null, 2)}
-          </pre>
-        </Card>
-
-        <Card variant="surface" className="p-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <H3>Sync log</H3>
-            {logStatus === 'open' && (
-              <StatusDot status="syncing" size={6} />
-            )}
-            {logStatus === 'closed' && logEvents.length > 0 && (
-              <Badge variant="outline" className="font-mono text-xs">done</Badge>
-            )}
+        <PageGrid>
+          {/* Overview stats */}
+          <div className="col-span-6 md:col-span-4 lg:col-span-3">
+            <Stat label="Resources" value={source.resourceCount.toLocaleString()} />
           </div>
-          {delta && (
-            <div className="grid grid-cols-3 gap-3">
-              <DeltaTile label="added" value={delta.added} tone="success" />
-              <DeltaTile label="updated" value={delta.updated} tone="accent" />
-              <DeltaTile label="removed" value={delta.removed} tone="danger" />
-            </div>
-          )}
-          {logEvents.length === 0 && !logUrl && (
-            <Muted className="font-mono text-sm">
-              Click <strong>Sync now</strong> to start an ingestion run and watch live progress.
-            </Muted>
-          )}
-          {(logUrl || logEvents.length > 0) && (
-            <ScrollArea className="h-56 rounded-md bg-bg-active p-3">
-              <div className="flex flex-col gap-1 font-mono text-xs">
-                {logEvents.map((e, i) => {
-                  const d = e.data as { level?: string; msg?: string; ts?: string } | string
-                  const level = typeof d === 'object' ? (d.level ?? 'info') : 'info'
-                  const msg = typeof d === 'object' ? (d.msg ?? e.raw) : e.raw
-                  const color =
-                    level === 'success' ? 'text-success' :
-                    level === 'done' ? 'text-fg-muted' :
-                    level === 'error' ? 'text-danger' : 'text-fg-muted'
-                  return (
-                    <div key={i} className={`flex gap-2 ${color}`}>
-                      <span className="text-fg-subtle shrink-0">›</span>
-                      <span>{msg}</span>
-                    </div>
-                  )
-                })}
+          <div className="col-span-6 md:col-span-4 lg:col-span-3">
+            <Stat label="Last sync" value={source.lastSync ? source.lastSync.slice(0, 19) : '—'} mono />
+          </div>
+          <div className="col-span-6 md:col-span-4 lg:col-span-3">
+            <Stat label="Next sync" value={source.nextSync ? source.nextSync.slice(0, 19) : '—'} mono />
+          </div>
+          <div className="col-span-6 md:col-span-4 lg:col-span-3">
+            <Stat label="Status" value={source.status} mono>
+              <StatusDot status={source.status === 'syncing' ? 'syncing' : 'done'} size={6} />
+            </Stat>
+          </div>
+          <div className="col-span-6 md:col-span-4 lg:col-span-3">
+            <Stat label="Product" value={source.product} mono />
+          </div>
+
+          {/* Connector config */}
+          <div className="col-span-12 lg:col-span-6">
+            <Card variant="surface">
+              <CardHeader>
+                <SectionLabel>Configuration</SectionLabel>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted bg-bg-active rounded-md p-3 overflow-x-auto">
+                  {JSON.stringify(source.config, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sync log */}
+          <div className="col-span-12 lg:col-span-6">
+            <Card variant="surface">
+              <CardHeader className="flex flex-row items-center gap-2">
+                <H3>Sync log</H3>
                 {logStatus === 'open' && (
-                  <div className="flex gap-2 text-fg-subtle animate-pulse">
-                    <span>›</span><span>Streaming…</span>
+                  <StatusDot status="syncing" size={6} />
+                )}
+                {logStatus === 'closed' && logEvents.length > 0 && (
+                  <Badge variant="outline" className="font-mono text-xs">done</Badge>
+                )}
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {delta && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <DeltaTile label="added" value={delta.added} tone="success" />
+                    <DeltaTile label="updated" value={delta.updated} tone="accent" />
+                    <DeltaTile label="removed" value={delta.removed} tone="danger" />
                   </div>
                 )}
-              </div>
-            </ScrollArea>
-          )}
-        </Card>
+                {logEvents.length === 0 && !logUrl && (
+                  <Muted className="font-mono text-sm">
+                    Click <strong>Sync now</strong> to start an ingestion run and watch live progress.
+                  </Muted>
+                )}
+                {(logUrl || logEvents.length > 0) && (
+                  <ScrollArea className="h-56 rounded-md bg-bg-active p-3">
+                    <div className="flex flex-col gap-1 font-mono text-xs">
+                      {logEvents.map((e, i) => {
+                        const d = e.data as { level?: string; msg?: string; ts?: string } | string
+                        const level = typeof d === 'object' ? (d.level ?? 'info') : 'info'
+                        const msg = typeof d === 'object' ? (d.msg ?? e.raw) : e.raw
+                        const color =
+                          level === 'success' ? 'text-success' :
+                          level === 'done' ? 'text-fg-muted' :
+                          level === 'error' ? 'text-danger' : 'text-fg-muted'
+                        return (
+                          <div key={i} className={cn('flex gap-2', color)}>
+                            <span className="text-fg-subtle shrink-0">›</span>
+                            <span>{msg}</span>
+                          </div>
+                        )
+                      })}
+                      {logStatus === 'open' && (
+                        <div className="flex gap-2 text-fg-subtle animate-pulse">
+                          <span>›</span><span>Streaming…</span>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </PageGrid>
       </PageBody>
     </>
   )
@@ -228,7 +240,7 @@ function DeltaTile({
   return (
     <div className="rounded-md bg-bg-active px-3 py-2 flex flex-col gap-0.5">
       <Subtle className="font-mono uppercase tracking-wider text-xs">{label}</Subtle>
-      <span className={`font-mono text-base font-medium ${color}`}>{value}</span>
+      <span className={cn('font-mono text-base font-medium', color)}>{value}</span>
     </div>
   )
 }
@@ -245,11 +257,11 @@ function Stat({
   children?: React.ReactNode
 }) {
   return (
-    <Card variant="stat" className="p-4 flex flex-col gap-1.5">
+    <Card variant="glass" className="p-4 flex flex-col gap-1.5">
       <Subtle className="font-mono uppercase tracking-wider text-xs">{label}</Subtle>
       <div className="flex items-center gap-1.5">
         {children}
-        <span className={mono ? 'font-mono text-base text-fg' : 'text-base font-medium text-fg'}>
+        <span className={cn('text-base font-medium text-fg', mono && 'font-mono')}>
           {value}
         </span>
       </div>

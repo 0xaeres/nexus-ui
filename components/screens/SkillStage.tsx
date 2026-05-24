@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
@@ -71,39 +71,43 @@ export function SkillStage({ productId }: { productId: string }) {
 
       {skill && (
         <div className="max-w-3xl mx-auto w-full flex flex-col gap-4">
-          <Card variant="surface" className="p-5 flex items-start gap-4">
-            <div className="h-12 w-12 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
-            <div className="flex flex-col gap-1 min-w-0 flex-1">
-              <H3>{skill.name}</H3>
-              <Muted>Approved skill for {product?.name ?? productId}</Muted>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 justify-end">
-              <Badge variant="success">{Math.round(skill.confidence * 100)}% confidence</Badge>
-              <Badge variant="outline" className="font-mono">v{skill.version}</Badge>
-            </div>
+          <Card variant="glass">
+            <CardContent className="p-5 flex items-start gap-4">
+              <div className="h-12 w-12 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <H3>{skill.name}</H3>
+                <Muted>Approved skill for {product?.name ?? productId}</Muted>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 justify-end">
+                <Badge variant="success">{Math.round(skill.confidence * 100)}% confidence</Badge>
+                <Badge variant="outline" className="font-mono">v{skill.version}</Badge>
+              </div>
+            </CardContent>
           </Card>
 
           <Card variant="surface" className="p-0 overflow-hidden">
-            <div className="px-4 py-2 border-b border-border">
+            <CardHeader className="border-b border-border">
               <Subtle className="font-mono text-xs uppercase tracking-wider">Skill body</Subtle>
-            </div>
+            </CardHeader>
             <pre className="text-sm font-mono whitespace-pre-wrap text-fg leading-relaxed p-4 m-0">
               {skill.body}
             </pre>
           </Card>
 
-          <Card variant="surface" className="px-4 py-3 flex items-center gap-3 flex-wrap">
-            <Subtle className="font-mono text-xs uppercase tracking-wider">Provenance</Subtle>
-            <Small className="font-mono">validated by {skill.provenance.validated_by}</Small>
-            <Small className="font-mono">at {skill.provenance.validated_at}</Small>
-            {skill.provenance.council_session && (
-              <Small className="font-mono">· session {skill.provenance.council_session}</Small>
-            )}
-            <Small className="font-mono">
-              · {skill.provenance.evidence_chunks.length} evidence chunks
-            </Small>
+          <Card variant="surface">
+            <CardContent className="p-4 flex items-center gap-3 flex-wrap">
+              <Subtle className="font-mono text-xs uppercase tracking-wider">Provenance</Subtle>
+              <Small className="font-mono">validated by {skill.provenance.validated_by}</Small>
+              <Small className="font-mono">at {skill.provenance.validated_at}</Small>
+              {skill.provenance.council_session && (
+                <Small className="font-mono">· session {skill.provenance.council_session}</Small>
+              )}
+              <Small className="font-mono">
+                · {skill.provenance.evidence_chunks.length} evidence chunks
+              </Small>
+            </CardContent>
           </Card>
         </div>
       )}

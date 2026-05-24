@@ -1,0 +1,517 @@
+{
+  "success": true,
+  "issues": [
+    {
+      "type": "file",
+      "name": "app/page.module.css",
+      "file": "app/page.module.css"
+    },
+    {
+      "type": "file",
+      "name": "components/atoms/CitationChip.tsx",
+      "file": "components/atoms/CitationChip.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/icons/BrandIcon.tsx",
+      "file": "components/icons/BrandIcon.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/ui/popover.tsx",
+      "file": "components/ui/popover.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/ui/tabs.tsx",
+      "file": "components/ui/tabs.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/screens/CouncilLanding.tsx",
+      "file": "components/screens/CouncilLanding.tsx"
+    },
+    {
+      "type": "dependency",
+      "name": "@icons-pack/react-simple-icons",
+      "file": "package.json",
+      "line": 11
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-popover",
+      "file": "package.json",
+      "line": 14
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-tabs",
+      "file": "package.json",
+      "line": 19
+    },
+    {
+      "type": "export",
+      "name": "buttonVariants",
+      "file": "components/ui/button.tsx",
+      "line": 44
+    },
+    {
+      "type": "export",
+      "name": "H2",
+      "file": "components/ui/typography.tsx",
+      "line": 7
+    },
+    {
+      "type": "export",
+      "name": "deleteSource",
+      "file": "lib/api/index.ts",
+      "line": 91
+    },
+    {
+      "type": "export",
+      "name": "listSessions",
+      "file": "lib/api/index.ts",
+      "line": 105
+    },
+    {
+      "type": "export",
+      "name": "Tooltip",
+      "file": "components/ui/tooltip.tsx",
+      "line": 7
+    },
+    {
+      "type": "export",
+      "name": "TooltipTrigger",
+      "file": "components/ui/tooltip.tsx",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "TooltipContent",
+      "file": "components/ui/tooltip.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "CardTitle",
+      "file": "components/ui/card.tsx",
+      "line": 48
+    },
+    {
+      "type": "export",
+      "name": "CardDescription",
+      "file": "components/ui/card.tsx",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "StageHint",
+      "file": "components/stages/StageShell.tsx",
+      "line": 112
+    },
+    {
+      "type": "export",
+      "name": "ScrollBar",
+      "file": "components/ui/scroll-area.tsx",
+      "line": 37
+    },
+    {
+      "type": "export",
+      "name": "DialogTrigger",
+      "file": "components/ui/dialog.tsx",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "DialogPortal",
+      "file": "components/ui/dialog.tsx",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "DialogClose",
+      "file": "components/ui/dialog.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "DialogOverlay",
+      "file": "components/ui/dialog.tsx",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuGroup",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuPortal",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuSub",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuRadioGroup",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "_icons",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 69
+    },
+    {
+      "type": "export",
+      "name": "UserId",
+      "file": "lib/types.ts",
+      "line": 4
+    },
+    {
+      "type": "export",
+      "name": "SessionStatus",
+      "file": "lib/types.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "ProposalStatus",
+      "file": "lib/types.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "RejectReason",
+      "file": "lib/types.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "Correction",
+      "file": "lib/types.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "SourceStatus",
+      "file": "lib/types.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "Owner",
+      "file": "lib/types.ts",
+      "line": 31
+    },
+    {
+      "type": "export",
+      "name": "AppliesTo",
+      "file": "lib/types.ts",
+      "line": 62
+    },
+    {
+      "type": "export",
+      "name": "Provenance",
+      "file": "lib/types.ts",
+      "line": 67
+    },
+    {
+      "type": "export",
+      "name": "Citation",
+      "file": "lib/types.ts",
+      "line": 95
+    },
+    {
+      "type": "export",
+      "name": "Critique",
+      "file": "lib/types.ts",
+      "line": 102
+    },
+    {
+      "type": "export",
+      "name": "CouncilTrigger",
+      "file": "lib/types.ts",
+      "line": 153
+    },
+    {
+      "type": "export",
+      "name": "Activity",
+      "file": "lib/types.ts",
+      "line": 199
+    },
+    {
+      "type": "export",
+      "name": "SseEvent",
+      "file": "lib/hooks/useEventStream.ts",
+      "line": 5
+    }
+  ],
+  "unusedExports": [
+    {
+      "type": "export",
+      "name": "buttonVariants",
+      "file": "components/ui/button.tsx",
+      "line": 44
+    },
+    {
+      "type": "export",
+      "name": "H2",
+      "file": "components/ui/typography.tsx",
+      "line": 7
+    },
+    {
+      "type": "export",
+      "name": "deleteSource",
+      "file": "lib/api/index.ts",
+      "line": 91
+    },
+    {
+      "type": "export",
+      "name": "listSessions",
+      "file": "lib/api/index.ts",
+      "line": 105
+    },
+    {
+      "type": "export",
+      "name": "Tooltip",
+      "file": "components/ui/tooltip.tsx",
+      "line": 7
+    },
+    {
+      "type": "export",
+      "name": "TooltipTrigger",
+      "file": "components/ui/tooltip.tsx",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "TooltipContent",
+      "file": "components/ui/tooltip.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "CardTitle",
+      "file": "components/ui/card.tsx",
+      "line": 48
+    },
+    {
+      "type": "export",
+      "name": "CardDescription",
+      "file": "components/ui/card.tsx",
+      "line": 55
+    },
+    {
+      "type": "export",
+      "name": "StageHint",
+      "file": "components/stages/StageShell.tsx",
+      "line": 112
+    },
+    {
+      "type": "export",
+      "name": "ScrollBar",
+      "file": "components/ui/scroll-area.tsx",
+      "line": 37
+    },
+    {
+      "type": "export",
+      "name": "DialogTrigger",
+      "file": "components/ui/dialog.tsx",
+      "line": 8
+    },
+    {
+      "type": "export",
+      "name": "DialogPortal",
+      "file": "components/ui/dialog.tsx",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "DialogClose",
+      "file": "components/ui/dialog.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "DialogOverlay",
+      "file": "components/ui/dialog.tsx",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuGroup",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuPortal",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuSub",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 11
+    },
+    {
+      "type": "export",
+      "name": "DropdownMenuRadioGroup",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 12
+    },
+    {
+      "type": "export",
+      "name": "_icons",
+      "file": "components/ui/dropdown-menu.tsx",
+      "line": 69
+    },
+    {
+      "type": "export",
+      "name": "UserId",
+      "file": "lib/types.ts",
+      "line": 4
+    },
+    {
+      "type": "export",
+      "name": "SessionStatus",
+      "file": "lib/types.ts",
+      "line": 9
+    },
+    {
+      "type": "export",
+      "name": "ProposalStatus",
+      "file": "lib/types.ts",
+      "line": 10
+    },
+    {
+      "type": "export",
+      "name": "RejectReason",
+      "file": "lib/types.ts",
+      "line": 13
+    },
+    {
+      "type": "export",
+      "name": "Correction",
+      "file": "lib/types.ts",
+      "line": 18
+    },
+    {
+      "type": "export",
+      "name": "SourceStatus",
+      "file": "lib/types.ts",
+      "line": 29
+    },
+    {
+      "type": "export",
+      "name": "Owner",
+      "file": "lib/types.ts",
+      "line": 31
+    },
+    {
+      "type": "export",
+      "name": "AppliesTo",
+      "file": "lib/types.ts",
+      "line": 62
+    },
+    {
+      "type": "export",
+      "name": "Provenance",
+      "file": "lib/types.ts",
+      "line": 67
+    },
+    {
+      "type": "export",
+      "name": "Citation",
+      "file": "lib/types.ts",
+      "line": 95
+    },
+    {
+      "type": "export",
+      "name": "Critique",
+      "file": "lib/types.ts",
+      "line": 102
+    },
+    {
+      "type": "export",
+      "name": "CouncilTrigger",
+      "file": "lib/types.ts",
+      "line": 153
+    },
+    {
+      "type": "export",
+      "name": "Activity",
+      "file": "lib/types.ts",
+      "line": 199
+    },
+    {
+      "type": "export",
+      "name": "SseEvent",
+      "file": "lib/hooks/useEventStream.ts",
+      "line": 5
+    }
+  ],
+  "unusedFiles": [
+    {
+      "type": "file",
+      "name": "app/page.module.css",
+      "file": "app/page.module.css"
+    },
+    {
+      "type": "file",
+      "name": "components/atoms/CitationChip.tsx",
+      "file": "components/atoms/CitationChip.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/icons/BrandIcon.tsx",
+      "file": "components/icons/BrandIcon.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/ui/popover.tsx",
+      "file": "components/ui/popover.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/ui/tabs.tsx",
+      "file": "components/ui/tabs.tsx"
+    },
+    {
+      "type": "file",
+      "name": "components/screens/CouncilLanding.tsx",
+      "file": "components/screens/CouncilLanding.tsx"
+    }
+  ],
+  "unusedDeps": [
+    {
+      "type": "dependency",
+      "name": "@icons-pack/react-simple-icons",
+      "file": "package.json",
+      "line": 11
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-popover",
+      "file": "package.json",
+      "line": 14
+    },
+    {
+      "type": "dependency",
+      "name": "@radix-ui/react-tabs",
+      "file": "package.json",
+      "line": 19
+    }
+  ],
+  "unlistedDeps": [],
+  "summary": "Found 43 issues"
+}

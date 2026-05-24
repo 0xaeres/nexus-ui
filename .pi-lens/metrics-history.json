@@ -1,0 +1,581 @@
+{
+  "version": 1,
+  "files": {
+    "components/shell/SideNav.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:36:31.935Z",
+        "mi": 37.3,
+        "cognitive": 7,
+        "nesting": 1,
+        "lines": 75,
+        "maxCyclomatic": 8,
+        "entropy": 4.69
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:36:31.935Z",
+          "mi": 37.3,
+          "cognitive": 7,
+          "nesting": 1,
+          "lines": 75,
+          "maxCyclomatic": 8,
+          "entropy": 4.69
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/shell/Shell.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:36:39.105Z",
+        "mi": 30.7,
+        "cognitive": 107,
+        "nesting": 6,
+        "lines": 149,
+        "maxCyclomatic": 59,
+        "entropy": 6.24
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:36:39.105Z",
+          "mi": 30.7,
+          "cognitive": 107,
+          "nesting": 6,
+          "lines": 149,
+          "maxCyclomatic": 59,
+          "entropy": 6.24
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/NewProduct.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:20.498Z",
+        "mi": 26.5,
+        "cognitive": 48,
+        "nesting": 6,
+        "lines": 185,
+        "maxCyclomatic": 33,
+        "entropy": 7.03
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:20.498Z",
+          "mi": 26.5,
+          "cognitive": 48,
+          "nesting": 6,
+          "lines": 185,
+          "maxCyclomatic": 33,
+          "entropy": 7.03
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/ConnectorNew.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:20.525Z",
+        "mi": 26.3,
+        "cognitive": 53,
+        "nesting": 5,
+        "lines": 189,
+        "maxCyclomatic": 36,
+        "entropy": 6.2
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:20.525Z",
+          "mi": 26.3,
+          "cognitive": 53,
+          "nesting": 5,
+          "lines": 189,
+          "maxCyclomatic": 36,
+          "entropy": 6.2
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/ConnectorDetail.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:20.548Z",
+        "mi": 21.6,
+        "cognitive": 80,
+        "nesting": 4,
+        "lines": 239,
+        "maxCyclomatic": 64,
+        "entropy": 6.17
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:20.548Z",
+          "mi": 21.6,
+          "cognitive": 80,
+          "nesting": 4,
+          "lines": 239,
+          "maxCyclomatic": 64,
+          "entropy": 6.17
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/SkillDetailPage.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:20.574Z",
+        "mi": 18,
+        "cognitive": 85,
+        "nesting": 4,
+        "lines": 350,
+        "maxCyclomatic": 72,
+        "entropy": 6.53
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:20.574Z",
+          "mi": 18,
+          "cognitive": 85,
+          "nesting": 4,
+          "lines": 350,
+          "maxCyclomatic": 72,
+          "entropy": 6.53
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/ui/badge.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:30.542Z",
+        "mi": 52.6,
+        "cognitive": 0,
+        "nesting": 1,
+        "lines": 25,
+        "maxCyclomatic": 1,
+        "entropy": 4.64
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:30.542Z",
+          "mi": 52.6,
+          "cognitive": 0,
+          "nesting": 1,
+          "lines": 25,
+          "maxCyclomatic": 1,
+          "entropy": 4.64
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/ui/input.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:30.561Z",
+        "mi": 59.9,
+        "cognitive": 0,
+        "nesting": 1,
+        "lines": 15,
+        "maxCyclomatic": 1,
+        "entropy": 3.91
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:30.561Z",
+          "mi": 59.9,
+          "cognitive": 0,
+          "nesting": 1,
+          "lines": 15,
+          "maxCyclomatic": 1,
+          "entropy": 3.91
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/ui/separator.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:30.579Z",
+        "mi": 54.1,
+        "cognitive": 2,
+        "nesting": 1,
+        "lines": 21,
+        "maxCyclomatic": 2,
+        "entropy": 4.18
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:30.579Z",
+          "mi": 54.1,
+          "cognitive": 2,
+          "nesting": 1,
+          "lines": 21,
+          "maxCyclomatic": 2,
+          "entropy": 4.18
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/ui/dialog.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:30.595Z",
+        "mi": 39,
+        "cognitive": 0,
+        "nesting": 1,
+        "lines": 66,
+        "maxCyclomatic": 1,
+        "entropy": 4.91
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:30.595Z",
+          "mi": 39,
+          "cognitive": 0,
+          "nesting": 1,
+          "lines": 66,
+          "maxCyclomatic": 1,
+          "entropy": 4.91
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/shell/TopBar.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:30.611Z",
+        "mi": 33.1,
+        "cognitive": 5,
+        "nesting": 3,
+        "lines": 99,
+        "maxCyclomatic": 11,
+        "entropy": 5.33
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:30.611Z",
+          "mi": 33.1,
+          "cognitive": 5,
+          "nesting": 3,
+          "lines": 99,
+          "maxCyclomatic": 11,
+          "entropy": 5.33
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/ProjectsDashboard.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:34.883Z",
+        "mi": 20.7,
+        "cognitive": 65,
+        "nesting": 5,
+        "lines": 265,
+        "maxCyclomatic": 26,
+        "entropy": 6.17
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:34.883Z",
+          "mi": 20.7,
+          "cognitive": 65,
+          "nesting": 5,
+          "lines": 265,
+          "maxCyclomatic": 26,
+          "entropy": 6.17
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/CouncilStage.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:34.909Z",
+        "mi": 20.8,
+        "cognitive": 89,
+        "nesting": 6,
+        "lines": 260,
+        "maxCyclomatic": 42,
+        "entropy": 6.74
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:34.909Z",
+          "mi": 20.8,
+          "cognitive": 89,
+          "nesting": 6,
+          "lines": 260,
+          "maxCyclomatic": 42,
+          "entropy": 6.74
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/IngestStage.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:34.929Z",
+        "mi": 28.7,
+        "cognitive": 56,
+        "nesting": 6,
+        "lines": 136,
+        "maxCyclomatic": 50,
+        "entropy": 6.41
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:34.929Z",
+          "mi": 28.7,
+          "cognitive": 56,
+          "nesting": 6,
+          "lines": 136,
+          "maxCyclomatic": 50,
+          "entropy": 6.41
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/ReviewStage.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:34.948Z",
+        "mi": 24.5,
+        "cognitive": 73,
+        "nesting": 5,
+        "lines": 195,
+        "maxCyclomatic": 48,
+        "entropy": 6.22
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:34.948Z",
+          "mi": 24.5,
+          "cognitive": 73,
+          "nesting": 5,
+          "lines": 195,
+          "maxCyclomatic": 48,
+          "entropy": 6.22
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/stages/StageShell.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:41:37.554Z",
+        "mi": 30.7,
+        "cognitive": 24,
+        "nesting": 2,
+        "lines": 111,
+        "maxCyclomatic": 35,
+        "entropy": 5.54
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:41:37.554Z",
+          "mi": 30.7,
+          "cognitive": 24,
+          "nesting": 2,
+          "lines": 111,
+          "maxCyclomatic": 35,
+          "entropy": 5.54
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/ui/table.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:43:02.214Z",
+        "mi": 43.1,
+        "cognitive": 0,
+        "nesting": 1,
+        "lines": 47,
+        "maxCyclomatic": 1,
+        "entropy": 4.37
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:43:02.214Z",
+          "mi": 43.1,
+          "cognitive": 0,
+          "nesting": 1,
+          "lines": 47,
+          "maxCyclomatic": 1,
+          "entropy": 4.37
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/Dashboard.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:43:46.170Z",
+        "mi": 24.7,
+        "cognitive": 34,
+        "nesting": 4,
+        "lines": 198,
+        "maxCyclomatic": 34,
+        "entropy": 6.08
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:43:46.170Z",
+          "mi": 24.7,
+          "cognitive": 34,
+          "nesting": 4,
+          "lines": 198,
+          "maxCyclomatic": 34,
+          "entropy": 6.08
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/Sources.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:44:56.878Z",
+        "mi": 26.1,
+        "cognitive": 35,
+        "nesting": 4,
+        "lines": 169,
+        "maxCyclomatic": 26,
+        "entropy": 5.91
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:44:56.878Z",
+          "mi": 26.1,
+          "cognitive": 35,
+          "nesting": 4,
+          "lines": 169,
+          "maxCyclomatic": 26,
+          "entropy": 5.91
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/Skills.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:44:56.902Z",
+        "mi": 24.8,
+        "cognitive": 47,
+        "nesting": 4,
+        "lines": 183,
+        "maxCyclomatic": 22,
+        "entropy": 5.94
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:44:56.902Z",
+          "mi": 24.8,
+          "cognitive": 47,
+          "nesting": 4,
+          "lines": 183,
+          "maxCyclomatic": 22,
+          "entropy": 5.94
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/SkillStage.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:46:07.187Z",
+        "mi": 31.4,
+        "cognitive": 32,
+        "nesting": 6,
+        "lines": 109,
+        "maxCyclomatic": 22,
+        "entropy": 5.87
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:46:07.187Z",
+          "mi": 31.4,
+          "cognitive": 32,
+          "nesting": 6,
+          "lines": 109,
+          "maxCyclomatic": 22,
+          "entropy": 5.87
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/CouncilLanding.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:46:07.211Z",
+        "mi": 23.6,
+        "cognitive": 44,
+        "nesting": 4,
+        "lines": 218,
+        "maxCyclomatic": 17,
+        "entropy": 6.74
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:46:07.211Z",
+          "mi": 23.6,
+          "cognitive": 44,
+          "nesting": 4,
+          "lines": 218,
+          "maxCyclomatic": 17,
+          "entropy": 6.74
+        }
+      ],
+      "trend": "stable"
+    },
+    "components/screens/CouncilSession.tsx": {
+      "latest": {
+        "commit": "4da7a76",
+        "timestamp": "2026-05-24T04:48:38.137Z",
+        "mi": 16.1,
+        "cognitive": 210,
+        "nesting": 9,
+        "lines": 367,
+        "maxCyclomatic": 148,
+        "entropy": 6.53
+      },
+      "history": [
+        {
+          "commit": "4da7a76",
+          "timestamp": "2026-05-24T04:48:38.137Z",
+          "mi": 16.1,
+          "cognitive": 210,
+          "nesting": 9,
+          "lines": 367,
+          "maxCyclomatic": 148,
+          "entropy": 6.53
+        }
+      ],
+      "trend": "stable"
+    }
+  },
+  "capturedAt": "2026-05-24T04:48:43.139Z"
+}

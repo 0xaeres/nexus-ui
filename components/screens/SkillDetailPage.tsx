@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, Hexagon, GitBranch, RefreshCw, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { PageHeader, PageBody } from '@/components/ui/page'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import {
   Dialog,
   DialogContent,
@@ -72,8 +72,6 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
 
   useEffect(() => { void load() }, [load])
 
-  // Load history / corrections / rejections in parallel; tolerate any individual failure
-  // (the endpoints may not be live yet — the panels just stay empty in that case).
   useEffect(() => {
     let cancelled = false
     const safe = <T,>(p: Promise<T>) => p.catch(() => null as unknown as T | null)
@@ -164,189 +162,216 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
       </PageHeader>
 
       <PageBody>
-        {/* Confidence */}
-        <Card variant="stat" className="p-4 flex items-center gap-3">
-          <SectionLabel className="shrink-0 w-32">Confidence</SectionLabel>
-          <Progress
-            value={Math.round(skill.confidence * 100)}
-            className="flex-1"
-            indicatorClassName={
-              skill.confidence >= 0.8 ? 'bg-success' :
-              skill.confidence >= 0.5 ? 'bg-warning' : 'bg-danger'
-            }
-          />
-          <Code className={cn('shrink-0 font-mono', confColor(skill.confidence))}>
-            {Math.round(skill.confidence * 100)}%
-          </Code>
-        </Card>
-
-        {/* Applies to */}
-        {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
-          <Card variant="surface" className="p-5 flex flex-col gap-3">
-            <SectionLabel>Applies to</SectionLabel>
-            {skill.applies_to.files.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {skill.applies_to.files.map(f => (
-                  <Badge key={f} variant="outline" className="font-mono text-xs">{f}</Badge>
-                ))}
-              </div>
-            )}
-            {skill.applies_to.contexts.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {skill.applies_to.contexts.map(c => (
-                  <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
-                ))}
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* Provenance */}
-        {skill.provenance && (
-          <Card variant="surface" className="p-5 flex flex-col gap-3">
-            <SectionLabel>Provenance</SectionLabel>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <ProvenanceRow label="Validated by" value={skill.provenance.validated_by} />
-              <ProvenanceRow label="Validated at" value={skill.provenance.validated_at?.slice(0, 19)} />
-              {skill.provenance.council_session && (
-                <ProvenanceRow label="Council session" value={skill.provenance.council_session ?? ''} mono />
-              )}
-              <ProvenanceRow
-                label="Revision"
-                value={String(skill.provenance.revision_count)}
+        <PageGrid>
+          {/* Confidence */}
+          <div className="col-span-12">
+            <Card variant="glass" className="p-4 flex items-center gap-3">
+              <SectionLabel className="shrink-0 w-32">Confidence</SectionLabel>
+              <Progress
+                value={Math.round(skill.confidence * 100)}
+                className="flex-1"
+                indicatorClassName={
+                  skill.confidence >= 0.8 ? 'bg-success' :
+                  skill.confidence >= 0.5 ? 'bg-warning' : 'bg-danger'
+                }
               />
-              <ProvenanceRow
-                label="Evidence chunks"
-                value={`${skill.provenance.evidence_chunks?.length ?? 0} / ${EVIDENCE_CHUNKS_PER_SESSION_CAP} cap`}
-              />
-            </div>
-            {skill.provenance.adversary_critique && (
-              <div className="mt-2 rounded-md bg-warning/10 border border-warning/30 px-3 py-2">
-                <Small className="text-warning font-mono">Critic note</Small>
-                <Body className="text-sm mt-1">{skill.provenance.adversary_critique}</Body>
-              </div>
-            )}
-          </Card>
-        )}
+              <Code className={cn('shrink-0 font-mono', confColor(skill.confidence))}>
+                {Math.round(skill.confidence * 100)}%
+              </Code>
+            </Card>
+          </div>
 
-        <Separator />
-
-        {/* Body */}
-        <Card variant="surface" className="p-5 flex flex-col gap-3">
-          <SectionLabel>Body</SectionLabel>
-          <pre className="font-mono text-sm whitespace-pre-wrap leading-relaxed text-fg-muted overflow-x-auto">
-            {skill.body}
-          </pre>
-        </Card>
-
-        {/* Council history */}
-        {history.length > 0 && (
-          <Card variant="surface" className="p-5 flex flex-col gap-3">
-            <SectionLabel>Council history</SectionLabel>
-            <div className="flex flex-col gap-1.5">
-              {history.map(s => (
-                <Link
-                  key={s.id}
-                  href={`${base}/council/${s.id}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-bg-active transition-colors"
-                >
-                  <Code className="text-xs shrink-0 w-44 truncate">{s.id}</Code>
-                  <Subtle className="font-mono text-xs">{s.started_at?.slice(0, 19)}</Subtle>
-                  <div className="flex-1" />
-                  <Badge variant="outline" className="font-mono text-xs">{s.status}</Badge>
-                </Link>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Corrections corpus — distilled rules (compacted) above, raw recent below */}
-        {corrections && (corrections.total > 0 || corrections.distilled) && (
-          <Card variant="surface" className="p-5 flex flex-col gap-4">
-            <SectionLabel>SME corrections ({corrections.total})</SectionLabel>
-            <Muted className="text-xs">
-              Edits applied by SMEs on prior revisions. These seed future council runs as house
-              rules. Older corrections are compacted into a distilled summary to keep prompts bounded.
-            </Muted>
-
-            {corrections.distilled && (
-              <div className="rounded-md border border-accent/30 bg-accent/[0.06] px-3 py-3 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  <SectionLabel className="text-accent">Distilled rules</SectionLabel>
-                  <Subtle className="font-mono text-xs">
-                    from {corrections.distilled.from_count} corrections
-                  </Subtle>
-                  <div className="flex-1" />
-                  <Subtle className="font-mono text-xs">
-                    compacted {corrections.distilled.last_compacted_at?.slice(0, 10)}
-                  </Subtle>
-                </div>
-                <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted leading-relaxed">
-                  {corrections.distilled.rules}
-                </pre>
-              </div>
-            )}
-
-            {corrections.corrections.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <SectionLabel>Recent</SectionLabel>
-                  <Subtle className="font-mono text-xs">
-                    showing {corrections.corrections.length}
-                    {corrections.distilled
-                      ? ` of ${corrections.total} (older folded into distilled rules)`
-                      : ` of ${corrections.total}`}
-                  </Subtle>
-                </div>
-                {corrections.corrections.map(c => (
-                  <div key={c.id} className="rounded-md bg-bg-active px-3 py-2 flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-xs">
-                      <Code>rev {c.from_revision}</Code>
-                      <Subtle className="font-mono">by {c.edited_by}</Subtle>
-                      <div className="flex-1" />
-                      <Subtle className="font-mono">{c.edited_at?.slice(0, 19)}</Subtle>
+          {/* Applies to */}
+          {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
+            <div className="col-span-12 md:col-span-6">
+              <Card variant="surface">
+                <CardHeader>
+                  <SectionLabel>Applies to</SectionLabel>
+                </CardHeader>
+                <CardContent>
+                  {skill.applies_to.files.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {skill.applies_to.files.map(f => (
+                        <Badge key={f} variant="outline" className="font-mono text-xs">{f}</Badge>
+                      ))}
                     </div>
-                    <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted">{c.diff}</pre>
-                    {c.applied_as_rule && (
-                      <div className="text-xs text-accent font-mono">
-                        → rule: {c.applied_as_rule}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* Rejection log */}
-        {rejections.length > 0 && (
-          <Card variant="surface" className="p-5 flex flex-col gap-3">
-            <SectionLabel>Rejected proposals ({rejections.length})</SectionLabel>
-            <Muted className="text-xs">
-              Past council drafts SMEs rejected. Future runs use these as anti-priors.
-            </Muted>
-            <div className="flex flex-col gap-2">
-              {rejections.map(r => (
-                <div key={r.id} className="rounded-md bg-bg-active px-3 py-2 flex flex-col gap-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Code className="truncate max-w-[200px]">{r.id}</Code>
-                    {r.reject_reason?.category && (
-                      <Badge variant="outline" className="font-mono text-xs py-0">
-                        {r.reject_reason.category}
-                      </Badge>
-                    )}
-                    <div className="flex-1" />
-                    <Subtle className="font-mono">{r.created_at?.slice(0, 19)}</Subtle>
-                  </div>
-                  {r.reject_reason?.reason && (
-                    <Body className="text-sm">{r.reject_reason.reason}</Body>
                   )}
-                </div>
-              ))}
+                  {skill.applies_to.contexts.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {skill.applies_to.contexts.map(c => (
+                        <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </Card>
-        )}
+          )}
+
+          {/* Provenance */}
+          {skill.provenance && (
+            <div className="col-span-12 md:col-span-6">
+              <Card variant="surface">
+                <CardHeader>
+                  <SectionLabel>Provenance</SectionLabel>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <ProvenanceRow label="Validated by" value={skill.provenance.validated_by} />
+                    <ProvenanceRow label="Validated at" value={skill.provenance.validated_at?.slice(0, 19)} />
+                    {skill.provenance.council_session && (
+                      <ProvenanceRow label="Council session" value={skill.provenance.council_session ?? ''} mono />
+                    )}
+                    <ProvenanceRow
+                      label="Revision"
+                      value={String(skill.provenance.revision_count)}
+                    />
+                    <ProvenanceRow
+                      label="Evidence chunks"
+                      value={`${skill.provenance.evidence_chunks?.length ?? 0} / ${EVIDENCE_CHUNKS_PER_SESSION_CAP} cap`}
+                    />
+                  </div>
+                  {skill.provenance.adversary_critique && (
+                    <div className="mt-3 rounded-md bg-warning/10 border border-warning/30 px-3 py-2">
+                      <Small className="text-warning font-mono">Critic note</Small>
+                      <Body className="text-sm mt-1">{skill.provenance.adversary_critique}</Body>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <div className="col-span-12">
+            <Separator />
+          </div>
+
+          {/* Body */}
+          <div className="col-span-12">
+            <Card variant="surface">
+              <CardHeader>
+                <SectionLabel>Body</SectionLabel>
+              </CardHeader>
+              <CardContent>
+                <pre className="font-mono text-sm whitespace-pre-wrap leading-relaxed text-fg-muted overflow-x-auto">
+                  {skill.body}
+                </pre>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Council history */}
+          {history.length > 0 && (
+            <div className="col-span-12">
+              <Card variant="surface">
+                <CardHeader>
+                  <SectionLabel>Council history</SectionLabel>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-1.5">
+                    {history.map(s => (
+                      <Link
+                        key={s.id}
+                        href={`${base}/council/${s.id}`}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-bg-active transition-colors"
+                      >
+                        <Code className="text-xs shrink-0 w-44 truncate">{s.id}</Code>
+                        <Subtle className="font-mono text-xs">{s.started_at?.slice(0, 19)}</Subtle>
+                        <div className="flex-1" />
+                        <Badge variant="outline" className="font-mono text-xs">{s.status}</Badge>
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Critic notes */}
+          {corrections && (corrections.corrections.length > 0 || corrections.adversary_critique) && (
+            <div className="col-span-12">
+              <Card variant="surface">
+                <CardHeader>
+                  <SectionLabel>Critic notes ({corrections.corrections.length})</SectionLabel>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <Muted className="text-xs">
+                    Critiques captured from approved proposals and stored in skill provenance.
+                  </Muted>
+
+                  {corrections.adversary_critique && (
+                    <div className="rounded-md border border-accent/30 bg-accent/[0.06] px-3 py-3 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <SectionLabel className="text-accent">Approved provenance</SectionLabel>
+                      </div>
+                      <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted leading-relaxed">
+                        {corrections.adversary_critique}
+                      </pre>
+                    </div>
+                  )}
+
+                  {corrections.corrections.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <SectionLabel>Approved proposal critiques</SectionLabel>
+                      </div>
+                      {corrections.corrections.map(c => (
+                        <div key={c.proposal_id} className="rounded-md bg-bg-active px-3 py-2 flex flex-col gap-1">
+                          <div className="flex items-center gap-2 text-xs">
+                            <Code>{c.proposal_id}</Code>
+                            <Badge variant="outline" className="font-mono text-xs py-0">
+                              {c.adversary_critique.severity}
+                            </Badge>
+                            <div className="flex-1" />
+                            <Subtle className="font-mono">{c.created_at?.slice(0, 19)}</Subtle>
+                          </div>
+                          <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted">
+                            {c.adversary_critique.recommendation}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Rejection log */}
+          {rejections.length > 0 && (
+            <div className="col-span-12">
+              <Card variant="surface">
+                <CardHeader>
+                  <SectionLabel>Rejected proposals ({rejections.length})</SectionLabel>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <Muted className="text-xs">
+                    Past council drafts SMEs rejected. Future runs use these as anti-priors.
+                  </Muted>
+                  <div className="flex flex-col gap-2">
+                    {rejections.map(r => (
+                      <div key={r.id} className="rounded-md bg-bg-active px-3 py-2 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Code className="truncate max-w-[200px]">{r.id}</Code>
+                          {r.reject_reason?.category && (
+                            <Badge variant="outline" className="font-mono text-xs py-0">
+                              {r.reject_reason.category}
+                            </Badge>
+                          )}
+                          <div className="flex-1" />
+                          <Subtle className="font-mono">{r.created_at?.slice(0, 19)}</Subtle>
+                        </div>
+                        {r.reject_reason?.reason && (
+                          <Body className="text-sm">{r.reject_reason.reason}</Body>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </PageGrid>
       </PageBody>
 
       <Dialog open={confirmRerun} onOpenChange={open => { if (!rerunBusy) setConfirmRerun(open) }}>
@@ -387,4 +412,3 @@ function ProvenanceRow({ label, value, mono = false }: { label: string; value: s
     </>
   )
 }
-

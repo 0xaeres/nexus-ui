@@ -49,7 +49,9 @@ export function ProductSwitcher({ onProductChange }: { onProductChange: (id: str
             >
               <div className="flex-1 min-w-0">
                 <div className="text-base font-medium font-mono text-fg">{p.name}</div>
-                <div className="text-xs text-fg-subtle truncate">{p.tagline}</div>
+                <div className="text-xs text-fg-subtle truncate">
+                  {p.tagline || p.owner?.team || p.id}
+                </div>
               </div>
               <span className="h-1.5 w-1.5 rounded-full bg-success shrink-0 mt-1.5" />
             </DropdownMenuItem>

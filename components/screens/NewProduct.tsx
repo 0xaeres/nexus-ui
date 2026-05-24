@@ -2,15 +2,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Loader2, GitBranch, FileText } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, GitBranch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { PageBody, PageHeader } from '@/components/ui/page'
+import { Textarea } from '@/components/ui/textarea'
+import { PageBody, PageHeader, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { ApiError, addSource, createProduct, syncSource } from '@/lib/api'
 
-const GITHUB_REPO_RE = /^https?:\/\/github\.com\/[^\s/]+\/[^\s/]+?(?:\.git)?\/?$/
+const GITHUB_REPO_RE = /^(https?:\/\/github\.com\/[^\s/]+\/[^\s/]+?|git@github\.com:[^\s/]+\/[^\s/]+?)(?:\.git)?\/?$/
 
 function slugify(s: string): string {
   return s
@@ -24,16 +25,18 @@ function slugify(s: string): string {
 export function NewProduct() {
   const router = useRouter()
   const [name, setName] = useState('')
-  const [repoUrl, setRepoUrl] = useState('')
+  const [team, setTeam] = useState('')
+  const [repoUrls, setRepoUrls] = useState('')
   const [token, setToken] = useState('')
-  const [confluenceSpace, setConfluenceSpace] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const id = slugify(name)
-  const repoOk = !repoUrl || GITHUB_REPO_RE.test(repoUrl.trim())
+  const repos = parseRepoUrls(repoUrls)
+  const badRepos = repos.filter((repo) => !GITHUB_REPO_RE.test(repo))
+  const repoOk = repos.length > 0 && badRepos.length === 0
   const canSubmit =
-    !!name.trim() && !!repoUrl.trim() && !!token.trim() && repoOk && !!id
+    !!name.trim() && !!token.trim() && repoOk && !!id
 
   const submit = async () => {
     if (!canSubmit) return
@@ -41,7 +44,11 @@ export function NewProduct() {
     setError(null)
     try {
       try {
-        await createProduct({ id, name: name.trim() })
+        await createProduct({
+          id,
+          name: name.trim(),
+          owner: team.trim() ? { team: team.trim() } : undefined,
+        })
       } catch (e: unknown) {
         if (!(e instanceof ApiError && e.status === 409)) throw e
       }
@@ -49,26 +56,12 @@ export function NewProduct() {
       const ghSource = await addSource(id, {
         name: 'github',
         type: 'github',
-        config: { token: token.trim(), repos: [repoUrl.trim()] },
+        config: { token: token.trim(), repos },
       })
       // Fire-and-forget; the ingest page picks up the SSE stream.
       syncSource(id, ghSource.id).catch(() => {
         /* surfaced on /ingest */
       })
-
-      const space = confluenceSpace.trim()
-      if (space) {
-        const confSource = await addSource(id, {
-          name: 'confluence',
-          type: 'confluence',
-          config: { space },
-        }).catch(() => null)
-        if (confSource) {
-          syncSource(id, confSource.id).catch(() => {
-            /* surfaced on /ingest */
-          })
-        }
-      }
 
       router.push(`/p/${id}/ingest`)
     } catch (e: unknown) {
@@ -91,94 +84,105 @@ export function NewProduct() {
       </PageHeader>
 
       <PageBody>
-        <Card variant="surface" className="max-w-2xl mx-auto p-6 flex flex-col gap-6">
-          <div className="flex flex-col gap-1">
-            <H3>Tell Nexus what to ingest</H3>
-            <Muted>
-              Point us at a repository. We&rsquo;ll clone, chunk, enrich, and embed it,
-              then the LLM Council drafts your first skill for review.
-            </Muted>
-          </div>
+        <PageGrid>
+          <div className="col-span-12 md:col-span-8 lg:col-span-6 md:col-start-3 lg:col-start-4">
+            <Card variant="surface">
+              <CardHeader className="gap-2">
+                <H3>Tell Nexus what to ingest</H3>
+                <Muted>
+                  Point us at the product repositories. We&rsquo;ll clone, chunk, enrich,
+                  and embed them, then the LLM Council drafts your first skill for review.
+                </Muted>
+              </CardHeader>
 
-          {error && (
-            <Card variant="surface" className="border-danger/30 bg-danger/5 px-4 py-2.5">
-              <Small className="font-mono text-danger">{error}</Small>
+              <CardContent className="flex flex-col gap-5">
+                {error && (
+                  <div className="rounded-md border border-danger/30 bg-danger/5 px-4 py-2.5">
+                    <Small className="font-mono text-danger">{error}</Small>
+                  </div>
+                )}
+
+                <Field label="Product name" hint={id ? `id · ${id}` : 'used as the URL slug'}>
+                  <Input
+                    autoFocus
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Forge"
+                    disabled={busy}
+                  />
+                </Field>
+
+                <Field label="Business unit / team" hint="optional display label">
+                  <Input
+                    value={team}
+                    onChange={(e) => setTeam(e.target.value)}
+                    placeholder="Payments Platform"
+                    disabled={busy}
+                  />
+                </Field>
+
+                <Field
+                  label="GitHub repositories"
+                  hint="one per line or comma-separated"
+                  icon={GitBranch}
+                >
+                  <Textarea
+                    value={repoUrls}
+                    onChange={(e) => setRepoUrls(e.target.value)}
+                    placeholder={'https://github.com/acme/api\nhttps://github.com/acme/web'}
+                    disabled={busy}
+                    rows={4}
+                    className="min-h-[104px]"
+                  />
+                  {repos.length > 0 && badRepos.length > 0 && (
+                    <Small className="font-mono text-danger">
+                      Invalid repo URL: {badRepos[0]}
+                    </Small>
+                  )}
+                </Field>
+
+                <Field label="GitHub token" hint="One-time setup per product. Stored encrypted.">
+                  <Input
+                    type="password"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="ghp_..."
+                    disabled={busy}
+                  />
+                </Field>
+              </CardContent>
+
+              <CardFooter className="flex items-center justify-between pt-0">
+                <Subtle className="font-mono">
+                  Next: live ingest progress, then council kickoff.
+                </Subtle>
+                <Button onClick={submit} disabled={!canSubmit || busy}>
+                  {busy ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating…
+                    </>
+                  ) : (
+                    <>
+                      Create product
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
             </Card>
-          )}
-
-          <Field label="Product name" hint={id ? `id · ${id}` : 'used as the URL slug'}>
-            <Input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Forge"
-              disabled={busy}
-            />
-          </Field>
-
-          <Field
-            label="GitHub repository"
-            hint="The main repo for this product"
-            icon={GitBranch}
-          >
-            <Input
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="https://github.com/acme/forge"
-              disabled={busy}
-            />
-            {!repoOk && (
-              <Small className="font-mono text-danger">
-                Must look like https://github.com/&lt;org&gt;/&lt;repo&gt;
-              </Small>
-            )}
-          </Field>
-
-          <Field label="GitHub token" hint="One-time setup per product. Stored encrypted.">
-            <Input
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="ghp_..."
-              disabled={busy}
-            />
-          </Field>
-
-          <Field
-            label="Confluence space"
-            hint="Optional. Add Jira and others later from Sources."
-            icon={FileText}
-          >
-            <Input
-              value={confluenceSpace}
-              onChange={(e) => setConfluenceSpace(e.target.value)}
-              placeholder="ENG"
-              disabled={busy}
-            />
-          </Field>
-
-          <div className="flex items-center justify-between pt-2">
-            <Subtle className="font-mono">
-              Next: live ingest progress, then council kickoff.
-            </Subtle>
-            <Button onClick={submit} disabled={!canSubmit || busy}>
-              {busy ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                <>
-                  Create product
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
           </div>
-        </Card>
+        </PageGrid>
       </PageBody>
     </>
   )
+}
+
+function parseRepoUrls(value: string): string[] {
+  return value
+    .split(/[\n,]+/)
+    .map((repo) => repo.trim())
+    .filter(Boolean)
 }
 
 function Field({

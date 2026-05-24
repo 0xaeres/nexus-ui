@@ -70,7 +70,7 @@ export function TopBar({
 }) {
   const { loading } = useProduct()
   return (
-    <div className="h-14 shrink-0 bg-bg border-b border-border flex items-center px-5 gap-4">
+    <div className="h-14 shrink-0 bg-surface-glass/80 backdrop-blur-md border-b border-border flex items-center px-5 gap-4">
       <Link href="/" className="flex items-center gap-2.5 text-fg no-underline">
         <Image src="/nexus-logo.svg" alt="" width={22} height={22} className="invert-[0.92]" priority />
         <span className="text-base font-semibold tracking-tight">nexus</span>
@@ -88,7 +88,7 @@ export function TopBar({
       <PersonaSwitch debugRole={debugRole} onChange={onDebugRoleChange} />
       <button
         onClick={onOpenPalette}
-        className="inline-flex items-center gap-2 px-3 py-1.5 min-w-[280px] bg-surface border border-border rounded-md text-fg-subtle text-sm hover:bg-bg-active transition-colors"
+        className="inline-flex items-center gap-2 px-3 py-1.5 min-w-[280px] bg-surface-glass/60 border border-white/[0.08] rounded-md text-fg-subtle text-sm hover:bg-surface-glass-raised/60 transition-colors backdrop-blur-sm"
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search or run a command…</span>

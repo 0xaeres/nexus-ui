@@ -133,7 +133,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
     try {
       await approveProposal(proposalId, currentUser?.name ?? 'unknown')
       setValidated('approved')
-    } catch {/* */}
+    } catch (e) { console.error(e) }
   }
 
   const handleReject = async () => {
@@ -143,7 +143,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
     try {
       await rejectProposal(proposalId, { reason, actor: currentUser?.name ?? 'unknown' })
       setValidated('rejected')
-    } catch {/* */}
+    } catch (e) { console.error(e) }
   }
 
   const totalTokens = useMemo(
@@ -204,7 +204,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                 const agentCost = costs.find(c => c.agent === a.role)
                 const tokens = agentCost ? (agentCost.prompt_tokens + agentCost.completion_tokens) : 0
                 return (
-                  <Card key={a.role} variant="surface" className="p-3 flex flex-col gap-1.5">
+                  <Card key={a.role} variant="glass" className="p-3 flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: a.hue }} />
                       <span className="text-sm font-medium text-fg">{a.label}</span>
@@ -375,7 +375,7 @@ function DraftSection({ section }: { section: ProposalSection }) {
 
 function DeliberationMsg({ msg }: { msg: DeliberationMessage }) {
   return (
-    <Card variant="surface" className="p-5 flex flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
+    <Card variant="glass" className="p-5 flex flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
       <div className="flex items-center gap-2 flex-wrap">
         <span
           className="inline-block h-1.5 w-1.5 rounded-full shrink-0"

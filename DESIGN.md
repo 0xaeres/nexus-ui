@@ -1,368 +1,128 @@
 # Nexus UI — Design Context
 
-> Read this **before** touching any screen, component, data, or route in this repo.
-> If you're an agent (OpenDesign, Claude, or otherwise) tasked with designing or
-> iterating on Nexus UX, this file is the brief.
-
-> **Updated 2026-05-15:** the original "No Tailwind, inline styles only" rule
-> was superseded by an explicit user request to migrate the design system to
-> **Tailwind v4 + shadcn-style primitives + simple-icons + lucide-react**.
-> The migration is now **complete**: every screen, shell component, and
-> skeleton is Tailwind-only. The legacy atoms (`Badge`, `Button`, `GlowCard`,
-> `Mono`, `Kbd`, `StatusDot`, `ConfidenceBar`, `AgentDot`) and the legacy
-> `NexusIcon` set have been deleted. See section 9 for the current rules
-> and the migration map.
-
----
+> **Stop. Read this before writing any UI code.**
+>
+> Most of what's in here is non-negotiable. The design system rules in §6
+> are the single source of truth — if a tool tries to add `text-[11px]`,
+> a glow card to a regular section, or a screen outside the locked IA,
+> push back.
 
 ## 1. What Nexus is (one paragraph)
 
-**Nexus is a sovereign, MCP-native skill server for engineering organizations.**
-It ingests an organization's code and docs through MCP connectors, runs an LLM
-Council to author validated **skill files** (with human approval), and serves
-those skills back through MCP to any AI client (Claude, Cursor, Continue, etc.).
-Skills are versioned, cited, and composable; they make every downstream agent
-*grounded in the org's actual code and conventions* instead of hallucinating from
-general training data.
-
-The canonical product plan: [`~/.claude/plans/delightful-conjuring-feigenbaum.md`](file:///Users/aeres/.claude/plans/delightful-conjuring-feigenbaum.md)
-
----
+Nexus indexes a product's code + docs, runs a 3-node LLM council
+(Drafter → Critic → Reviser) to draft a curated skill file, and serves
+that skill via MCP to any AI coding client (Claude, Cursor, Continue,
+…) — after a human approves it. The UI is where humans drive the
+sources, watch the council, and approve / edit / reject proposals. See
+[`../nexus/README.md`](../nexus/README.md) for the backend overview.
 
 ## 2. What this repo is
 
-A **Next.js 16 (App Router, TypeScript) demo app** of the Nexus web UI.
-Purpose: lock the UX before the backend is built. Everything is mock data
-(`lib/data.ts`), simulated streaming (`setTimeout`).
-
-Styling stack (current):
-
-- **Tailwind v4** (`@import 'tailwindcss'` + `@theme inline` in `app/globals.css`)
-- **shadcn-style primitives** hand-installed under `components/ui/`
-  (Button, Card, Badge, Dialog, DropdownMenu, Popover, Progress, ScrollArea,
-  Separator, Skeleton, Table, Tabs, Tooltip, Input, StatusDot)
-- **Radix UI** under the hood for accessibility (`@radix-ui/react-*`)
-- **lucide-react** for UI affordance icons (search, chevrons, bell, plus,
-  refresh, settings, etc.)
-- **`@icons-pack/react-simple-icons`** for brand icons
-  (GitHub / Jira / Confluence) — never invent custom connector glyphs
-- Design tokens live in `app/globals.css` exclusively inside the
-  `@theme inline { … }` block. Tailwind exposes them as utilities (`bg-bg`,
-  `text-fg-muted`, `border-border`, …). The old `:root { --foo: … }`
-  legacy block has been removed.
-
-The current redesign target (product-first, hard isolation, cost-aware council)
-is fully specified in [`~/.claude/plans/composed-forging-treasure.md`](file:///Users/aeres/.claude/plans/composed-forging-treasure.md).
-That plan is the **source of truth** for the in-flight changes; this file is the
-durable context that explains *why*.
-
----
+Next.js 16 (App Router, TypeScript) UI. All screens are live-connected
+to the FastAPI backend — there is no mock data and no env flag to switch
+to one. If a screen needs data the backend doesn't yet expose, the
+backend gets the route first; the UI follows.
 
 ## 3. The mental model (do not violate)
 
-```
-Org
-└── Product (master skill = the product itself)
-    ├── Sources (product-scoped connector instances)
-    ├── Ingested chunks (vector store partition, conceptual)
-    ├── Council sessions (one drafts one skill)
-    └── Skill hierarchy
-        ├── Master Skill           (the product — required, generated first)
-        ├── Tech-Stack Skills      (SpringBoot, AngularJS, Karate, …)
-        ├── Language Skills        (Java, TypeScript, …)
-        └── Security Skills        (auth, secrets, input-validation, …)
-```
+Two invariants:
 
-Hard rules:
+1. **Product = root entity.** Every screen worth navigating to lives
+   under `/p/[product]/…`. There is no cross-product list, no global
+   skill catalogue, no "all sessions across the org" page. Adding one is
+   a tenancy regression. Business units are optional product display metadata
+   (`owner.team`) in v1, not navigation, RBAC, or tenancy.
+2. **Humans approve, agents draft.** The council writes proposals; the UI
+   surfaces them at `/p/[product]/review` for human approval. Nothing
+   becomes a `.skill.md` without an explicit human action.
 
-1. **Product is the root entity.** Everything (sources, council, skills,
-   activity, ingestion) is scoped to one product at a time.
-2. **Master Skill = Product.** The "product knowledge" lives as a single
-   master skill file. It is generated by the council *during onboarding*, before
-   any other skill exists.
-3. **Skills compose.** A non-master skill always composes back to its master
-   (and optionally to other prerequisite skills). At serve-time, Nexus assembles
-   `[Master] + [matching Tech-Stack(s)] + [matching Language(s)] + [Security overlay]`
-   into the skill bundle an AI client consumes.
-4. **Hard tenancy isolation.** A product SME / admin must only see *their*
-   product. Connectors, chunks, council sessions, and skills never cross the
-   product boundary. Org admins can switch products via the TopBar product
-   switcher.
-5. **The council is expensive — be honest about it.** Per-skill-kind rosters
-   exist specifically to keep cost in check. Show estimates in the UI before a
-   council session starts.
-
----
-
-## 4. The target UX — what we are aiming for
-
-A reviewer should walk away saying: *"I understand exactly what Nexus does, how
-my team would onboard onto it, who has access to what, and why I should trust
-the skill files."*
-
-The five demo moments that earn that reaction:
-
-| # | Moment | Where |
-|---|---|---|
-| 1 | **Onboarding wizard** — 3 sequential steps: identity → connect & ingest (live SSE log, delta summary) → council kickoff (council form only appears after ingest succeeds; on failure the user can retry or go back to fix the source) | `/onboarding` |
-| 2 | **Product switcher** in the TopBar — flip between products, watch every screen re-scope; SME persona hides admin affordances | TopBar + persona-switch debug widget |
-| 3 | **Council session** with a dynamic roster (4 agents for Master, 3 for Tech-Stack / Language / Security) and a live **cost meter** in the header | `/p/[product]/council/[sessionId]` |
-| 4 | **Skill composition view** — open a non-master skill, see the explicit composition graph back to Master + prerequisite stacks | `/p/[product]/skills/[id]` |
-| 5 | **Live ingestion log** in onboarding (and in source detail) — real SSE stream (`EventSource`) that shows per-stage log lines and a terminal delta summary (added / updated / removed / unchanged) | inline in `Onboarding.tsx`; source detail uses `ConnectorDetail.tsx` |
-
-If a design proposal does not strengthen one of these five moments, it is
-probably scope creep.
-
----
-
-## 5. Information architecture (target)
-
-```
-/                       → first-run gate
-/onboarding             → product onboarding wizard (3 sequential steps)
-/p/[product]
-  ├── /dashboard        → product-scoped overview (pipeline, pending, activity, council mini)
-  ├── /sources          → product-scoped connectors + ingestion runs (was /connectors)
-  │   ├── /new          → add source to this product
-  │   └── /[name]       → source detail + sync log
-  ├── /council          → council home: recent sessions + "Start new session"
-  │   └── /[sessionId]  → active deliberation (3-pane, roster adapts to skill kind)
-  ├── /skills           → hierarchy tree (Master pinned to top)
-  │   └── /[id]         → skill detail + composition graph
-  ├── /assistant        → conversational + action chat panel (Jira/Confluence)
-  ├── /activity         → product-scoped activity timeline
-  └── /settings         → product-level (members, roster overrides, model assignments)
-/settings/org           → org-level settings (admins, billing placeholder, daemon)
-```
-
-Legacy flat routes (`/dashboard`, `/council`, `/skills`, `/connectors`,
-`/activity`, `/settings`) redirect to their `/p/[currentProduct]/...` equivalent.
-
----
-
-## 6. Skill file structure (model-agnostic)
-
-Plain YAML frontmatter + plain Markdown body. **Do not use vendor-specific tags
-(no "Anthropic Skills" framing).** Any agent must be able to consume.
-
-### Master Skill — required sections
-
-```yaml
----
-kind: master
-product: <id>
-version: 1
-confidence: 0..1
-applies_to: { globs, contexts }
-provenance: { council_session, validated_by, validated_at, revision }
-composes_with: []   # master has no parents
-provenance:
-  revision_count: 0 | 1          # per-session adversary loop cap (binary)
-  cumulative_revisions: <number> # monotonic across council sessions; used by priors badge
-  evidence_chunks: [chunk_id…]   # capped per session; see §7.4
----
-
-# {Product Name}
-## Identity           — elevator pitch, owners, repos
-## Overview           — what it does, why it exists, who uses it
-## Architecture       — high-level diagram, key components, deployment model
-## Domain Vocabulary  — terms, acronyms (table)
-## Entity Relationships — key entities + how they relate (table or text ERD)
-## Key User Flows     — top 3–5 critical paths through the system
-## Tech Stack Index   — links to tech_stack sub-skills
-## Positive Patterns  — idiomatic examples with [file:line] citations
-## Anti-Patterns      — don'ts with rationale
-## Conventions        — naming, branching, repo layout
-## Operational Context — how it runs in prod, monitoring, on-call
-## References         — linked ADRs, RFCs, runbooks
-```
-
-### Tech-Stack / Language / Security — see plan file for section lists
-
-All non-master skills carry `composes_with: [master, <prereqs…>]` in their
-frontmatter. The Skill detail screen renders that as a composition graph.
-
----
-
-## 7. LLM Council — rosters & cost (UI-visible)
-
-The roster is **dictated by the skill kind being drafted**. Always show the cost
-and time estimate before starting a session.
-
-| Skill kind | Roster (agents) | Tokens (est.) | $ (est.) | Wall time |
-|---|---|---|---|---|
-| **Master** | Archaeologist + Domain Expert + Synthesizer + Adversary (4) | ~3,200 | ~$0.006 | 4 min |
-| **Tech-Stack** | Archaeologist + Stack Specialist + Adversary (3) | ~1,400 | ~$0.002 | 90 s |
-| **Language** | Archaeologist + Code Semantics + Adversary (3) | ~1,200 | ~$0.0015 | 75 s |
-| **Security** | Archaeologist + Security Sentinel + Adversary (3) | ~1,500 | ~$0.0025 | 90 s |
-
-Cost engineering rules to surface in the UI:
-
-- Non-Master sessions run Archaeologist on the lighter model tier.
-- Adversary triggers a revision **only** when severity = blocking (max 1
-  revision ever). When no revision happens, surface "Adversary OK — no
-  revision needed" in the validator panel.
-- Master sessions are the expensive ones — fired once per product, during
-  onboarding. Every other kind is 3-agent.
-
-### 7.1 Resync cadence and delta-only ingestion
-
-Sources re-sync on a backend-owned cadence (default: every 30 minutes; the daemon
-owns the schedule, the UI does not let users configure it).
-
-**Each resync computes a delta against the existing vector partition, not a full
-re-ingest.** This is standard RAG practice; full re-ingest on every tick is the
-non-negotiable thing we explicitly avoid:
-
-- For each chunk pulled from the connector: compute a content hash (`path + anchor + content`).
-- Compare against the stored hash table for that source.
-- **Added** (hash not in store) → embed + insert.
-- **Updated** (path/anchor in store, hash differs) → re-embed + upsert.
-- **Removed** (in store, not in current pull) → delete from index.
-- **Untouched** → no-op (the dominant case, where the cost win comes from).
-
-Contract:
-
-- `POST /products/{id}/sources/{sid}/sync` returns `{ ok: true, delta: { added, updated, removed, unchanged } }`.
-- The SSE sync-log stream at `sourceLogUrl` emits a terminal `delta` event with the same shape, plus per-chunk `added path:line` / `updated path:line` / `removed path:line` lines.
-- `Source.lastDelta` and `Source.nextSync` are persisted on the row and read via `listSources` / `getSource`.
-
-UI surfaces:
-
-- **Sources screen**: each card grows a "next sync · HH:MM" line and a "last delta · +N ~M -K" line.
-- **Source detail**: a "Next sync" stat tile next to Resources / Last sync / Status, and three delta counters (added / updated / removed) at the top of the Sync log card.
-- **Activity feed**: ingest rows read `Re-sync: N added, M updated, K removed` — no new `ActivityType` needed.
-
-### 7.2 Change-gated council cadence
-
-Council does **not** fire on every resync. Three layers, all backend-side:
-
-- **Gate** — after each ingestion delta, intersect the changed-chunk IDs with each
-  skill's `provenance.evidence_chunks`. If the overlap exceeds a configured threshold,
-  enqueue a council run for that skill.
-- **Cap** — at most one council run per `(product, skill)` per 7 days. Multiple gate
-  trips inside the window coalesce into one richer session that uses the union of
-  changed chunks.
-- **Override** — `POST /products/{id}/council/sessions` accepts `{ force: true, skill_id }`.
-  When true, the cap is bypassed. Admin perms required.
-
-The backend exposes `nextCouncilEligibleAt` per skill in the skill detail response.
-The Dashboard reads `DashboardData.cadence.nextSyncAt` / `nextCouncilAt` / `nextCouncilSkill`
-and shows a quiet one-line hint above the pipeline strip — non-interactive.
-
-`createSession` accepts `{ force?: boolean; skill_id?: string }` and returns
-`{ session_id, status, priors? }` where `priors = { revision, corrections, rejections }`.
-Activity rows for council events are suffixed `(gated)` or `(manual override)` so
-audit is clear.
-
-### 7.3 Council priors (the SME-burden mechanism)
-
-Every council session is seeded with three priors derived from prior interactions
-on the same product + skill. The goal: SMEs see less of the council over time, not more.
-
-- **Starting revision** — if a current approved skill exists, the council is launched
-  with that skill body as input. Sections that re-derive identically carry
-  `inherited: true` in the proposal payload and render with a subtle "inherited"
-  pill so SMEs can visually skip them.
-- **Corrections corpus** — every `editProposal` call captures a (council-draft → SME-edit)
-  diff against `(product_id, skill_kind)`. Recent corrections (default cap: 10) plus a
-  **distilled summary** of older ones (see §7.4) are rendered into the system prompt as
-  house rules ("Past SMEs have said: …").
-- **Rejection log** — `SkillProposal.reject_reason = { reason: string; category? }`
-  persists every SME rejection. Surfaced via `GET /skills/{id}/rejections` and rendered
-  on the skill detail page; fed back into the next session's prompt as anti-priors.
-- **Per-agent edit-rate** (stretch, not yet implemented) — if a specific agent's drafts
-  get rewritten consistently on a product, upweight its persona prompt with the actual
-  correction examples on the next run.
-
-Two revision counters, not one — easy to confuse:
-
-| Field | Scope | Capped? | Purpose |
-|---|---|---|---|
-| `provenance.revision_count` | within a single council session | `0 \| 1` (hard) | input to the confidence formula `adversary_passes = 1.0 if 0 \| 0.7 if 1` |
-| `provenance.cumulative_revisions` | across all sessions for this skill | monotonic, uncapped | the "rev N" shown in the Council session header's priors badge and on the skill provenance row |
-
-The UI's "Priors loaded · rev N · M corr · K rej" badge reads `cumulative_revisions`
-(via session.priors), never the per-session counter.
-
-### 7.4 Corrections compaction (prevents the token bomb)
-
-Without compaction, every SME edit accumulates forever in the council's system
-prompt. A master skill with 200 approved edits over 6 months would carry 50K+
-tokens of "house rules" prepended to every run, with the volume growing linearly
-with usage. We compact.
-
-Contract — `GET /skills/{id}/corrections` returns:
+The Skill is **flat** — one type, one product per skill:
 
 ```ts
-{
-  corrections: Correction[],           // recent, raw; capped at ~10 by default
-  distilled: {                         // older corrections, folded into a summary
-    rules: string,                     // the condensed house-rules text actually injected into prompts
-    from_count: number,                // how many raw corrections were folded in
-    last_compacted_at: string,
-  } | null,                            // null until the first compaction happens
-  total: number,                       // total raw corrections ever recorded
+interface Skill {
+  id: string                    // "{product}/{name}"
+  name: string
+  product: ProductId
+  version: number
+  confidence: number
+  applies_to: { files: string[]; contexts: string[] }
+  provenance: Provenance
+  body: string                  // markdown
 }
 ```
 
-Compaction policy is owned by the backend (e.g. "compact when raw count > 25, fold
-all but the most recent 10"). The UI surfaces both: a "Distilled rules" accent panel
-on top of a list of recent raw corrections, with a "showing 10 of 47 (older folded
-into distilled rules)" subtitle. SMEs always have the raw audit trail available
-via the recent list, but the *injected prompt context stays bounded*.
+There are no `kind` / `scope` / `composes_with` fields. There is no
+"master skill" vs "product domain skill" distinction. A product has zero
+or more skills, that's it.
 
-### 7.5 Evidence chunks per session cap
+## 4. Information architecture (locked)
 
-The synthesizer's prompt is also bounded on the citation side:
-`EVIDENCE_CHUNKS_PER_SESSION_CAP = 20` ([lib/types.ts](lib/types.ts)).
+```
+/                                Org-wide product list (ProjectsDashboard)
+/setup                           First-run skills-repo bootstrap
+/new                             Create a product
 
-Above this, the reranker's top-K decides which chunks survive into the prompt; the
-rest are dropped for that session. The cap is enforced backend-side. The UI surfaces
-it on the skill provenance row as `N / 20 cap` so the budget is visible to SMEs.
+/p/[product]/
+  /dashboard                     Pipeline cards + pending proposals + recent activity
+  /sources                       Source list
+  /sources/new                   Add a source (GitHub or Local filesystem)
+  /sources/[name]                Source detail + live SSE sync log
+  /ingest                        Stage gate at the ingest phase
+  /council                       Session list + start dialog
+  /council/[id]                  Live 3-pane deliberation
+  /review                        ReviewStage — approve / reject / edit
+  /skill                         Terminal-skill stage gate
+  /skills                        Skill list + detail pane
+  /skills/[id]                   Full skill detail
+```
 
-If a skill's stored `provenance.evidence_chunks` ever exceeds the cap, that's a
-historical artifact (cap was raised previously, then lowered). Display the actual
-length; the cap is a constant the prompt assembler enforces, not a hard storage limit.
+That's the full surface. **Don't add `/p/[product]/assistant`,
+`/p/[product]/activity`, `/p/[product]/proposals`,
+`/p/[product]/settings`, or `/settings/org` back.** Those layers were
+removed when the backend was slimmed — see
+[`../nexus/ENGINEERING.md §13`](../nexus/ENGINEERING.md).
 
----
+## 5. Council (UI shape)
 
-## 8. RBAC personas (mocked via debug widget)
+The 3-node Reflexion graph:
 
-| Role | Sees | Can |
-|---|---|---|
-| **Org Admin** | All products + Org overview | Onboard new products, edit org settings, switch products |
-| **Product Admin** | Their products | Manage sources, run council, edit product settings |
-| **SME** | Their products (read-mostly) | View skills, view activity, **no** Add/Remove/Onboard |
+```
+Drafter → Critic → (severity == "blocking" ?) → Reviser → END
+                  ↘ (else) → END
+```
 
-Persona is flipped via a debug widget in the TopBar (demo-only — no real
-auth/SSO). When SME is active, the product switcher hides "Onboard new product",
-sources page hides Add/Remove, and settings is read-only.
+`lib/types.ts` exports:
 
----
+```ts
+type AgentRole = 'drafter' | 'critic' | 'reviser'
+const COUNCIL_ROSTER: AgentRole[] = ['drafter', 'critic', 'reviser']
+```
 
-## 9. Design system rules (non-negotiable)
+The CouncilLanding "start session" dialog asks only for a **topic**;
+there is no skill-kind picker, no roster selector, no cost-per-roster
+disclaimer. The CouncilSession 3-pane view (`/p/[id]/council/[sessionId]`)
+streams `deliberation`, `cost`, `critique`, and `proposal_preview` events
+over SSE.
 
-> Superseded the original "No Tailwind / inline styles only" rule on
-> **2026-05-15** per explicit user request. The visual identity and tokens
-> are unchanged; the implementation moved to Tailwind v4 + shadcn primitives.
+## 6. Design system rules (non-negotiable)
 
-### 9.1 Styling
+Tailwind v4 + shadcn-style primitives. Migration complete; the
+inline-style fallback no longer exists.
 
-- **Tailwind v4 utilities are the default.** Use the `@theme`-mapped tokens
+### 6.1 Styling
+
+- **Tailwind utilities are the default.** Use the `@theme`-mapped tokens
   (`bg-bg`, `bg-surface`, `bg-surface-raised`, `text-fg`, `text-fg-muted`,
   `text-fg-subtle`, `border-border`, `border-border-strong`, `text-accent`,
   `bg-success`, etc.).
-- **No inline `style={{…}}`** in screens or shell components. The only
-  exception is dynamic numeric or color values that cannot be expressed
-  as classes — e.g. agent hue colors pulled from `lib/agent-colors.ts`,
-  animation delays, or per-row opacity in skeletons. Those are rare and
-  documented in `lib/agent-colors.ts`.
+- **No inline `style={{…}}`** in screens or shell. The only exceptions are
+  dynamic numeric / color values that can't be expressed as classes —
+  e.g. agent hue colors from `lib/types.ts::COUNCIL_AGENT_HUES`,
+  animation delays, per-row opacity in skeletons. Rare and documented.
 - Design tokens live in `app/globals.css` only inside the `@theme inline`
-  block. Tailwind utilities resolve them directly. There is no longer a
-  parallel `--foo` CSS-variable block.
+  block. Tailwind utilities resolve them directly.
 
-### 9.2 Card variants (replaces the single `GlowCard`)
+### 6.2 Card variants
 
 `components/ui/card.tsx` exposes a `variant` prop. Use the right one:
 
@@ -371,41 +131,37 @@ sources page hides Add/Remove, and settings is read-only.
 | `surface` (default) | tables, panels, content groupings, info cards | flat `bg-surface` + `border-border` |
 | `stat` | metric tiles only (counts, gauges) | subtle radial glow via `glowColor` prop |
 | `action` | clickable connector cards, source tiles, kickoff cards | raised `bg-surface-raised`, stronger border, hover affordance |
+| `glass` | premium frosted panels | `bg-surface-glass` + `backdrop-blur-xl` + subtle glow |
+| `glassAction` | interactive premium cards | glass treatment plus hover lift / stronger affordance |
 | `ghost` | inline groupings with no chrome | no bg, no border |
 
-Do **not** wrap every screen section in a blurred glow card. Most screens
-should be flat surfaces with focused use of `stat` for emphasis.
+Do **not** wrap every screen section in a glow card. Most screens should
+be flat surfaces with focused use of `stat` for emphasis.
 
-### 9.3 Icons
+### 6.3 Icons
 
-- **Brand / connector icons:** always from `@icons-pack/react-simple-icons`
-  via the `BrandIcon` wrapper in `components/icons/BrandIcon.tsx`. Never use
-  emoji or hand-drawn glyphs for GitHub / Jira / Confluence.
+- **Brand / connector icons:** `@icons-pack/react-simple-icons` via the
+  `BrandIcon` wrapper in `components/icons/BrandIcon.tsx`. Never emoji
+  or hand-drawn glyphs for GitHub, etc.
 - **UI affordances:** lucide-react (`Search`, `ChevronRight`, `Plus`,
-  `RefreshCw`, `Bell`, `Hexagon`, `Users`, `BookOpen`, …).
-- The legacy `components/icons/NexusIcon.tsx` SVG set has been **deleted**.
-  All icons go through `BrandIcon` (brands) or lucide-react (everything else).
+  `RefreshCw`, `Hexagon`, `Users`, `BookOpen`, …).
 
-### 9.4 Color identity (unchanged)
+### 6.4 Color identity
 
 - Accent `#7C8CFF` · Success `#4DD4AC` · Warning `#E8B86B` ·
   Danger `#F26D6D` · High `#FF9159` · Violet `#C58BFF`
-- Agent hues, connector state colors, severity tiers, and the confidence
-  ramp are all unchanged. Connector state and severity colors live as
-  `--color-*` tokens in the `@theme inline` block. Per-agent hex values
-  (used for runtime-dynamic chip colors) live in `lib/agent-colors.ts`.
+- Connector state, severity tiers, and the confidence ramp use these
+  same hues. Per-agent hex values live in `lib/types.ts`
+  (`COUNCIL_AGENT_HUES`).
 
-### 9.5 Typography
+### 6.5 Typography (canonical scale)
 
-- Inter for UI, JetBrains Mono for paths/IDs/timestamps/stats. Both loaded
-  via `next/font/google` in `app/layout.tsx` and exposed as
-  `--font-inter` / `--font-jetbrains` variables. Tailwind's `font-sans`
-  and `font-mono` resolve to these via `@theme inline`.
-- Root font size is **16px** (`html { font-size: 16px }`). All Tailwind
-  spacing/sizing is `rem`-based and scales from this.
+Inter for UI, JetBrains Mono for paths/IDs/timestamps/stats. Both loaded
+via `next/font/google` in `app/layout.tsx`. Tailwind's `font-sans` and
+`font-mono` resolve to these via `@theme inline`.
 
-**Canonical text scale — these are the ONLY sizes allowed in the app.**
-Use the components in `components/ui/typography.tsx`, not raw `<h1>`/`text-*`:
+**These are the ONLY text sizes allowed.** Use the components in
+`components/ui/typography.tsx`, not raw `<h1>` / `text-*`:
 
 | Size | Use | Component |
 |---|---|---|
@@ -415,183 +171,156 @@ Use the components in `components/ui/typography.tsx`, not raw `<h1>`/`text-*`:
 | `text-sm` 14px | Descriptions, mono paths, muted text | `<Muted>`, `<Subtle>`, `<Code>` |
 | `text-xs` 12px | Section labels, badges, dense metadata | `<SectionLabel>`, `<Small>` |
 
-No `text-[10px]`, no `text-[11px]`, no raw `<h1>/<h2>/<h3>`, no `text-lg`
-except a deliberate hero callout (currently only the Onboarding step-4
-"Run Council" CTA). Enforced by:
+No `text-[10px]`, no `text-[11px]`, no raw `<h1>/<h2>/<h3>`, no `text-lg`.
+Enforced by:
 
-```
+```bash
 grep -rn 'text-\[1[01]px\]\|<h1\|<h2\|<h3' components/screens components/shell app/ \
   | grep -v 'components/ui/typography.tsx'   # must be empty
 ```
 
-### 9.5a Page layout primitives
+### 6.6 Page layout primitives
 
-`components/ui/page.tsx` exposes the standard page chrome — use these
-instead of hand-rolling header/body wrappers:
+`components/ui/page.tsx`:
 
-- `<PageHeader>` — fixed 64px-tall header, `border-b`, content centered in
-  a `max-w-[1280px]` `px-8` container.
+- `<PageHeader>` — fixed 64px header, `border-b`, content in a
+  `max-w-[1280px]` `px-8` container.
 - `<PageBody>` — scrollable region, same max-width/padding, `py-8 space-y-8`.
-- `<PageGrid>` — 12-column grid (`grid-cols-12 gap-6`) for dashboard-style
-  layouts. Use `col-span-*` on children.
+- `<PageGrid>` — 12-column grid (`grid-cols-12 gap-6`).
 
-**Exceptions:** `Skills` and `CouncilSession` keep their custom 2-/3-pane
-bodies (full-bleed below the header). Only their header uses `<PageHeader>`.
+**Exceptions:** `Skills` and `CouncilSession` keep their custom
+2-/3-pane bodies (full-bleed below the header).
 
-### 9.6 Connector scope (locked to 3)
+### 6.7 Connector scope
 
-The shipped connectors are **GitHub, Jira, Confluence only**. Slack, Linear,
-Notion, GitLab, GitBook, and "Custom" have been dropped. Do not re-add them
-without a product decision.
+The shipped connectors are **GitHub** and **Local filesystem**. The
+ConnectorNew picker has exactly two options. Do not re-add Jira,
+Confluence, Slack, Linear, etc. without a product decision and a
+matching backend connector.
 
-### 9.7 Ingestion progress UX
+Product onboarding (`/new`) is intentionally narrower than Sources: it creates
+the product plus a required GitHub source using a product service-account PAT
+and one or more GitHub repo URLs. Confluence/Jira are configured later from
+Sources once their sync paths exist; they are not onboarding fields in v1.
 
-The `IngestProgress` block (scrolling SSE log + status header + delta summary)
-is the single source of truth for "we are reading your code right now."
+### 6.8 Ingestion progress UX
 
-**Current location:** inlined as a local component inside
-`components/screens/Onboarding.tsx`. It is not yet extracted to a standalone
-file. If the Sources screen needs to embed the same block, extract it to
-`components/sources/IngestionProgress.tsx` at that point — do not duplicate
-the implementation.
+`components/sources/IngestionProgress.tsx` is the single source of
+truth for "we are reading your code right now."
 
-It is used in:
-
-- **Onboarding Step 3** — full scrolling log, per-level icons (›/✓/✗),
-  spinner/done/error header, delta counter row (added / updated / removed /
-  unchanged). The council form is hidden beneath it until the stream closes
-  with `level: done`.
-- **Source detail** (`ConnectorDetail.tsx`) — a separate sync log panel
-  already exists there; align its UI to `IngestProgress` when next touched.
+- Consumes the SSE stream at `sourceLogUrl(productId, sourceId)`.
+- Renders the `Progress` bar from structured `progress` events
+  (`done`/`total`/`pct`).
+- Auto-retries the sync once on `level=warn` events (covers the
+  llama-server embed-token-limit hint cleanly without bothering the user).
+- Shows per-level icons (›/✓/✗/⚠).
 
 The Dashboard does **not** host live ingestion content. If sources are
-syncing, the Dashboard shows a single inline strip that links into Sources.
+syncing, the Dashboard shows a single inline strip that links into
+Sources.
 
-### 9.8 Skeletons, empty states, fallbacks
+### 6.9 Skeletons + empty states
 
 - `components/skeletons/` holds `SourcesSkeleton`, `SkillsSkeleton`,
   `DashboardSkeleton`, `TableSkeleton`. Each major route also has a
   `loading.tsx` next to its `page.tsx`.
-- `app/not-found.tsx` and `app/error.tsx` provide custom 404 + error
-  boundary UIs that match the design system.
-- Reviewers can preview the skeleton state on Sources / Skills / Dashboard
-  by appending `?loading=1` to the URL.
+- `app/not-found.tsx` and `app/error.tsx` are custom 404 + error
+  boundaries that match the design system.
+- Append `?loading=1` to a URL to preview the skeleton state.
 
-### 9.9 Migration map (current state)
+### 6.10 Server vs client components
 
-| File | Status |
-|---|---|
-| `app/layout.tsx`, `app/globals.css`, `postcss.config.mjs` | Tailwind v4 |
-| `components/ui/*` | shadcn primitives (canonical) |
-| `components/shell/{Shell,TopBar,SideNav,ProductSwitcher,CommandPalette,ShortcutsHelp}.tsx` | Tailwind |
-| `components/ui/{page,typography}.tsx` | New: page chrome + canonical type scale |
-| `components/pipeline/Pipeline.tsx` | Tailwind |
-| `components/screens/{Dashboard,Skills,SkillDetailPage,Sources,CouncilLanding,CouncilSession,Onboarding,Activity,Settings,ConnectorNew,ConnectorDetail,Assistant}.tsx` | Tailwind |
-| `components/sources/IngestionProgress.tsx` | Tailwind |
-| `components/skeletons/*` | Tailwind |
-| `components/icons/BrandIcon.tsx` | simple-icons wrapper for GitHub/Jira/Confluence |
-| `components/atoms/CitationChip.tsx` | Tailwind (kept — used by `CouncilSession`) |
-| `lib/agent-colors.ts` | New: `AGENT_HUE` / `AGENT_LABEL` constants (extracted from the deleted `AgentDot`) |
-| `components/screens/Connectors.tsx` | **deleted** — superseded by `Sources.tsx` |
-| `components/atoms/{Badge,Button,GlowCard,Kbd,Mono,StatusDot,ConfidenceBar,AgentDot}.tsx` | **deleted** — replaced by `components/ui/*` and `lib/agent-colors.ts` |
-| `components/icons/NexusIcon.tsx` | **deleted** — replaced by lucide-react |
+Page components stay server components by default. `'use client'` is
+only on files that need interaction state, effects, browser APIs, or
+a Radix primitive that internally uses hooks.
 
-The migration is complete. There are no legacy inline-styled files left.
-Any future component must use Tailwind utilities + `components/ui/*`
-primitives.
+### 6.11 Keyboard shortcuts
 
-### 9.10 Server vs client
-
-Page components stay server components by default. `'use client'` is only
-on files that need interaction state, effects, browser APIs, or a Radix
-primitive that internally uses hooks.
-
-### 9.11 Keyboard shortcuts
-
-The global handler lives in `components/shell/Shell.tsx`. It ignores key
-events originating in inputs/textareas/contentEditable and suspends the
-`g`-sequence while the palette or help dialog owns the keyboard.
+Global handler in `components/shell/Shell.tsx`. Ignores key events from
+inputs / textareas / contentEditable; suspends `g`-sequence while the
+palette or help dialog owns the keyboard.
 
 | Keys | Action |
 |---|---|
 | `⌘K` / `Ctrl+K` | Toggle command palette |
-| `?` | Toggle the shortcuts help dialog (`ShortcutsHelp.tsx`) |
+| `?` | Toggle the shortcuts help dialog |
 | `Esc` | Close palette / help |
-| `g` then `d` | Dashboard (product-scoped) |
-| `g` then `c` | Council |
-| `g` then `s` | Skills |
-| `g` then `i` | Assistant |
-| `g` then `a` | Activity |
-| `g` then `n` | Sources |
+| `g h` | Products (`/`) |
+| `g n` | New product (`/new`) |
+| `g i` | Ingest (product-scoped) |
+| `g c` | Council |
+| `g r` | Review |
+| `g k` | Skill |
+| `g s` | Sources |
 
-The `g`-prefix is a Vim-style sequence with an 800ms window. All nav
-targets resolve against the **current product** (`/p/${currentProductId}/…`),
-so shortcuts respect the active tenant.
+`g`-prefix is Vim-style with an 800ms window. All product-scoped
+shortcuts resolve against the current product (`/p/${currentProductId}/…`).
 
-Inside the command palette (`CommandPalette.tsx`), while the search box is
-empty: `1`–`9` jump to the Nth visible result, and a single letter
-(`d/c/s/i/a/n`) runs the matching Navigate command. `↑↓` move the selection,
-`↵` runs it. The palette itself is product-aware — its hrefs are built from
-`useProduct()`, not hardcoded to a product id.
+### 6.12 Command palette glass treatment
 
-### 9.12 Command palette glass treatment
+Convention from Linear / Vercel / cmdk: **blurred, dimmed backdrop** with
+a **crisp, near-solid elevated panel** floating on top.
 
-Follows the modern command-palette convention (Linear / Vercel / cmdk):
-a **blurred, dimmed backdrop** with a **crisp, near-solid elevated panel**
-floating on top.
-
-- **Overlay:** `bg-black/55 backdrop-blur-md` — this is what produces the
-  glassy depth; the whole app recedes behind a soft frosted dim.
+- **Overlay:** `bg-black/55 backdrop-blur-md` — produces the glassy depth.
 - **Panel:** `bg-surface-raised` (solid, opaque) + `border-border-strong`
   + `shadow-2xl shadow-black/80` + a faint `ring-inset ring-white/[0.05]`
   top sheen.
 
 **Critical — do NOT make the panel translucent.** Glass-on-blur looks
-muddy: if the backdrop is already blurred, a translucent panel has nothing
-crisp to refract and reads as double-blur mush. With a blurred backdrop the
-panel must be a clean solid surface. (Translucent-glass panels only work
-when the backdrop is *not* pre-blurred — we deliberately chose the
-blurred-backdrop + solid-panel direction instead.)
+muddy: with a blurred backdrop the panel must be a clean solid surface.
 
 This blur treatment is **reserved for the command palette** — regular
-cards and dialogs stay flat (see 9.2).
+cards and dialogs stay flat (see 6.2).
 
----
+## 7. RBAC personas
 
-## 10. Where to find things
+Three personas backed by the registry users table. UI-side they surface
+as the `permissions` block on `/me`:
+
+```ts
+interface Permissions {
+  canManageSources: boolean
+  canRunCouncil: boolean
+  canOnboard: boolean
+  isOrgAdmin: boolean
+  settingsReadOnly: boolean
+}
+```
+
+The UI gates affordances on these flags (e.g. "New product" button on
+ProductSwitcher only shows when `canOnboard`). There's no separate
+settings screen — `settingsReadOnly` was for the deleted Settings
+route.
+
+## 8. Where to find things
 
 | What | Where |
 |---|---|
-| Full product plan (original) | `~/.claude/plans/delightful-conjuring-feigenbaum.md` |
-| In-flight redesign plan | `~/.claude/plans/composed-forging-treasure.md` |
-| All mock data | `lib/data.ts` |
-| Design tokens | `app/globals.css` |
-| UI primitives (Tailwind + Radix) | `components/ui/` |
+| Design tokens | `app/globals.css` (`@theme inline`) |
+| UI primitives (Button, Card, Badge, …) | `components/ui/` |
 | Shell (TopBar, SideNav, palette, ProductSwitcher) | `components/shell/` |
-| Screen components | `components/screens/` |
-| Brand icons (GitHub/Jira/Confluence) | `components/icons/BrandIcon.tsx` |
-| Agent hue + label constants | `lib/agent-colors.ts` |
-| Citation chip (last remaining atom) | `components/atoms/CitationChip.tsx` |
+| Screen components (one per route) | `components/screens/` |
+| Brand icons | `components/icons/BrandIcon.tsx` |
+| Agent hues + labels + roster | `lib/types.ts` (`COUNCIL_AGENT_HUES`, `COUNCIL_AGENT_LABELS`, `COUNCIL_ROSTER`) |
+| API client (one fn per endpoint) | `lib/api/index.ts` |
+| Domain types | `lib/types.ts` |
+| Product context hook | `lib/product-context.tsx` (`useProduct()`) |
 
----
+## 9. What to do when in doubt
 
-## 11. What to do when in doubt
+1. Re-read the invariants in §3.
+2. Check if the IA in §4 already has a spot for what you want.
+3. Search the existing screen for the closest analogue — match its
+   structure and primitives.
+4. If you find yourself wanting a new top-level route, push back. The
+   IA is locked.
 
-1. Re-read sections 3 (mental model) and 4 (target UX) — they're the spine.
-2. Check if the move strengthens one of the five demo moments in section 4.
-3. Check if an atom in `components/atoms/` already covers your need.
-4. Ask before introducing a new dependency. This app is intentionally
-   dependency-light (Next.js + React + a handful of inline SVGs).
-5. If a proposed change adds a top-level route outside the `/p/[product]/...`
-   tree, **stop** — that almost certainly breaks the tenancy model.
+## 10. Out of scope (do not build)
 
----
-
-## 12. Out of scope (do not build)
-
-- Real auth / SSO / role provisioning.
-- A real graph renderer for skill composition (use static SVG/CSS).
-- A real markdown editor for skill bodies.
-- Billing UI.
-- Org overview dashboard for org admins (stub to "coming soon" if needed).
-- Re-implementing backend wiring (all screens are live-connected; see `nexus/docs/UI-CUTOVER-STATUS.md`).
+- Cross-product views or rollups.
+- A separate Assistant chat surface.
+- An Org Library / Adopted Standards section.
+- A composition graph on the skill detail page (`composes_with` is
+  gone).
+- Settings / Org Settings / Activity / Proposals power-user routes.
+- Anything that bypasses the council → review → approve loop.

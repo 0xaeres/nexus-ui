@@ -5,7 +5,7 @@ const PAGE_PADDING_X = 'px-8'
 
 export function PageHeader({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="border-b border-border bg-bg">
+    <div className="border-b border-border bg-surface-glass/60 backdrop-blur-sm">
       <div className={cn('mx-auto flex items-center gap-4 h-16', PAGE_MAX_WIDTH, PAGE_PADDING_X, className)}>
         {children}
       </div>

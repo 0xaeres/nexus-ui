@@ -3,11 +3,11 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, RefreshCw, ChevronRight, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StatusDot } from '@/components/ui/status-dot'
 import { SourcesSkeleton } from '@/components/skeletons/SourcesSkeleton'
-import { PageHeader, PageBody } from '@/components/ui/page'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, SectionLabel, Muted, Subtle, Code } from '@/components/ui/typography'
 import { useProduct } from '@/lib/product-context'
 import { ApiError, listSources, syncSource } from '@/lib/api'
@@ -79,45 +79,51 @@ export function Sources() {
       </PageHeader>
 
       <PageBody>
-        {error && (
-          <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
-            <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
-            <Muted className="font-mono">{error}</Muted>
-          </Card>
-        )}
+        <PageGrid>
+          {error && (
+            <div className="col-span-12">
+              <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
+                <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
+                <Muted className="font-mono">{error}</Muted>
+              </Card>
+            </div>
+          )}
 
-        <section>
-          <div className="flex items-center gap-2.5 mb-4">
-            <SectionLabel>Active sources</SectionLabel>
-            <Subtle className="font-mono">
-              {sources?.length ?? 0} configured
-            </Subtle>
+          <div className="col-span-12">
+            <div className="flex items-center gap-2.5 mb-4">
+              <SectionLabel>Active sources</SectionLabel>
+              <Subtle className="font-mono">
+                {sources?.length ?? 0} configured
+              </Subtle>
+            </div>
           </div>
 
           {(!sources || sources.length === 0) ? (
-            <Card variant="surface" className="p-8 flex flex-col items-center gap-3 text-center">
-              <Inbox className="h-8 w-8 text-fg-subtle" />
-              <H3>No sources yet</H3>
-              <Muted>
-                Add a GitHub repo, Confluence space, or any MCP connector to start ingesting.
-              </Muted>
-              {perms.canManageSources && (
-                <Button asChild size="sm">
-                  <Link href={`${base}/sources/new`}>
-                    <Plus className="h-4 w-4" />
-                    Add your first source
-                  </Link>
-                </Button>
-              )}
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sources.map(src => (
-                <SourceCard key={src.id} src={src} base={base} />
-              ))}
+            <div className="col-span-12">
+              <Card variant="surface" className="p-8 flex flex-col items-center gap-3 text-center">
+                <Inbox className="h-8 w-8 text-fg-subtle" />
+                <H3>No sources yet</H3>
+                <Muted>
+                  Add a GitHub repo or local filesystem source to start ingesting.
+                </Muted>
+                {perms.canManageSources && (
+                  <Button asChild size="sm">
+                    <Link href={`${base}/sources/new`}>
+                      <Plus className="h-4 w-4" />
+                      Add your first source
+                    </Link>
+                  </Button>
+                )}
+              </Card>
             </div>
+          ) : (
+            sources.map(src => (
+              <div key={src.id} className="col-span-12 md:col-span-6 lg:col-span-4">
+                <SourceCard src={src} base={base} />
+              </div>
+            ))
           )}
-        </section>
+        </PageGrid>
       </PageBody>
     </>
   )
@@ -128,11 +134,11 @@ function SourceCard({ src, base }: { src: Source; base: string }) {
   return (
     <Link
       href={`${base}/sources/${encodeURIComponent(src.name)}`}
-      className="group"
+      className="group block h-full"
     >
       <Card
-        variant="surface"
-        className="p-4 flex flex-col gap-3 transition-transform hover:-translate-y-0.5"
+        variant="glassAction"
+        className="p-4 flex flex-col gap-3 h-full"
       >
         <div className="flex items-center gap-2.5">
           <span className="h-2 w-2 rounded-full bg-accent" />
@@ -169,7 +175,7 @@ function SourceCard({ src, base }: { src: Source; base: string }) {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 text-fg-subtle group-hover:text-fg transition-colors">
+        <div className="flex items-center gap-1 text-fg-subtle group-hover:text-fg transition-colors mt-auto">
           <StatusDot status={src.status === 'syncing' ? 'syncing' : 'done'} size={5} />
           <span className="text-xs font-mono">view detail</span>
           <ChevronRight className="h-3 w-3 ml-auto" />

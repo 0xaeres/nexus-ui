@@ -1,5 +1,5 @@
 /**
- * Typed accessors mapped to FastAPI routes (ENGINEERING.md §11).
+ * Typed accessors mapped to FastAPI routes (ENGINEERING.md §8).
  * One function per endpoint; no business logic.
  */
 
@@ -42,7 +42,7 @@ export const createProduct = (body: {
   id: string
   name: string
   tagline?: string
-  owner?: { team: string; lead: string }
+  owner?: { team?: string; lead?: string }
 }) => api.post<Product>('/products', body)
 
 // ---- dashboard -----------------------------------------------------------
