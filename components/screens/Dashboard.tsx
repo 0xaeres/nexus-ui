@@ -1,46 +1,89 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Plus, BookOpen, ArrowRight, Activity as ActivityIcon } from 'lucide-react'
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ClipboardCheck,
+  Database,
+  GitBranch,
+  Plus,
+  Sparkles,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { StatusDot } from '@/components/ui/status-dot'
-import { Separator } from '@/components/ui/separator'
-import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-} from '@/components/ui/table'
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton'
-import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
-import { H1, H3, SectionLabel, Muted, Subtle, Small } from '@/components/ui/typography'
+import { PageBody, PageGrid, PageHeader } from '@/components/ui/page'
+import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { useProduct } from '@/lib/product-context'
-import { ApiError, getDashboard } from '@/lib/api'
-import type { DashboardData } from '@/lib/types'
+import { ApiError, getDashboard, getProductStatus, listSources } from '@/lib/api'
+import type { DashboardData, ProductStage, ProductStatus, Source } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-const ACCENT_TEXT: Record<string, string> = {
-  default: 'text-fg',
-}
-
-const ACCENT_DOT: Record<string, string> = {
-  default: 'bg-fg-subtle',
-}
-
-const ACCENT_GLOW = 'rgba(124,140,255,0.12)'
+const FLOW: Array<{
+  stage: Exclude<ProductStage, 'none'>
+  title: string
+  caption: string
+  icon: typeof Database
+  href: (base: string) => string
+  cta: string
+}> = [
+  {
+    stage: 'ingesting',
+    title: 'Ingest',
+    caption: 'Clone repositories, chunk files, enrich context, and build embeddings.',
+    icon: Database,
+    href: (base) => `${base}/ingest`,
+    cta: 'Open ingest',
+  },
+  {
+    stage: 'council',
+    title: 'Council',
+    caption: 'Run the 3-agent loop to draft a product skill proposal.',
+    icon: Sparkles,
+    href: (base) => `${base}/council`,
+    cta: 'Run Council',
+  },
+  {
+    stage: 'review',
+    title: 'Review',
+    caption: 'SME reviews, edits, rejects, or approves the proposal.',
+    icon: ClipboardCheck,
+    href: (base) => `${base}/review`,
+    cta: 'Review proposal',
+  },
+  {
+    stage: 'skill',
+    title: 'Skill',
+    caption: 'Approved skill is ready to view and serve through MCP.',
+    icon: BookOpen,
+    href: (base) => `${base}/skill`,
+    cta: 'View skill',
+  },
+]
 
 export function Dashboard() {
-  const { currentProductId, currentProduct } = useProduct()
+  const { currentProductId, currentProduct, perms } = useProduct()
   const sp = useSearchParams()
   const forceLoading = sp?.get('loading') === '1'
-
   const [data, setData] = useState<DashboardData | null>(null)
+  const [status, setStatus] = useState<ProductStatus | null>(null)
+  const [sources, setSources] = useState<Source[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const d = await getDashboard(currentProductId)
-      setData(d)
+      const [dashboard, productStatus, sourceList] = await Promise.all([
+        getDashboard(currentProductId),
+        getProductStatus(currentProductId),
+        listSources(currentProductId),
+      ])
+      setData(dashboard)
+      setStatus(productStatus)
+      setSources(sourceList)
       setError(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : String(e))
@@ -50,173 +93,281 @@ export function Dashboard() {
   useEffect(() => { void refresh() }, [refresh])
 
   if (forceLoading) return <DashboardSkeleton />
-  if (!data && !error) return <DashboardSkeleton />
+  if (!data && !status && !error) return <DashboardSkeleton />
 
   const base = `/p/${currentProductId}`
-  const pending = data?.pending ?? []
-  const activity = data?.recentActivity ?? []
-  const pipeline = data?.pipeline ?? []
-  const daemonState = data?.daemon?.state ?? 'unknown'
+  const sourceCount = sources?.length ?? 0
+  const resourceCount = sources?.reduce((sum, source) => sum + source.resourceCount, 0) ?? 0
+  const pendingCount = data?.pending.length ?? 0
+  const currentStage = status?.currentStage ?? 'none'
+  const nextAction = getNextAction(currentStage, base, sourceCount)
 
   return (
     <>
       <PageHeader>
-        <H1>Dashboard</H1>
-        <Badge variant="outline" className="font-mono">
-          {currentProduct?.name ?? currentProductId}
-        </Badge>
+        <H1>{currentProduct?.name ?? currentProductId}</H1>
+        <Badge variant="outline" className="font-mono">{currentProductId}</Badge>
         <div className="flex-1" />
         <Button asChild variant="secondary">
-          <Link href={`${base}/skills`}>
-            <BookOpen className="h-4 w-4" />
-            View Skills
+          <Link href={`${base}/sources`}>
+            <GitBranch className="h-4 w-4" />
+            Configure sources
           </Link>
         </Button>
-        <Button asChild>
-          <Link href={`${base}/council`}>
-            <Plus className="h-4 w-4" />
-            New Council session
-          </Link>
-        </Button>
+        {nextAction && (
+          <Button asChild>
+            <Link href={nextAction.href}>
+              {nextAction.label}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </PageHeader>
 
       <PageBody>
         <PageGrid>
           {error && (
             <div className="col-span-12">
-              <Card variant="surface" className="px-5 py-4 border border-danger/30 bg-danger/10">
+              <Card variant="surface" className="border-danger/30 bg-danger/10 px-5 py-4">
                 <SectionLabel className="text-danger">Backend unreachable</SectionLabel>
                 <Muted className="font-mono">{error}</Muted>
               </Card>
             </div>
           )}
 
-          {/* Pipeline stat cards */}
-          <div className="col-span-12">
-            <div className="flex items-center gap-2.5 mb-4">
-              <SectionLabel>Pipeline</SectionLabel>
-              <Subtle className="font-mono">live counts</Subtle>
-            </div>
-          </div>
-          {pipeline.map(stage => (
-            <div key={stage.id} className="col-span-6 md:col-span-3">
-              <Card variant="glass" glowColor={ACCENT_GLOW} className="p-5 flex flex-col gap-3">
-                <Muted className="text-sm">{stage.label}</Muted>
-                <span className="text-3xl font-semibold font-mono leading-none tracking-tight text-fg">
-                  {stage.count.toLocaleString()}
-                </span>
-              </Card>
-            </div>
-          ))}
-
-          {/* Daemon strip */}
-          <div className="col-span-12">
-            <Card variant="surface" className="px-6 py-4 flex items-center gap-5 flex-wrap">
-              <div className="flex items-center gap-2">
-                <StatusDot status={daemonState === 'idle' ? 'idle' : 'running'} size={7} />
-                <span className="text-base font-mono text-fg">daemon · {daemonState}</span>
-                {data?.daemon?.lastEvent && (
-                  <Subtle className="font-mono">last event {data.daemon.lastEvent}</Subtle>
-                )}
-              </div>
-              <Separator orientation="vertical" className="h-4" />
-              <Muted className="font-mono">
-                {pending.length} pending {pending.length === 1 ? 'proposal' : 'proposals'}
-              </Muted>
+          <div className="col-span-12 xl:col-span-8">
+            <Card variant="glass" className="h-full">
+              <CardContent className="flex h-full flex-col gap-6 p-6">
+                <div className="flex flex-col gap-2">
+                  <SectionLabel>Product flow</SectionLabel>
+                  <H3>Configure once, then move through the skill pipeline.</H3>
+                  <Muted>
+                    Sources belong to this product. Ingestion prepares evidence, Council drafts,
+                    SME review gates approval, and the approved skill becomes visible here.
+                  </Muted>
+                </div>
+                <StageProgress current={currentStage} />
+                <div className="grid gap-3 md:grid-cols-2">
+                  {FLOW.map((item) => (
+                    <FlowStep key={item.stage} item={item} current={currentStage} base={base} />
+                  ))}
+                </div>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Pending proposals */}
-          <div className="col-span-12">
-            <div className="flex items-center gap-2.5 mb-4">
-              <SectionLabel>Awaiting human</SectionLabel>
-              <Subtle className="font-mono">{pending.length} items</Subtle>
-            </div>
-          </div>
-          {pending.length === 0 ? (
-            <div className="col-span-12">
-              <Card variant="surface" className="px-5 py-4">
-                <Muted>Nothing pending. Kick off a council to draft a new skill.</Muted>
-              </Card>
-            </div>
-          ) : (
-            pending.slice(0, 6).map(p => (
-              <div key={p.id} className="col-span-12 md:col-span-6 lg:col-span-4">
-                <Link href={`${base}/review`} className="group block">
-                  <Card variant="glassAction" glowColor={ACCENT_GLOW} className="p-5 flex flex-col gap-3 h-full">
-                    <div className="flex items-center gap-2">
-                      <span className={cn('h-1.5 w-1.5 rounded-full', ACCENT_DOT.default)} />
-                      <Muted>pending</Muted>
-                    </div>
-                    <div className="flex items-baseline justify-between">
-                      <span className={cn('text-base font-medium font-mono leading-tight truncate', ACCENT_TEXT.default)}>
-                        {p.label}
-                      </span>
-                      <Small className="font-mono text-fg-subtle">
-                        {Math.round((p.confidence ?? 0) * 100)}%
-                      </Small>
-                    </div>
-                    <div className="flex items-center gap-1 text-fg-subtle group-hover:text-fg transition-colors mt-auto">
-                      <Small className="font-mono">Open</Small>
-                      <ArrowRight className="h-3 w-3" />
-                    </div>
-                  </Card>
-                </Link>
-              </div>
-            ))
-          )}
-
-          {/* Recent activity */}
-          <div className="col-span-12">
-            <Card variant="surface" className="overflow-hidden p-0">
-              <CardHeader className="border-b border-border flex flex-row items-center gap-2.5">
-                <ActivityIcon className="h-4 w-4 text-fg-muted" />
-                <H3>Recent activity</H3>
+          <div className="col-span-12 xl:col-span-4">
+            <Card variant="surface" className="h-full">
+              <CardHeader>
+                <SectionLabel>Configuration</SectionLabel>
+                <H3>Product sources</H3>
+                <Muted>Add GitHub repositories or local filesystem sources for this product.</Muted>
               </CardHeader>
-              {activity.length === 0 ? (
-                <CardContent>
-                  <Muted>No activity yet for this product.</Muted>
-                </CardContent>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead>Type</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Started</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activity.slice(0, 10).map(r => (
-                      <TableRow key={r.id}>
-                        <TableCell>
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {r.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{r.title}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center gap-2">
-                            <StatusDot
-                              status={r.status === 'completed' ? 'done' : r.status === 'running' ? 'syncing' : 'error'}
-                              size={5}
-                            />
-                            <Small className="font-mono">{r.status}</Small>
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-fg-subtle">
-                          {r.startedAt?.slice(0, 19) ?? '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <CardContent className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Stat label="sources" value={sourceCount.toLocaleString()} />
+                  <Stat label="resources" value={resourceCount.toLocaleString()} />
+                  <Stat label="pending" value={pendingCount.toLocaleString()} />
+                  <Stat label="stage" value={stageLabel(currentStage)} />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href={`${base}/sources`}>
+                      <GitBranch className="h-3.5 w-3.5" />
+                      Sources
+                    </Link>
+                  </Button>
+                  {perms.canManageSources && (
+                    <Button asChild size="sm">
+                      <Link href={`${base}/sources/new`}>
+                        <Plus className="h-3.5 w-3.5" />
+                        Add source
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="col-span-12 lg:col-span-7">
+            <Card variant="surface">
+              <CardHeader>
+                <SectionLabel>Sources</SectionLabel>
+                <H3>Connected repositories and docs</H3>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {sources && sources.length === 0 && (
+                  <Muted>No sources yet. Add one to start the ingestion pipeline.</Muted>
+                )}
+                {sources?.slice(0, 4).map((source) => (
+                  <SourceRow key={source.id} source={source} base={base} />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="col-span-12 lg:col-span-5">
+            <Card variant="surface">
+              <CardHeader>
+                <SectionLabel>Next action</SectionLabel>
+                <H3>{nextAction?.label ?? 'Flow complete'}</H3>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <Muted>{nextAction?.description ?? 'Approved skill is ready. View it or run another council session when sources change.'}</Muted>
+                {nextAction ? (
+                  <Button asChild>
+                    <Link href={nextAction.href}>
+                      {nextAction.label}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="secondary">
+                    <Link href={`${base}/skill`}>
+                      View skill
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
+              </CardContent>
             </Card>
           </div>
         </PageGrid>
       </PageBody>
     </>
   )
+}
+
+function getNextAction(stage: ProductStage, base: string, sourceCount: number) {
+  if (sourceCount === 0) {
+    return {
+      label: 'Add source',
+      href: `${base}/sources/new`,
+      description: 'Connect at least one repository or local source before ingestion can run.',
+    }
+  }
+  if (stage === 'none' || stage === 'ingesting') {
+    return {
+      label: 'Open ingest',
+      href: `${base}/ingest`,
+      description: 'Watch the live ingestion pipeline and continue to Council when embeddings are ready.',
+    }
+  }
+  if (stage === 'council') {
+    return {
+      label: 'Run Council',
+      href: `${base}/council`,
+      description: 'Embeddings are ready. Start the Council to draft a skill proposal.',
+    }
+  }
+  if (stage === 'review') {
+    return {
+      label: 'Review proposal',
+      href: `${base}/review`,
+      description: 'A proposal is waiting for SME approval, edit, or rejection.',
+    }
+  }
+  return null
+}
+
+function StageProgress({ current }: { current: ProductStage }) {
+  const reached = current === 'none' ? -1 : FLOW.findIndex((item) => item.stage === current)
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {FLOW.map((item, index) => (
+        <div
+          key={item.stage}
+          className={cn(
+            'h-1.5 rounded-full',
+            index < reached && 'bg-success',
+            index === reached && 'bg-accent',
+            index > reached && 'bg-border',
+            reached === -1 && 'bg-border',
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
+function FlowStep({
+  item,
+  current,
+  base,
+}: {
+  item: (typeof FLOW)[number]
+  current: ProductStage
+  base: string
+}) {
+  const Icon = item.icon
+  const reached = current === 'none' ? -1 : FLOW.findIndex((step) => step.stage === current)
+  const index = FLOW.findIndex((step) => step.stage === item.stage)
+  const active = index === reached
+  const done = index < reached
+  return (
+    <Link href={item.href(base)} className="group block no-underline">
+      <Card
+        variant={active ? 'glassAction' : 'surface'}
+        className={cn(
+          'h-full p-4 transition-colors',
+          active && 'border-accent/35',
+          done && 'border-success/20',
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <div className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-bg-active',
+            active && 'text-accent',
+            done && 'text-success',
+            !active && !done && 'text-fg-subtle',
+          )}>
+            {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <H3>{item.title}</H3>
+            <Muted className="block">{item.caption}</Muted>
+            <Small className="mt-3 inline-flex items-center gap-1 font-mono text-fg-subtle group-hover:text-fg">
+              {item.cta}
+              <ArrowRight className="h-3 w-3" />
+            </Small>
+          </div>
+        </div>
+      </Card>
+    </Link>
+  )
+}
+
+function SourceRow({ source, base }: { source: Source; base: string }) {
+  return (
+    <Link href={`${base}/sources/${encodeURIComponent(source.name)}`} className="no-underline">
+      <div className="flex items-center gap-3 rounded-md border border-border bg-bg/40 px-3 py-2 hover:bg-bg-hover">
+        <GitBranch className="h-4 w-4 text-fg-subtle" />
+        <div className="min-w-0 flex-1">
+          <Small className="block truncate font-mono text-fg">{source.name}</Small>
+          <Small className="font-mono text-fg-subtle">{source.type}</Small>
+        </div>
+        <Badge variant={source.status === 'error' ? 'danger' : 'outline'}>
+          {source.status}
+        </Badge>
+        <Small className="font-mono text-fg-subtle">
+          {source.resourceCount.toLocaleString()}
+        </Small>
+      </div>
+    </Link>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-bg-active px-3 py-2">
+      <SectionLabel>{label}</SectionLabel>
+      <Small className="block truncate font-mono text-fg">{value}</Small>
+    </div>
+  )
+}
+
+function stageLabel(stage: ProductStage): string {
+  if (stage === 'none') return 'setup'
+  return stage === 'ingesting' ? 'ingest' : stage
 }

@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Compass, Plug, Settings, Terminal } from 'lucide-react'
+import { BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, Plug, Settings, Sparkles, Terminal } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
@@ -24,12 +24,44 @@ export function SideNav() {
       <NavLink href="/" icon={Compass} label="Products" active={!inProduct && pathname === '/'} />
 
       {inProduct && (
-        <NavLink
-          href={`${base}/sources`}
-          icon={Plug}
-          label="Sources"
-          active={pathname.startsWith(`${base}/sources`)}
-        />
+        <>
+          <NavLink
+            href={base}
+            icon={LayoutDashboard}
+            label="Dashboard"
+            active={pathname === base || pathname === `${base}/dashboard`}
+          />
+          <NavLink
+            href={`${base}/sources`}
+            icon={Plug}
+            label="Sources"
+            active={pathname.startsWith(`${base}/sources`)}
+          />
+          <NavLink
+            href={`${base}/ingest`}
+            icon={Database}
+            label="Ingest"
+            active={pathname === `${base}/ingest`}
+          />
+          <NavLink
+            href={`${base}/council`}
+            icon={Sparkles}
+            label="Council"
+            active={pathname.startsWith(`${base}/council`)}
+          />
+          <NavLink
+            href={`${base}/review`}
+            icon={ClipboardCheck}
+            label="Review"
+            active={pathname === `${base}/review`}
+          />
+          <NavLink
+            href={`${base}/skill`}
+            icon={BookOpen}
+            label="Skill"
+            active={pathname === `${base}/skill` || pathname.startsWith(`${base}/skills`)}
+          />
+        </>
       )}
 
       <div className="flex-1" />

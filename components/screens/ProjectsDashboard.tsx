@@ -1,13 +1,14 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Plus, Loader2, Sparkles, CheckCircle2, Inbox, Database, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PageBody, PageHeader, PageGrid } from '@/components/ui/page'
-import { H1, H3, Muted, Small } from '@/components/ui/typography'
-import { ApiError, getProductStatus, listProducts } from '@/lib/api'
+import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { ApiError, getProductStatus, listProducts, listSources, syncSource } from '@/lib/api'
 import type { Product, ProductStage, ProductStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,20 @@ interface StageVisual {
   href: (id: string) => string
   primary: boolean
 }
+
+type BoardKey = 'ingest' | 'council' | 'review' | 'skill'
+
+const BOARD: Array<{
+  key: BoardKey
+  title: string
+  caption: string
+  icon: typeof Database
+}> = [
+  { key: 'ingest', title: 'Ingest', caption: 'Sources and embeddings', icon: Database },
+  { key: 'council', title: 'Council', caption: 'Draft skill proposal', icon: Sparkles },
+  { key: 'review', title: 'Review', caption: 'SME approval loop', icon: Inbox },
+  { key: 'skill', title: 'Skill Ready', caption: 'Approved knowledge', icon: CheckCircle2 },
+]
 
 function stageVisual(status: ProductStatus): StageVisual {
   if (status.currentStage === 'skill') {
@@ -84,9 +99,11 @@ function stageVisual(status: ProductStatus): StageVisual {
 }
 
 export function ProjectsDashboard() {
+  const router = useRouter()
   const [products, setProducts] = useState<Product[] | null>(null)
   const [statuses, setStatuses] = useState<Record<string, CardState>>({})
   const [listError, setListError] = useState<string | null>(null)
+  const [syncingProduct, setSyncingProduct] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -117,6 +134,28 @@ export function ProjectsDashboard() {
       cancelled = true
     }
   }, [])
+
+  const resyncProduct = useCallback(async (productId: string) => {
+    setSyncingProduct(productId)
+    setListError(null)
+    try {
+      const sources = await listSources(productId)
+      if (sources.length === 0) {
+        router.push(`/p/${productId}/sources/new`)
+        return
+      }
+      await Promise.allSettled(sources.map((source) => syncSource(productId, source.id)))
+      router.push(`/p/${productId}/ingest?sync=1`)
+    } catch (e: unknown) {
+      setListError(e instanceof ApiError ? e.message : String(e))
+      setSyncingProduct(null)
+    }
+  }, [router])
+
+  const grouped = BOARD.map((stage) => ({
+    ...stage,
+    products: (products ?? []).filter((product) => boardKeyForState(statuses[product.id] ?? null) === stage.key),
+  }))
 
   return (
     <>
@@ -152,14 +191,70 @@ export function ProjectsDashboard() {
             </div>
           )}
 
-          {products && products.length > 0 && products.map((p) => (
-            <div key={p.id} className="col-span-12 md:col-span-6 xl:col-span-4">
-              <ProductCard product={p} state={statuses[p.id] ?? null} />
+          {products && products.length > 0 && grouped.map((stage) => (
+            <div key={stage.key} className="col-span-12 lg:col-span-6 2xl:col-span-3">
+              <FlowColumn stage={stage}>
+                {stage.products.length === 0 ? (
+                  <EmptyColumn />
+                ) : (
+                  stage.products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      state={statuses[product.id] ?? null}
+                      syncing={syncingProduct === product.id}
+                      onResync={() => void resyncProduct(product.id)}
+                    />
+                  ))
+                )}
+              </FlowColumn>
             </div>
           ))}
         </PageGrid>
       </PageBody>
     </>
+  )
+}
+
+function boardKeyForState(state: CardState): BoardKey {
+  if (!state || 'error' in state) return 'ingest'
+  if (state.currentStage === 'skill') return 'skill'
+  if (state.currentStage === 'review') return 'review'
+  if (state.currentStage === 'council') return 'council'
+  return 'ingest'
+}
+
+function FlowColumn({
+  stage,
+  children,
+}: {
+  stage: (typeof BOARD)[number] & { products: Product[] }
+  children: React.ReactNode
+}) {
+  const Icon = stage.icon
+  return (
+    <Card variant="surface" className="flex min-h-[420px] flex-col overflow-hidden">
+      <CardHeader className="border-b border-border">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-accent" />
+          <H3>{stage.title}</H3>
+          <div className="flex-1" />
+          <Badge variant="outline" className="font-mono">{stage.products.length}</Badge>
+        </div>
+        <Subtle>{stage.caption}</Subtle>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-3">
+        {children}
+      </CardContent>
+    </Card>
+  )
+}
+
+function EmptyColumn() {
+  return (
+    <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border bg-bg/40 p-5 text-center">
+      <Small className="font-mono text-fg-subtle">No products here</Small>
+    </div>
   )
 }
 
@@ -186,13 +281,23 @@ function EmptyState() {
   )
 }
 
-function ProductCard({ product, state }: { product: Product; state: CardState }) {
+function ProductCard({
+  product,
+  state,
+  syncing,
+  onResync,
+}: {
+  product: Product
+  state: CardState
+  syncing: boolean
+  onResync: () => void
+}) {
   const isLoading = state === null
   const isError = state !== null && 'error' in state
 
   if (isLoading || isError) {
     return (
-      <Card variant="surface" className="p-5 flex flex-col gap-3 min-h-[180px]">
+      <Card variant="surface" className="flex min-h-[170px] flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1 min-w-0">
             <H3 className="truncate">{product.name}</H3>
@@ -218,7 +323,7 @@ function ProductCard({ product, state }: { product: Product; state: CardState })
   const spin = status.currentStage === 'ingesting' || (status.currentStage === 'council' && status.councilInProgress)
 
   return (
-    <Card variant="glassAction" className="p-5 flex flex-col gap-4 min-h-[180px]">
+    <Card variant="glassAction" className="flex min-h-[190px] flex-col gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <Link href={`/p/${product.id}`} className="flex flex-col gap-1 min-w-0 no-underline">
           <H3 className="truncate text-fg hover:text-accent transition-colors">{product.name}</H3>
@@ -238,18 +343,27 @@ function ProductCard({ product, state }: { product: Product; state: CardState })
 
       <StageProgress stage={status.currentStage} />
 
-      <div className="flex-1" />
-      <div className="flex items-center justify-between">
-        {status.currentStage !== 'none' ? (
-          <Button asChild variant="ghost" size="sm" className="text-fg-subtle h-7 px-2">
-            <Link href={`/p/${product.id}/sources`}>
-              <RefreshCw className="h-3 w-3" />
-              Re-sync
-            </Link>
-          </Button>
-        ) : (
-          <span />
-        )}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <Metric label="state" value={v.label} />
+        <Metric label="id" value={product.id} />
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2 text-fg-subtle"
+          disabled={syncing}
+          onClick={onResync}
+        >
+          {syncing ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3 w-3" />
+          )}
+          Sync
+        </Button>
         <Button
           asChild
           variant={v.primary ? 'default' : 'secondary'}
@@ -262,6 +376,15 @@ function ProductCard({ product, state }: { product: Product; state: CardState })
         </Button>
       </div>
     </Card>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md bg-bg-active px-2.5 py-2">
+      <SectionLabel>{label}</SectionLabel>
+      <Small className="block truncate font-mono text-fg-muted">{value}</Small>
+    </div>
   )
 }
 

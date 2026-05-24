@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft, Check, Database, Users, ClipboardCheck, BookOpen } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { PageHeader, PageBody } from '@/components/ui/page'
+import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, Muted, Small, Subtle } from '@/components/ui/typography'
 import { cn } from '@/lib/utils'
 import type { ProductStage } from '@/lib/types'
@@ -53,8 +53,14 @@ export function StageShell({
       </PageHeader>
 
       <PageBody>
-        <Stepper productId={productId} stageIndex={stageIndex} reachedIndex={reachedIndex} />
-        {children}
+        <PageGrid>
+          <div className="col-span-12 lg:col-span-10 lg:col-start-2 xl:col-span-8 xl:col-start-3">
+            <div className="flex flex-col gap-6">
+              <Stepper productId={productId} stageIndex={stageIndex} reachedIndex={reachedIndex} />
+              {children}
+            </div>
+          </div>
+        </PageGrid>
       </PageBody>
     </>
   )
@@ -70,7 +76,7 @@ function Stepper({
   reachedIndex: number
 }) {
   return (
-    <div className="flex items-center gap-2 max-w-3xl">
+    <div className="grid grid-cols-4 items-center gap-2">
       {ORDER.map((s, i) => {
         const Icon = s.icon
         const isCurrent = i === stageIndex
@@ -91,16 +97,16 @@ function Stepper({
           </div>
         )
         return (
-          <div key={s.key} className="flex items-center gap-2">
+          <div key={s.key} className="flex min-w-0 items-center gap-2">
             {isReachable && !isCurrent ? (
-              <Link href={`/p/${productId}/${s.path}`} className="no-underline">
+              <Link href={`/p/${productId}/${s.path}`} className="min-w-0 flex-1 no-underline">
                 {inner}
               </Link>
             ) : (
-              inner
+              <div className="min-w-0 flex-1">{inner}</div>
             )}
             {i < ORDER.length - 1 && (
-              <div className={cn('h-px w-6', i < reachedIndex ? 'bg-success/60' : 'bg-border')} />
+              <div className={cn('hidden h-px w-4 shrink-0 sm:block', i < reachedIndex ? 'bg-success/60' : 'bg-border')} />
             )}
           </div>
         )

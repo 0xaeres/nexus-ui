@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, RefreshCw } from 'lucide-react'
+import { ArrowRight, ChevronLeft, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { StatusDot } from '@/components/ui/status-dot'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Code, Subtle } from '@/components/ui/typography'
-import { ApiError, getSource, syncSource, sourceLogUrl } from '@/lib/api'
+import { ApiError, getProductStatus, getSource, syncSource, sourceLogUrl } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
 import { useEventStream } from '@/lib/hooks/useEventStream'
 import type { Source, SyncDelta } from '@/lib/types'
@@ -30,6 +30,7 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
   const [error, setError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [logUrl, setLogUrl] = useState<string | null>(null)
+  const [readyForCouncil, setReadyForCouncil] = useState(false)
 
   const { events: logEvents, status: logStatus } = useEventStream(logUrl, { enabled: !!logUrl })
 
@@ -43,7 +44,9 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
     try {
       if (!activeProductId) return
       const s = await getSource(activeProductId, name)
+      const productStatus = await getProductStatus(activeProductId)
       setSource(s)
+      setReadyForCouncil(productStatus.hasEmbeddings && !productStatus.hasSkill)
       setError(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
@@ -185,6 +188,20 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
                     <DeltaTile label="added" value={delta.added} tone="success" />
                     <DeltaTile label="updated" value={delta.updated} tone="accent" />
                     <DeltaTile label="removed" value={delta.removed} tone="danger" />
+                  </div>
+                )}
+                {readyForCouncil && (
+                  <div className="flex flex-col gap-3 rounded-md border border-accent/30 bg-accent/10 p-3 sm:flex-row sm:items-center">
+                    <div className="min-w-0 flex-1">
+                      <H3>Ready for Council</H3>
+                      <Muted>Ingestion has produced embeddings. Continue the product flow from Council.</Muted>
+                    </div>
+                    <Button asChild size="sm">
+                      <Link href={`${base}/council`}>
+                        Run Council
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
                   </div>
                 )}
                 {logEvents.length === 0 && !logUrl && (

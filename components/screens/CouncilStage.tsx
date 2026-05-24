@@ -130,7 +130,7 @@ function KickoffCard({
   productName: string
 }) {
   return (
-    <Card variant="glass" className="max-w-2xl mx-auto p-6 flex flex-col gap-5">
+    <Card variant="glass" className="flex flex-col gap-5 p-6">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-accent/15 text-accent flex items-center justify-center">
           <Sparkles className="h-5 w-5" />
@@ -227,7 +227,7 @@ function CouncilLive({
   const live = streamStatus === 'open' || streamStatus === 'connecting'
 
   return (
-    <div className="flex flex-col gap-3 max-w-3xl mx-auto w-full">
+    <div className="flex w-full flex-col gap-3">
       <div className="flex items-center gap-2">
         {live && !ended ? (
           <Badge variant="violet" className="gap-1.5">

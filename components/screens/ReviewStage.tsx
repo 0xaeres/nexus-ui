@@ -105,7 +105,7 @@ export function ReviewStage({ productId }: { productId: string }) {
       {error && <StageError message={error} />}
 
       {proposal && (
-        <div className="max-w-3xl mx-auto w-full flex flex-col gap-4">
+        <div className="flex w-full flex-col gap-4">
           <Card variant="glass">
             <CardContent className="p-5 flex flex-col gap-3">
               <div className="flex items-center gap-2 flex-wrap">

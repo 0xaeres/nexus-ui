@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TopBar } from './TopBar'
 import { SideNav } from './SideNav'
@@ -31,6 +31,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const pathname = usePathname() ?? '/'
   const pendingG = useRef(false)
   const pendingGTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -57,6 +58,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const match = pathname.match(/^\/p\/([^/]+)/)
+    const productFromPath = match?.[1]
+    if (productFromPath && productFromPath !== currentProductId) {
+      setCurrentProductId(productFromPath)
+    }
+  }, [currentProductId, pathname])
 
   const baseUser: User =
     user ?? {

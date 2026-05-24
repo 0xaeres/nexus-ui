@@ -70,7 +70,7 @@ export function SkillStage({ productId }: { productId: string }) {
       {error && <StageError message={error} />}
 
       {skill && (
-        <div className="max-w-3xl mx-auto w-full flex flex-col gap-4">
+        <div className="flex w-full flex-col gap-4">
           <Card variant="glass">
             <CardContent className="p-5 flex items-start gap-4">
               <div className="h-12 w-12 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">

@@ -1,10 +1,10 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, Database, Loader2, Plus } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Database, Loader2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { H3, Muted, Small } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import { IngestionProgress, type IngestStatus } from '@/components/sources/IngestionProgress'
@@ -19,6 +19,8 @@ import type { Product, ProductStatus, Source } from '@/lib/types'
 
 export function IngestStage({ productId }: { productId: string }) {
   const router = useRouter()
+  const params = useSearchParams()
+  const stayOnProgress = params.get('sync') === '1'
   const [product, setProduct] = useState<Product | null>(null)
   const [status, setStatus] = useState<ProductStatus | null>(null)
   const [sources, setSources] = useState<Source[] | null>(null)
@@ -37,7 +39,7 @@ export function IngestStage({ productId }: { productId: string }) {
         setSources(srcs)
         if (s.currentStage === 'skill') router.replace(`/p/${productId}/skill`)
         else if (s.currentStage === 'review') router.replace(`/p/${productId}/review`)
-        else if (s.currentStage === 'council' || s.hasEmbeddings) {
+        else if (!stayOnProgress && (s.currentStage === 'council' || s.hasEmbeddings)) {
           router.replace(`/p/${productId}/council`)
         }
       })
@@ -48,7 +50,7 @@ export function IngestStage({ productId }: { productId: string }) {
     return () => {
       cancelled = true
     }
-  }, [productId, router])
+  }, [productId, router, stayOnProgress])
 
   const onSourceStatus = useCallback((sourceId: string, s: IngestStatus) => {
     statusByIdRef.current[sourceId] = s
@@ -105,7 +107,7 @@ export function IngestStage({ productId }: { productId: string }) {
       {error && <StageError message={error} />}
 
       {sources && sources.length === 0 && (
-        <Card variant="glass" className="p-8 flex flex-col items-center text-center gap-4 max-w-xl mx-auto">
+        <Card variant="glass" className="flex flex-col items-center gap-4 p-8 text-center">
           <div className="h-12 w-12 rounded-full bg-bg-active text-accent flex items-center justify-center">
             <Database className="h-5 w-5" />
           </div>
@@ -125,7 +127,35 @@ export function IngestStage({ productId }: { productId: string }) {
       )}
 
       {sources && sources.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-4">
+          {allDone && (
+            <Card variant="glass" className="border-success/25 bg-success/5">
+              <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <H3>Ingestion complete</H3>
+                  <Muted>
+                    Sources are indexed. Run the LLM Council to draft the first skill proposal.
+                  </Muted>
+                </div>
+                <Button onClick={launchCouncil} disabled={launching}>
+                  {launching ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Starting…
+                    </>
+                  ) : (
+                    <>
+                      Run Council
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           {sources.map((s) => (
             <Card key={s.id} variant="surface" className="p-4">
               <IngestionProgress
