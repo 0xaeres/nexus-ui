@@ -91,6 +91,48 @@ html, body {
 *:hover::-webkit-scrollbar-thumb { background: var(--color-border); }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
 
+.nexus-scrollbar-visible::-webkit-scrollbar-thumb { background: var(--color-border-strong); }
+.nexus-scrollbar-visible::-webkit-scrollbar-track { background: var(--color-bg-active); }
+
+.diff-scroll-range {
+  appearance: none;
+  height: 14px;
+  background: transparent;
+}
+
+.diff-scroll-range:disabled { opacity: 0.6; }
+.diff-scroll-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-active);
+}
+
+.diff-scroll-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 44px;
+  height: 14px;
+  margin-top: -5px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-fg-muted);
+}
+
+.diff-scroll-range::-moz-range-track {
+  height: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-active);
+}
+
+.diff-scroll-range::-moz-range-thumb {
+  width: 44px;
+  height: 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-fg-muted);
+}
+
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; border-radius: var(--radius-sm); }
 
