@@ -27,6 +27,7 @@ const STATUS_VARIANT: Record<string, 'accent' | 'warning' | 'success' | 'danger'
   awaiting_approval: 'warning',
   completed: 'success',
   failed: 'danger',
+  stopped: 'warning',
   rejected: 'danger',
 }
 

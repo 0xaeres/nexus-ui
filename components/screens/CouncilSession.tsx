@@ -31,6 +31,13 @@ import { cn } from '@/lib/utils'
 
 const KNOWN_AGENTS = new Set<AgentRole>(['drafter', 'critic', 'reviser'])
 
+type CouncilNotice = {
+  level?: 'info' | 'warning' | 'error'
+  reason?: string
+  message: string
+  detail?: string
+}
+
 function asAgentRole(value: string): AgentRole | null {
   return KNOWN_AGENTS.has(value as AgentRole) ? (value as AgentRole) : null
 }
@@ -56,6 +63,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   const [proposal, setProposal] = useState<SkillProposal | null>(null)
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
   const [ended, setEnded] = useState(false)
+  const [notice, setNotice] = useState<CouncilNotice | null>(null)
   const [priors, setPriors] = useState<CouncilPriors | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -82,6 +90,8 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         setMessages(prev => prev.concat(ev.data as DeliberationMessage))
       } else if (ev.event === 'cost' && typeof ev.data === 'object') {
         setCosts(prev => prev.concat(ev.data as AgentCost))
+      } else if (ev.event === 'notice' && typeof ev.data === 'object') {
+        setNotice(ev.data as CouncilNotice)
       } else if (ev.event === 'critique' && typeof ev.data === 'object') {
         const sev = (ev.data as { severity?: string }).severity
         if (sev) setCritiqueSeverity(sev)
@@ -206,6 +216,15 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                 {streamLive ? 'Waiting for first agent message…' : 'Loading session…'}
               </Muted>
             )}
+            {notice && (
+              <Card variant="glass" className="border-warning/40 bg-warning/10 p-4">
+                <div className="flex flex-col gap-1">
+                  <Small className="font-medium text-warning">Council stopped</Small>
+                  <p className="m-0 text-sm text-fg">{notice.message}</p>
+                  {notice.detail && <Small className="font-mono text-fg-muted">{notice.detail}</Small>}
+                </div>
+              </Card>
+            )}
             {messages.map((msg, i) => <DeliberationMsg key={i} msg={msg} />)}
             {ended && messages.length > 0 && (
               <Muted className="text-center py-4 font-mono">— session ended —</Muted>
@@ -240,7 +259,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
             {!proposal ? (
               <div className="flex-1 flex items-center justify-center p-6">
                 <Muted className="font-mono">
-                  {streamLive ? 'Drafting…' : 'No proposal produced.'}
+                  {notice ? 'No proposal produced.' : streamLive ? 'Drafting…' : 'No proposal produced.'}
                 </Muted>
               </div>
             ) : (

@@ -40,6 +40,13 @@ const agentLabel = (n: string) => {
   return role ? COUNCIL_AGENT_LABELS[role] : n
 }
 
+type CouncilNotice = {
+  level?: 'info' | 'warning' | 'error'
+  reason?: string
+  message: string
+  detail?: string
+}
+
 export function CouncilStage({ productId }: { productId: string }) {
   const router = useRouter()
   const params = useSearchParams()
@@ -186,6 +193,7 @@ function CouncilLive({
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
   const [costs, setCosts] = useState<AgentCost[]>([])
   const [ended, setEnded] = useState(false)
+  const [notice, setNotice] = useState<CouncilNotice | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const completedRef = useRef(false)
 
@@ -197,6 +205,8 @@ function CouncilLive({
         setMessages((prev) => prev.concat(ev.data as DeliberationMessage))
       } else if (ev.event === 'cost' && typeof ev.data === 'object') {
         setCosts((prev) => prev.concat(ev.data as AgentCost))
+      } else if (ev.event === 'notice' && typeof ev.data === 'object') {
+        setNotice(ev.data as CouncilNotice)
       } else if (ev.event === 'session_end') {
         setEnded(true)
       }
@@ -204,12 +214,12 @@ function CouncilLive({
   }, [events])
 
   useEffect(() => {
-    if (ended && !completedRef.current) {
+    if (ended && !notice && !completedRef.current) {
       completedRef.current = true
       const t = setTimeout(onComplete, 1200)
       return () => clearTimeout(t)
     }
-  }, [ended, onComplete])
+  }, [ended, notice, onComplete])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -248,6 +258,16 @@ function CouncilLive({
         )}
       </div>
 
+      {notice && (
+        <Card variant="glass" className="border-warning/40 bg-warning/10 p-4">
+          <div className="flex flex-col gap-1">
+            <Small className="font-medium text-warning">Council stopped</Small>
+            <p className="m-0 text-sm text-fg">{notice.message}</p>
+            {notice.detail && <Small className="font-mono text-fg-muted">{notice.detail}</Small>}
+          </div>
+        </Card>
+      )}
+
       <div ref={scrollRef} className="flex flex-col gap-3 max-h-[60vh] overflow-auto pr-1">
         {messages.length === 0 && (
           <Muted className="font-mono text-center py-12">
@@ -273,8 +293,11 @@ function CouncilLive({
             <p className="m-0 text-sm text-fg leading-relaxed whitespace-pre-wrap">{m.body}</p>
           </Card>
         ))}
-        {ended && (
+        {ended && !notice && (
           <Muted className="text-center py-2 font-mono">— forwarding to review —</Muted>
+        )}
+        {ended && notice && (
+          <Muted className="text-center py-2 font-mono">— session stopped —</Muted>
         )}
       </div>
     </div>

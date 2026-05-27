@@ -102,6 +102,7 @@ export function useEventStream(
       'critique',
       'proposal_preview',
       'proposal',
+      'notice',
       'error',
       'session_end',
       'delta',
