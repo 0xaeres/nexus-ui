@@ -23,15 +23,17 @@ interface LogLine {
 interface Props {
   productId: string
   source: Source
+  forceRunning?: boolean
   onStatusChange?: (status: IngestStatus) => void
 }
 
-export function IngestionProgress({ productId, source, onStatusChange }: Props) {
+export function IngestionProgress({ productId, source, forceRunning = false, onStatusChange }: Props) {
   const initial: IngestStatus = useMemo(() => {
+    if (forceRunning) return 'running'
     if (source.lastSync && source.resourceCount > 0) return 'done'
     if (source.status === 'error') return 'error'
     return 'running'
-  }, [source.lastSync, source.resourceCount, source.status])
+  }, [forceRunning, source.lastSync, source.resourceCount, source.status])
 
   const [status, setStatus] = useState<IngestStatus>(initial)
   const [lines, setLines] = useState<LogLine[]>([])
@@ -68,7 +70,8 @@ export function IngestionProgress({ productId, source, onStatusChange }: Props) 
       }
 
       if (item.level === 'warn') {
-        hasEmbedWarnRef.current = true
+        const isEmbedWarn = /embed|EMBEDDER|token limit/i.test(item.msg ?? '')
+        if (isEmbedWarn) hasEmbedWarnRef.current = true
         setLines((prev) => [...prev, item])
         return
       }

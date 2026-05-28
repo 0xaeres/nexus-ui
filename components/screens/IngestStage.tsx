@@ -77,6 +77,7 @@ export function IngestStage({ productId }: { productId: string }) {
       const live = statusByIdRef.current[s.id]
       if (live === 'done') return true
       if (live) return false
+      if (stayOnProgress) return false
       return !!s.lastSync && s.resourceCount > 0
     })
 
@@ -161,6 +162,7 @@ export function IngestStage({ productId }: { productId: string }) {
               <IngestionProgress
                 productId={productId}
                 source={s}
+                forceRunning={stayOnProgress}
                 onStatusChange={(st) => onSourceStatus(s.id, st)}
               />
             </Card>
