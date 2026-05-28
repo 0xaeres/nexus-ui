@@ -1,6 +1,6 @@
 'use client'
 import type { ReactNode } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, FileText, Loader2, RotateCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -28,7 +28,9 @@ import {
   reviseProposal,
 } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
-import type { Citation, Product, ProductStatus, SkillProposal } from '@/lib/types'
+import { coverageSummary, groupByTier, SKILL_TIER_ORDER, tierLabel } from '@/lib/skills'
+import type { Citation, Product, ProductSkillsResponse, ProductStatus, SkillProposal } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 type ActionBusy = 'approve' | 'reject' | 'revise' | null
 type ReviewComment = { line: number; body: string }
@@ -38,7 +40,9 @@ export function ReviewStage({ productId }: { productId: string }) {
   const { currentUser } = useProduct()
   const [product, setProduct] = useState<Product | null>(null)
   const [status, setStatus] = useState<ProductStatus | null>(null)
-  const [proposal, setProposal] = useState<SkillProposal | null>(null)
+  const [proposals, setProposals] = useState<SkillProposal[]>([])
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
+  const [skills, setSkills] = useState<ProductSkillsResponse>({ skills: [], grouped: {} })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<ActionBusy>(null)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -48,30 +52,37 @@ export function ReviewStage({ productId }: { productId: string }) {
   const [previousBody, setPreviousBody] = useState('')
   const [reviewComments, setReviewComments] = useState<ReviewComment[]>([])
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([
+  const selectedProposal = useMemo(
+    () => proposals.find((item) => item.id === selectedProposalId) ?? proposals[0] ?? null,
+    [proposals, selectedProposalId],
+  )
+  const groupedProposals = useMemo(() => groupByTier(proposals), [proposals])
+
+  const load = useCallback(async () => {
+    const [p, s, pending, skillData] = await Promise.all([
       getProduct(productId),
       getProductStatus(productId),
       listProposals({ productId, status: 'pending' }),
-      listProductSkills(productId).catch(() => ({ skills: [] })),
+      listProductSkills(productId).catch(() => ({ skills: [], grouped: {} })),
     ])
-      .then(([p, s, pending, skills]) => {
-        if (cancelled) return
-        setProduct(p)
-        setStatus(s)
-        if (s.currentStage === 'skill') {
-          router.replace(`/p/${productId}/skill`)
-          return
-        }
-        if (pending.length === 0) {
-          if (s.hasEmbeddings) router.replace(`/p/${productId}/council`)
-          else router.replace(`/p/${productId}/ingest`)
-          return
-        }
-        setProposal(pending[0])
-        setPreviousBody(skills.skills.find((skill) => skill.name === pending[0].name)?.body ?? '')
-      })
+    setProduct(p)
+    setStatus(s)
+    setSkills(skillData)
+    setProposals(pending)
+    setSelectedProposalId((current) => {
+      if (current && pending.some((item) => item.id === current)) return current
+      return pending[0]?.id ?? null
+    })
+    if (pending.length === 0) {
+      if (s.hasSkill || s.currentStage === 'skill') router.replace(`/p/${productId}/skill`)
+      else if (s.hasEmbeddings) router.replace(`/p/${productId}/council`)
+      else router.replace(`/p/${productId}/ingest`)
+    }
+  }, [productId, router])
+
+  useEffect(() => {
+    let cancelled = false
+    load()
       .catch((e: unknown) => {
         if (cancelled) return
         setError(e instanceof ApiError ? e.message : String(e))
@@ -79,17 +90,23 @@ export function ReviewStage({ productId }: { productId: string }) {
     return () => {
       cancelled = true
     }
-  }, [productId, router])
+  }, [load])
+
+  useEffect(() => {
+    setReviewComments([])
+    setPreviousBody(skills.skills.find((skill) => skill.name === selectedProposal?.name)?.body ?? '')
+  }, [selectedProposal?.id, selectedProposal?.name, skills.skills])
 
   const actor = currentUser?.name ?? 'unknown'
 
   const approve = async () => {
-    if (!proposal || busy) return
+    if (!selectedProposal || busy) return
     setBusy('approve')
     setError(null)
     try {
-      await approveProposal(proposal.id, actor)
-      router.push(`/p/${productId}/skill`)
+      await approveProposal(selectedProposal.id, actor)
+      await load()
+      setBusy(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : String(e))
       setBusy(null)
@@ -97,7 +114,7 @@ export function ReviewStage({ productId }: { productId: string }) {
   }
 
   const submitReject = async () => {
-    if (!proposal || busy) return
+    if (!selectedProposal || busy) return
     const reason = rejectReason.trim()
     if (!reason) {
       setError('Rejection reason is required.')
@@ -106,8 +123,11 @@ export function ReviewStage({ productId }: { productId: string }) {
     setBusy('reject')
     setError(null)
     try {
-      await rejectProposal(proposal.id, { reason, actor })
-      router.replace(`/p/${productId}/council`)
+      await rejectProposal(selectedProposal.id, { reason, actor })
+      setRejectOpen(false)
+      setRejectReason('')
+      await load()
+      setBusy(null)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : String(e))
       setBusy(null)
@@ -115,7 +135,7 @@ export function ReviewStage({ productId }: { productId: string }) {
   }
 
   const submitRevision = async () => {
-    if (!proposal || busy) return
+    if (!selectedProposal || busy) return
     const summary = revisionAsk.trim()
     if (!summary && reviewComments.length === 0) {
       setError('Revision request is required.')
@@ -124,7 +144,7 @@ export function ReviewStage({ productId }: { productId: string }) {
     setBusy('revise')
     setError(null)
     try {
-      const { session_id } = await reviseProposal(proposal.id, {
+      const { session_id } = await reviseProposal(selectedProposal.id, {
         summary: summary || 'Apply submitted line comments.',
         actor,
         comments: reviewComments,
@@ -145,26 +165,76 @@ export function ReviewStage({ productId }: { productId: string }) {
     >
       {error && <StageError message={error} />}
 
-      {proposal && (
+      {selectedProposal && (
         <div className="grid w-full grid-cols-12 gap-4">
-          <Card variant="glass" className="col-span-12">
+          <Card variant="surface" className="col-span-12 lg:col-span-3">
+            <CardHeader className="border-b border-border">
+              <SectionLabel>Proposal queue</SectionLabel>
+              <Muted>{proposals.length} pending pack proposals</Muted>
+            </CardHeader>
+            <CardContent className="p-2 flex flex-col gap-3">
+              {SKILL_TIER_ORDER.map((tier) => {
+                const items = groupedProposals[tier] ?? []
+                if (items.length === 0) return null
+                return (
+                  <div key={tier} className="flex flex-col gap-1">
+                    <SectionLabel className="px-2">{tierLabel(tier)}</SectionLabel>
+                    {items.map((item) => {
+                      const active = item.id === selectedProposal.id
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedProposalId(item.id)}
+                          className={cn(
+                            'rounded-md px-3 py-2 text-left transition-colors',
+                            active ? 'bg-bg-active' : 'hover:bg-surface',
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Code className="truncate">{item.name}</Code>
+                            <div className="flex-1" />
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {Math.round(item.confidence * 100)}%
+                            </Badge>
+                          </div>
+                          <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          <Card variant="glass" className="col-span-12 lg:col-span-9">
             <CardContent className="p-5 flex flex-col gap-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <FileText className="h-4 w-4 text-accent" />
-                <H3>{proposal.name}</H3>
+                <H3>{selectedProposal.name}</H3>
+                <Badge variant="accent">{tierLabel(selectedProposal.tier)}</Badge>
                 <div className="flex-1" />
                 <Badge variant="outline" className="font-mono">
-                  {Math.round(proposal.confidence * 100)}% confidence
+                  {Math.round(selectedProposal.confidence * 100)}% confidence
                 </Badge>
                 <Badge variant="outline" className="font-mono">
-                  {proposal.citations.length} citations
+                  {selectedProposal.citations.length} citations
                 </Badge>
+                <Badge variant="outline" className="font-mono">{selectedProposal.status}</Badge>
               </div>
-              {proposal.adversary_critique && proposal.adversary_critique.severity !== 'minor' && (
+              <div className="flex flex-wrap gap-2">
+                <Small className="font-mono text-fg-subtle">{coverageSummary(selectedProposal.coverage)}</Small>
+                {selectedProposal.parent && <Small className="font-mono text-fg-subtle">parent {selectedProposal.parent}</Small>}
+                {(selectedProposal.related?.length ?? 0) > 0 && (
+                  <Small className="font-mono text-fg-subtle">related {selectedProposal.related.join(', ')}</Small>
+                )}
+              </div>
+              {selectedProposal.adversary_critique && selectedProposal.adversary_critique.severity !== 'minor' && (
                 <div className="px-3 py-2 rounded-md border border-warning/30 bg-warning/5">
                   <Small className="font-medium text-warning">
-                    Critic: {proposal.adversary_critique.severity} ·{' '}
-                    {proposal.adversary_critique.recommendation || 'see issues'}
+                    Critic: {selectedProposal.adversary_critique.severity} ·{' '}
+                    {selectedProposal.adversary_critique.recommendation || 'see issues'}
                   </Small>
                 </div>
               )}
@@ -181,7 +251,7 @@ export function ReviewStage({ productId }: { productId: string }) {
             <CardContent className="p-0">
               <DiffViewer
                 oldBody={previousBody}
-                newBody={proposal.body}
+                newBody={selectedProposal.body}
                 comments={reviewComments}
                 onComment={(comment) => setReviewComments((items) => items.concat(comment))}
               />
@@ -189,7 +259,7 @@ export function ReviewStage({ productId }: { productId: string }) {
           </Card>
 
           <Card variant="surface" className="col-span-12 lg:col-span-8">
-            <CitationsPanel citations={proposal.citations} />
+            <CitationsPanel citations={selectedProposal.citations} />
           </Card>
 
           <Card variant="surface" className="col-span-12 lg:col-span-4">
@@ -220,8 +290,8 @@ export function ReviewStage({ productId }: { productId: string }) {
         </div>
       )}
 
-      {!proposal && !error && (
-        <Small className="font-mono text-fg-subtle text-center block">Loading proposal…</Small>
+      {!selectedProposal && !error && (
+        <Small className="font-mono text-fg-subtle text-center block">Loading proposals…</Small>
       )}
 
       <Dialog open={rejectOpen} onOpenChange={(open) => { if (!busy) setRejectOpen(open) }}>
@@ -461,7 +531,7 @@ function DiffViewer({
     <div ref={diffRef} className="overflow-hidden bg-surface-sunk font-mono text-sm">
       <div>
         <div className="flex items-center gap-3 border-b border-border bg-bg px-4 py-3">
-          <SectionLabel className="text-fg">skill proposal</SectionLabel>
+          <SectionLabel className="text-fg">skill pack proposal</SectionLabel>
           <div className="flex-1" />
           <Small className="font-mono text-success">+{added}</Small>
           <Small className="font-mono text-danger">-{removed}</Small>

@@ -29,6 +29,7 @@ import {
   listSkillRejections,
 } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
+import { coverageSummary, tierLabel } from '@/lib/skills'
 import {
   COUNCIL_ROSTER,
   EVIDENCE_CHUNKS_PER_SESSION_CAP,
@@ -38,8 +39,6 @@ import {
   type SkillProposal,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
-
-const SKILL_COLOR = '#7C8CFF'
 
 function confColor(c: number) {
   if (c < 0.5) return 'text-danger'
@@ -144,8 +143,9 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
         <Button asChild variant="ghost" size="sm">
           <Link href={`${base}/skills`}><ChevronLeft className="h-4 w-4" />Skills</Link>
         </Button>
-        <Hexagon className="h-5 w-5 shrink-0" style={{ color: SKILL_COLOR }} fill={SKILL_COLOR} />
+        <Hexagon className="h-5 w-5 shrink-0 text-accent fill-accent" />
         <H1>{skill.name}</H1>
+        <Badge variant="accent">{tierLabel(skill.tier)}</Badge>
         <Subtle className="font-mono ml-1">v{skill.version}</Subtle>
         <div className="flex-1" />
         {perms.canRunCouncil && (
@@ -178,6 +178,34 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
               <Code className={cn('shrink-0 font-mono', confColor(skill.confidence))}>
                 {Math.round(skill.confidence * 100)}%
               </Code>
+            </Card>
+          </div>
+
+          {/* Pack metadata */}
+          <div className="col-span-12">
+            <Card variant="surface">
+              <CardHeader>
+                <SectionLabel>Pack metadata</SectionLabel>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="accent">{tierLabel(skill.tier)}</Badge>
+                  <Badge variant="outline" className="font-mono">{coverageSummary(skill.coverage)}</Badge>
+                  {skill.parent && <Badge variant="outline" className="font-mono">parent {skill.parent}</Badge>}
+                </div>
+                {(skill.related?.length ?? 0) > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(skill.related ?? []).map((id) => (
+                      <Badge key={id} variant="outline" className="font-mono text-xs">rel {id}</Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {(skill.coverage?.repos ?? []).map((item) => <Badge key={`repo-${item}`} variant="outline" className="font-mono text-xs">{item}</Badge>)}
+                  {(skill.coverage?.applications ?? []).map((item) => <Badge key={`app-${item}`} variant="accent" className="font-mono text-xs">{item}</Badge>)}
+                  {(skill.coverage?.topics ?? []).map((item) => <Badge key={`topic-${item}`} variant="secondary" className="font-mono text-xs">{item}</Badge>)}
+                </div>
+              </CardContent>
             </Card>
           </div>
 

@@ -54,7 +54,7 @@ export function StageShell({
 
       <PageBody>
         <PageGrid>
-          <div className="col-span-12 lg:col-span-10 lg:col-start-2 xl:col-span-8 xl:col-start-3">
+          <div className="col-span-12">
             <div className="flex flex-col gap-6">
               <Stepper productId={productId} stageIndex={stageIndex} reachedIndex={reachedIndex} />
               {children}

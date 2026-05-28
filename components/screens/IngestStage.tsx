@@ -137,7 +137,7 @@ export function IngestStage({ productId }: { productId: string }) {
                 <div className="min-w-0 flex-1">
                   <H3>Ingestion complete</H3>
                   <Muted>
-                    Sources are indexed. Run the LLM Council to draft the first skill proposal.
+                    Sources are indexed. Run the LLM Council to draft skill pack proposals.
                   </Muted>
                 </div>
                 <Button onClick={launchCouncil} disabled={launching}>

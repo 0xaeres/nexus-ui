@@ -41,24 +41,25 @@ Backend was deliberately slimmed down (see `../nexus/ENGINEERING.md §13`).
   Skills; no composition graph on skill detail).
 - No Activity timeline route, no Proposals power-user route, no Settings
   route.
-- No skill kinds or scopes — `Skill` is flat: `{name, product, version,
-  confidence, applies_to, provenance, body}`.
-- No `composes_with` field.
+- Skills are delivered as a bounded product skill pack: one
+  `product_master` plus focused skills with `tier`, `parent`, `related`,
+  and `coverage`.
+- No org library or reusable composition graph. `related` is pack metadata,
+  not cross-product adoption/composition.
 - No `cumulative_revisions` counter — only `provenance.revision_count`
   (capped at `0 | 1`).
 
 ## Council shape
 
-The council is a 3-node Reflexion graph:
+The council is a bounded expert-pack graph:
 
 ```
-Drafter → Critic → (severity == blocking?) → Reviser → END
-                  ↘ (else) → END
+Planner → Expert fanout → Synthesizer → Repair → Judge
+      → optional targeted callback → Finalizer
 ```
 
-`COUNCIL_ROSTER` in `lib/types.ts` is the canonical list:
-`['drafter', 'critic', 'reviser']`. No more master-vs-product_domain
-rosters; one shape applies to every session.
+The UI does not expose roster selection. It watches session events, lists all
+generated proposal IDs, and routes SMEs to product-scoped review.
 
 ## Product onboarding
 

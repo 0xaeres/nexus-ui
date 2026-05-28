@@ -9,11 +9,11 @@
 
 ## 1. What Nexus is (one paragraph)
 
-Nexus indexes a product's code + docs, runs a 3-node LLM council
-(Drafter → Critic → Reviser) to draft a curated skill file, and serves
-that skill via MCP to any AI coding client (Claude, Cursor, Continue,
-…) — after a human approves it. The UI is where humans drive the
-sources, watch the council, and approve / edit / reject proposals. See
+Nexus indexes a product's code + docs, runs a bounded expert LLM council
+to draft a curated product skill pack, and serves approved skills via MCP
+to any AI coding client (Claude, Cursor, Continue, …). The UI is where
+humans drive sources, watch council runs, and approve / edit / reject
+proposals one at a time. See
 [`../nexus/README.md`](../nexus/README.md) for the backend overview.
 
 ## 2. What this repo is
@@ -36,7 +36,9 @@ Two invariants:
    surfaces them at `/p/[product]/review` for human approval. Nothing
    becomes a `.skill.md` without an explicit human action.
 
-The Skill is **flat** — one type, one product per skill:
+The Skill belongs to a product-scoped pack: one `product_master` plus focused
+skills. Pack metadata is display/review context only; it is not org library
+scope or cross-product composition.
 
 ```ts
 interface Skill {
@@ -44,6 +46,10 @@ interface Skill {
   name: string
   product: ProductId
   version: number
+  tier: 'product_master' | 'application' | 'domain' | 'interface' | 'tech_stack' | 'quality_security'
+  parent: string | null
+  related: string[]
+  coverage: { repos: string[]; applications: string[]; topics: string[] }
   confidence: number
   applies_to: { files: string[]; contexts: string[] }
   provenance: Provenance
@@ -51,9 +57,9 @@ interface Skill {
 }
 ```
 
-There are no `kind` / `scope` / `composes_with` fields. There is no
-"master skill" vs "product domain skill" distinction. A product has zero
-or more skills, that's it.
+There are no `kind` / `scope` / `composes_with` fields, no org-wide skill
+library, and no bulk approval. A product has zero or one approved pack with
+multiple skills; pending proposals keep the product in Review until cleared.
 
 ## 4. Information architecture (locked)
 
@@ -69,10 +75,10 @@ or more skills, that's it.
   /sources/[name]                Source detail + live SSE sync log
   /ingest                        Stage gate at the ingest phase
   /council                       Session list + start dialog
-  /council/[id]                  Live 3-pane deliberation
-  /review                        ReviewStage — approve / reject / edit
-  /skill                         Terminal-skill stage gate
-  /skills                        Skill list + detail pane
+  /council/[id]                  Live deliberation + draft pack preview
+  /review                        ReviewStage — approve / reject / revise proposals
+  /skill                         Terminal skill-pack overview
+  /skills                        Tier-grouped skill list + detail pane
   /skills/[id]                   Full skill detail
 ```
 
@@ -84,25 +90,18 @@ removed when the backend was slimmed — see
 
 ## 5. Council (UI shape)
 
-The 3-node Reflexion graph:
+The bounded expert-pack graph:
 
 ```
-Drafter → Critic → (severity == "blocking" ?) → Reviser → END
-                  ↘ (else) → END
+Planner → Expert fanout → Synthesizer → Repair → Judge
+      → optional targeted callback → Finalizer
 ```
 
-`lib/types.ts` exports:
-
-```ts
-type AgentRole = 'drafter' | 'critic' | 'reviser'
-const COUNCIL_ROSTER: AgentRole[] = ['drafter', 'critic', 'reviser']
-```
-
-The CouncilLanding "start session" dialog asks only for a **topic**;
-there is no skill-kind picker, no roster selector, no cost-per-roster
-disclaimer. The CouncilSession 3-pane view (`/p/[id]/council/[sessionId]`)
-streams `deliberation`, `cost`, `critique`, and `proposal_preview` events
-over SSE.
+The CouncilLanding "start session" dialog asks only for a **topic**; there is
+no skill-kind picker, roster selector, or cost-per-roster disclaimer. The
+CouncilSession view (`/p/[id]/council/[sessionId]`) streams deliberation/cost
+events and may surface multiple `proposal_id`s. The right panel previews the
+draft pack and links to product-scoped Review.
 
 ## 6. Design system rules (non-negotiable)
 
@@ -183,12 +182,12 @@ grep -rn 'text-\[1[01]px\]\|<h1\|<h2\|<h3' components/screens components/shell a
 
 `components/ui/page.tsx`:
 
-- `<PageHeader>` — fixed 56px header, `border-b`, full-width `px-8`
+- `<PageHeader>` — fixed 56px header, `border-b`, full-width responsive padding
   row. Do not center this region; it is navigation chrome, not page
   content. Header `H1` text is compacted to `text-xl` at the primitive
   level; header buttons/links use compact `text-xs` treatment.
-- `<PageBody>` — scrollable centered content region, `max-w-[1280px]`,
-  `px-8`, `py-8 space-y-8`.
+- `<PageBody>` — scrollable full-width centered content region with only
+  responsive horizontal padding, `py-8 space-y-8`.
 - `<PageGrid>` — 12-column grid (`grid-cols-12 gap-6`).
 
 **Exceptions:** `Skills` and `CouncilSession` keep their custom
@@ -304,7 +303,7 @@ route.
 | Shell (TopBar, SideNav, palette, ProductSwitcher) | `components/shell/` |
 | Screen components (one per route) | `components/screens/` |
 | Brand icons | `components/icons/BrandIcon.tsx` |
-| Agent hues + labels + roster | `lib/types.ts` (`COUNCIL_AGENT_HUES`, `COUNCIL_AGENT_LABELS`, `COUNCIL_ROSTER`) |
+| Agent hues + labels + roster fallback | `lib/types.ts` (`COUNCIL_AGENT_HUES`, `COUNCIL_AGENT_LABELS`, `COUNCIL_ROSTER`) |
 | API client (one fn per endpoint) | `lib/api/index.ts` |
 | Domain types | `lib/types.ts` |
 | Product context hook | `lib/product-context.tsx` (`useProduct()`) |
@@ -323,7 +322,7 @@ route.
 - Cross-product views or rollups.
 - A separate Assistant chat surface.
 - An Org Library / Adopted Standards section.
-- A composition graph on the skill detail page (`composes_with` is
-  gone).
+- A cross-product composition graph on the skill detail page (`composes_with`
+  is gone; `related` stays inside the product pack).
 - Settings / Org Settings / Activity / Proposals power-user routes.
 - Anything that bypasses the council → review → approve loop.

@@ -116,10 +116,10 @@ function stageVisual(status: ProductStatus): StageVisual {
       label: 'Awaiting review',
       badge: 'warning',
       icon: Inbox,
-      cta: 'Review proposal',
+      cta: 'Review proposals',
       href: (id) => `/p/${id}/review`,
       primary: true,
-      pending: 'SME proposal review',
+      pending: 'SME pack proposal review',
     }
   }
   if (status.currentStage === 'council') {

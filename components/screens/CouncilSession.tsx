@@ -27,6 +27,7 @@ import {
   type SkillProposal,
 } from '@/lib/types'
 import { useProduct } from '@/lib/product-context'
+import { coverageSummary, sortByTier, tierLabel } from '@/lib/skills'
 import { cn } from '@/lib/utils'
 
 const KNOWN_AGENTS = new Set<AgentRole>(['drafter', 'critic', 'reviser'])
@@ -59,8 +60,9 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
   const [costs, setCosts] = useState<AgentCost[]>([])
   const [topic, setTopic] = useState<string>('')
-  const [proposalId, setProposalId] = useState<string | null>(null)
-  const [proposal, setProposal] = useState<SkillProposal | null>(null)
+  const [proposalIds, setProposalIds] = useState<string[]>([])
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
+  const [proposals, setProposals] = useState<Record<string, SkillProposal>>({})
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
   const [ended, setEnded] = useState(false)
   const [notice, setNotice] = useState<CouncilNotice | null>(null)
@@ -75,7 +77,11 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         setTopic(sess.topic ?? '')
         if (sess.deliberation?.length) setMessages(sess.deliberation as DeliberationMessage[])
         if (sess.costs?.length) setCosts(sess.costs as AgentCost[])
-        if (sess.proposal_id) setProposalId(sess.proposal_id)
+        const ids = sess.proposal_ids?.length ? sess.proposal_ids : sess.proposal_id ? [sess.proposal_id] : []
+        if (ids.length) {
+          setProposalIds(ids)
+          setSelectedProposalId((current) => current ?? ids[0])
+        }
         if (sess.priors) setPriors(sess.priors)
       })
       .catch(() => {/* not yet persisted */})
@@ -99,9 +105,12 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         (ev.event === 'proposal' || ev.event === 'proposal_preview') &&
         typeof ev.data === 'object'
       ) {
-        const d = ev.data as { proposal_id?: string; id?: string }
-        const pid = d.proposal_id ?? d.id
-        if (pid) setProposalId(pid)
+        const d = ev.data as { proposal_id?: string; proposal_ids?: string[]; id?: string }
+        const ids = d.proposal_ids?.length ? d.proposal_ids : [d.proposal_id ?? d.id].filter(Boolean) as string[]
+        if (ids.length) {
+          setProposalIds((prev) => Array.from(new Set(prev.concat(ids))))
+          setSelectedProposalId((current) => current ?? ids[0])
+        }
       } else if (ev.event === 'session_start' && typeof ev.data === 'object') {
         const d = ev.data as { topic?: string }
         if (d.topic) setTopic(d.topic)
@@ -112,13 +121,23 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   }, [events])
 
   useEffect(() => {
-    if (!proposalId) return
+    const missing = proposalIds.filter((id) => !proposals[id])
+    if (missing.length === 0) return
     let cancelled = false
-    getProposal(proposalId)
-      .then(p => { if (!cancelled) setProposal(p) })
+    Promise.all(missing.map((id) => getProposal(id).catch(() => null)))
+      .then((loaded) => {
+        if (cancelled) return
+        setProposals((prev) => {
+          const next = { ...prev }
+          for (const item of loaded) {
+            if (item) next[item.id] = item
+          }
+          return next
+        })
+      })
       .catch(() => {/* ignore */})
     return () => { cancelled = true }
-  }, [proposalId])
+  }, [proposalIds, proposals])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -139,6 +158,13 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         | 'done' | 'thinking' | 'idle',
     }))
   }, [messages, ended])
+
+  const proposalList = useMemo(
+    () => sortByTier(proposalIds.map((id) => proposals[id]).filter(Boolean)),
+    [proposalIds, proposals],
+  )
+  const selectedProposal =
+    proposalList.find((item) => item.id === selectedProposalId) ?? proposalList[0] ?? null
 
   const streamLive = status === 'open' || status === 'connecting'
 
@@ -235,20 +261,20 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         {rightOpen ? (
           <aside className="w-[460px] shrink-0 border-l border-border flex flex-col bg-bg">
             <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <SectionLabel>Draft skill</SectionLabel>
+              <SectionLabel>Draft pack</SectionLabel>
               <div className="flex-1" />
-              {proposal && (
+              {selectedProposal && (
                 <>
                   <Progress
-                    value={Math.round(proposal.confidence * 100)}
+                    value={Math.round(selectedProposal.confidence * 100)}
                     className="w-20"
                     indicatorClassName={
-                      proposal.confidence >= 0.7 ? 'bg-success'
-                      : proposal.confidence >= 0.5 ? 'bg-warning'
+                      selectedProposal.confidence >= 0.7 ? 'bg-success'
+                      : selectedProposal.confidence >= 0.5 ? 'bg-warning'
                       : 'bg-danger'
                     }
                   />
-                  <span className="font-mono text-sm">{Math.round(proposal.confidence * 100)}%</span>
+                  <span className="font-mono text-sm">{Math.round(selectedProposal.confidence * 100)}%</span>
                 </>
               )}
               <button onClick={() => setRightOpen(false)} className="text-fg-subtle hover:text-fg p-0.5">
@@ -256,31 +282,57 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
               </button>
             </div>
 
-            {!proposal ? (
+            {!selectedProposal ? (
               <div className="flex-1 flex items-center justify-center p-6">
                 <Muted className="font-mono">
-                  {notice ? 'No proposal produced.' : streamLive ? 'Drafting…' : 'No proposal produced.'}
+                  {notice ? 'No proposals produced.' : streamLive ? 'Drafting pack…' : 'No proposals produced.'}
                 </Muted>
               </div>
             ) : (
               <div className="flex-1 overflow-auto flex flex-col">
+                <div className="px-3 py-3 border-b border-border flex flex-col gap-1">
+                  {proposalList.map((item) => {
+                    const active = item.id === selectedProposal.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedProposalId(item.id)}
+                        className={cn(
+                          'rounded-md px-3 py-2 text-left transition-colors',
+                          active ? 'bg-bg-active' : 'hover:bg-surface',
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-fg truncate">{item.name}</span>
+                          <div className="flex-1" />
+                          <Badge variant="outline" className="font-mono text-xs">{tierLabel(item.tier)}</Badge>
+                        </div>
+                        <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>
+                      </button>
+                    )
+                  })}
+                </div>
                 <div className="px-5 py-4 border-b border-border">
-                  <span className="text-sm font-mono text-fg break-all">{proposal.name}</span>
+                  <span className="text-sm font-mono text-fg break-all">{selectedProposal.name}</span>
                   <div className="flex gap-2 mt-2 text-xs">
+                    <Badge variant="accent" className="font-mono">
+                      {tierLabel(selectedProposal.tier)}
+                    </Badge>
                     <Badge variant="outline" className="font-mono">
-                      {proposal.citations.length} citations
+                      {selectedProposal.citations.length} citations
                     </Badge>
                   </div>
                 </div>
 
                 <div className="px-5 py-4 flex-1 overflow-auto flex flex-col gap-4">
-                  {proposal.sections && proposal.sections.length > 0 ? (
-                    proposal.sections.map((sec, i) => (
+                  {selectedProposal.sections && selectedProposal.sections.length > 0 ? (
+                    selectedProposal.sections.map((sec, i) => (
                       <DraftSection key={i} section={sec} />
                     ))
                   ) : (
                     <pre className="text-xs font-mono whitespace-pre-wrap text-fg-muted leading-relaxed">
-                      {proposal.body}
+                      {selectedProposal.body}
                     </pre>
                   )}
                 </div>
@@ -297,17 +349,17 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
               </div>
             )}
 
-            {proposal && (
+            {selectedProposal && (
               <div className="border-t border-border bg-surface px-5 py-3 flex items-center gap-2">
                 <Button asChild size="sm">
                   <Link href={`/p/${currentProductId}/review`}>
-                    Review proposal
+                    Review proposals
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </Button>
                 <div className="flex-1" />
                 <Subtle className="font-mono">
-                  rev {priors ? priors.revision + 1 : proposal.adversary_critique ? 2 : 1}
+                  rev {priors ? priors.revision + 1 : selectedProposal.adversary_critique ? 2 : 1}
                 </Subtle>
               </div>
             )}

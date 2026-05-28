@@ -9,6 +9,13 @@ export type AgentRole = 'drafter' | 'critic' | 'reviser'
 export type SessionStatus = 'drafting' | 'awaiting_approval' | 'completed' | 'failed' | 'stopped'
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'edited' | 'revision_requested'
 export type RejectCategory = 'factual' | 'out-of-scope' | 'duplicate' | 'other'
+export type SkillTier =
+  | 'product_master'
+  | 'application'
+  | 'domain'
+  | 'interface'
+  | 'tech_stack'
+  | 'quality_security'
 
 export interface RejectReason {
   reason: string
@@ -64,16 +71,20 @@ export interface AppliesTo {
   contexts: string[]
 }
 
+export interface SkillCoverage {
+  repos: string[]
+  applications: string[]
+  topics: string[]
+}
+
 export interface Provenance {
   council_session: string | null
   validated_by: string
   validated_at: string
   evidence_chunks: string[]
   adversary_critique: string | null
-  // Per-session critic loop cap. The 3-node graph runs at most one
-  // critic → reviser pass per session, so this is 0 or 1.
-  // The confidence formula relies on this being binary
-  // (critic_passes = 1.0 if 0 | 0.7 if 1).
+  // Per-session targeted callback cap. v1 records this as 0 or 1 so older
+  // confidence/provenance displays remain binary.
   revision_count: 0 | 1
 }
 
@@ -82,6 +93,10 @@ export interface Skill {
   name: string
   product: ProductId
   version: number
+  tier: SkillTier
+  parent: string | null
+  related: string[]
+  coverage: SkillCoverage
   confidence: number
   applies_to: AppliesTo
   provenance: Provenance
@@ -90,6 +105,7 @@ export interface Skill {
 
 export interface ProductSkillsResponse {
   skills: Skill[]
+  grouped: Partial<Record<SkillTier, Skill[]>>
 }
 
 export interface Citation {
@@ -116,6 +132,10 @@ export interface SkillProposal {
   session_id: string | null
   product_id: ProductId
   name: string
+  tier: SkillTier
+  parent: string | null
+  related: string[]
+  coverage: SkillCoverage
   body: string
   sections?: ProposalSection[]
   confidence: number
@@ -157,6 +177,7 @@ export interface CouncilSession {
   product_id: ProductId
   topic: string
   proposal_id: string | null
+  proposal_ids: string[]
   status: SessionStatus | string
   deliberation: DeliberationMessage[]
   costs: AgentCost[]
@@ -171,6 +192,7 @@ export interface CouncilSessionSummary {
   product_id: ProductId
   topic: string
   proposal_id: string | null
+  proposal_ids: string[]
   status: string
   started_at: string
   completed_at: string | null
@@ -230,7 +252,7 @@ export interface DashboardData {
 // Per-session cap on evidence chunks fed to the council's prompt.
 export const EVIDENCE_CHUNKS_PER_SESSION_CAP = 20
 
-// 3-node Reflexion council (drafter -> critic -> reviser).
+// Fallback display roster for council events that still use legacy role names.
 export const COUNCIL_ROSTER: AgentRole[] = ['drafter', 'critic', 'reviser']
 
 export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {

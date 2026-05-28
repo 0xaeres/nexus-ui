@@ -144,7 +144,7 @@ function KickoffCard({
         </div>
         <div>
           <H3>Run the Council</H3>
-          <Muted>Three agents will draft → critique → revise the skill for {productName}.</Muted>
+          <Muted>Expert agents will draft skill pack proposals for {productName}.</Muted>
         </div>
       </div>
 
