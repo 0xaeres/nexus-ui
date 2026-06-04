@@ -34,7 +34,7 @@ const FLOW: Array<{
   {
     stage: 'ingesting',
     title: 'Ingest',
-    caption: 'Clone repositories, chunk files, enrich context, and build embeddings.',
+    caption: 'Clone repositories, chunk files, and build embeddings.',
     icon: Database,
     href: (base) => `${base}/ingest`,
     cta: 'Open ingest',
@@ -42,7 +42,7 @@ const FLOW: Array<{
   {
     stage: 'council',
     title: 'Council',
-    caption: 'Run the expert council to draft product skill pack proposals.',
+    caption: 'Run the expert council to draft the product skill proposal.',
     icon: Sparkles,
     href: (base) => `${base}/council`,
     cta: 'Run Council',
@@ -50,7 +50,7 @@ const FLOW: Array<{
   {
     stage: 'review',
     title: 'Review',
-    caption: 'SME reviews, edits, rejects, or approves skill pack proposals.',
+    caption: 'SME reviews, edits, rejects, or approves the product skill proposal.',
     icon: ClipboardCheck,
     href: (base) => `${base}/review`,
     cta: 'Review proposals',
@@ -58,10 +58,10 @@ const FLOW: Array<{
   {
     stage: 'skill',
     title: 'Skill',
-    caption: 'Approved skill pack is ready to view and serve through MCP.',
+    caption: 'Approved product skill is ready to view and serve through MCP.',
     icon: BookOpen,
     href: (base) => `${base}/skill`,
-    cta: 'View skills',
+    cta: 'View skill',
   },
 ]
 
@@ -143,7 +143,7 @@ export function Dashboard() {
                   <H3>Configure once, then move through the skill pipeline.</H3>
                   <Muted>
                     Sources belong to this product. Ingestion prepares evidence, Council drafts,
-                    SME review gates approval, and approved skills become visible here.
+                    SME review gates approval, and the approved skill becomes visible here.
                   </Muted>
                 </div>
                 <StageProgress current={currentStage} />
@@ -214,7 +214,7 @@ export function Dashboard() {
                 <H3>{nextAction?.label ?? 'Flow complete'}</H3>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <Muted>{nextAction?.description ?? 'Approved skill pack is ready. View it or run another council session when sources change.'}</Muted>
+                <Muted>{nextAction?.description ?? 'Approved product skill is ready. View it or run another council session when sources change.'}</Muted>
                 {nextAction ? (
                   <Button asChild>
                     <Link href={nextAction.href}>
@@ -225,7 +225,7 @@ export function Dashboard() {
                 ) : (
                   <Button asChild variant="secondary">
                     <Link href={`${base}/skill`}>
-                      View skills
+                      View skill
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -258,14 +258,14 @@ function getNextAction(stage: ProductStage, base: string, sourceCount: number) {
     return {
       label: 'Run Council',
       href: `${base}/council`,
-      description: 'Embeddings are ready. Start the Council to draft skill pack proposals.',
+      description: 'Embeddings are ready. Start the Council to draft the product skill.',
     }
   }
   if (stage === 'review') {
     return {
       label: 'Review proposals',
       href: `${base}/review`,
-      description: 'Skill pack proposals are waiting for SME approval, edit, or rejection.',
+      description: 'Product skill proposal is waiting for SME approval, edit, or rejection.',
     }
   }
   return null

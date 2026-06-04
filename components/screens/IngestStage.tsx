@@ -115,7 +115,7 @@ export function IngestStage({ productId }: { productId: string }) {
           <div className="flex flex-col gap-1">
             <H3>No sources connected</H3>
             <Muted>
-              Add a source to ingest. We&rsquo;ll clone, chunk, enrich, and embed it.
+              Add a source to ingest. We&rsquo;ll clone, chunk, and embed it.
             </Muted>
           </div>
           <Button asChild>
@@ -138,7 +138,7 @@ export function IngestStage({ productId }: { productId: string }) {
                 <div className="min-w-0 flex-1">
                   <H3>Ingestion complete</H3>
                   <Muted>
-                    Sources are indexed. Run the LLM Council to draft skill pack proposals.
+                    Sources are indexed. Run the LLM Council to draft the product skill.
                   </Muted>
                 </div>
                 <Button onClick={launchCouncil} disabled={launching}>

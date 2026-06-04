@@ -14,6 +14,7 @@ import type {
   ProductStatus,
   RejectCategory,
   Skill,
+  SkillQualityResponse,
   SkillProposal,
   Source,
   SyncDelta,
@@ -74,6 +75,9 @@ export const listSkillCouncilHistory = (skillId: string) =>
       `/skills/${encodeURIComponent(skillId)}/council-history`,
     )
     .then((r) => r.sessions)
+
+export const getSkillQuality = (skillId: string) =>
+  api.get<SkillQualityResponse>(`/skills/${encodeURIComponent(skillId)}/quality`)
 
 // ---- sources -------------------------------------------------------------
 

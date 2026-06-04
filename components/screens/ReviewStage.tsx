@@ -28,7 +28,14 @@ import {
   reviseProposal,
 } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
-import { coverageSummary, groupByTier, SKILL_TIER_ORDER, tierLabel } from '@/lib/skills'
+import {
+  coverageSummary,
+  evalStatusLabel,
+  evalStatusVariant,
+  groupByTier,
+  SKILL_TIER_ORDER,
+  tierLabel,
+} from '@/lib/skills'
 import type { Citation, Product, ProductSkillsResponse, ProductStatus, SkillProposal } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -105,8 +112,7 @@ export function ReviewStage({ productId }: { productId: string }) {
     setError(null)
     try {
       await approveProposal(selectedProposal.id, actor)
-      await load()
-      setBusy(null)
+      router.replace(`/p/${productId}/skill`)
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : String(e))
       setBusy(null)
@@ -197,6 +203,9 @@ export function ReviewStage({ productId }: { productId: string }) {
                             <Badge variant="outline" className="font-mono text-xs">
                               {Math.round(item.confidence * 100)}%
                             </Badge>
+                            <Badge variant={evalStatusVariant(item.eval_status)} className="font-mono text-xs">
+                              {Math.round((item.quality_score ?? 0) * 100)}%
+                            </Badge>
                           </div>
                           <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>
                         </button>
@@ -221,6 +230,14 @@ export function ReviewStage({ productId }: { productId: string }) {
                 <Badge variant="outline" className="font-mono">
                   {selectedProposal.citations.length} citations
                 </Badge>
+                <Badge variant={evalStatusVariant(selectedProposal.eval_status)} className="font-mono">
+                  {evalStatusLabel(selectedProposal.eval_status)}
+                </Badge>
+                {selectedProposal.quality_score > 0 && (
+                  <Badge variant="outline" className="font-mono">
+                    {Math.round(selectedProposal.quality_score * 100)}% quality
+                  </Badge>
+                )}
                 <Badge variant="outline" className="font-mono">{selectedProposal.status}</Badge>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -236,6 +253,20 @@ export function ReviewStage({ productId }: { productId: string }) {
                     Critic: {selectedProposal.adversary_critique.severity} ·{' '}
                     {selectedProposal.adversary_critique.recommendation || 'see issues'}
                   </Small>
+                </div>
+              )}
+              {(selectedProposal.eval_summary || selectedProposal.eval_failures.length > 0) && (
+                <div className="px-3 py-2 rounded-md border border-border bg-bg/40">
+                  <Small className="font-medium">
+                    Eval: {selectedProposal.eval_summary || evalStatusLabel(selectedProposal.eval_status)}
+                  </Small>
+                  {selectedProposal.eval_failures.length > 0 && (
+                    <div className="mt-2 flex flex-col gap-1">
+                      {selectedProposal.eval_failures.slice(0, 4).map((failure) => (
+                        <Small key={failure} className="text-fg-subtle">{failure}</Small>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -268,15 +299,16 @@ export function ReviewStage({ productId }: { productId: string }) {
               <Muted>Approve, reject, or ask the Council for a revised proposal.</Muted>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3">
-              <Button onClick={approve} disabled={Boolean(busy)}>
+              <Button type="button" onClick={approve} disabled={Boolean(busy)}>
                 {busy === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 Approve
               </Button>
-              <Button variant="secondary" onClick={() => setReviseOpen(true)} disabled={Boolean(busy)}>
+              <Button type="button" variant="secondary" onClick={() => setReviseOpen(true)} disabled={Boolean(busy)}>
                 <RotateCcw className="h-4 w-4" />
                 Revise
               </Button>
               <Button
+                type="button"
                 variant="secondary"
                 onClick={() => setRejectOpen(true)}
                 disabled={Boolean(busy)}
@@ -454,8 +486,8 @@ type DiffRow = {
   text: string
 }
 
-type DiffPaneRow =
-  | { type: 'row'; key: string; kind: 'add' | 'del' | 'ctx' | 'change'; oldLine: number | null; newLine: number | null; oldText: string; newText: string }
+type UnifiedDiffRow =
+  | { type: 'row'; key: string; kind: 'add' | 'del' | 'ctx'; oldLine: number | null; newLine: number | null; text: string }
   | { type: 'collapse'; key: string; count: number }
 
 function DiffViewer({
@@ -471,53 +503,9 @@ function DiffViewer({
 }) {
   const [activeLine, setActiveLine] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
-  const [scrollLeft, setScrollLeft] = useState(0)
-  const [diffWidth, setDiffWidth] = useState(0)
-  const [measuredTextWidth, setMeasuredTextWidth] = useState(640)
-  const diffRef = useRef<HTMLDivElement>(null)
-  const rows = buildSplitDiff(oldBody, newBody)
-  const added = rows.filter((row) => row.type === 'row' && (row.kind === 'add' || row.kind === 'change')).length
-  const removed = rows.filter((row) => row.type === 'row' && (row.kind === 'del' || row.kind === 'change')).length
-  const longestLine = rows.reduce((longest, row) => {
-    if (row.type === 'collapse') return longest
-    return Math.max(longest, row.oldText.length, row.newText.length)
-  }, 0)
-  const paneTextWidth = Math.max(640, measuredTextWidth, Math.ceil(longestLine * 12) + 48)
-  const paneViewportWidth = Math.max(0, diffWidth / 2 - 96)
-  const scrollRange = Math.max(0, paneTextWidth - paneViewportWidth)
-  const clampedScrollLeft = Math.min(scrollLeft, scrollRange)
-
-  useEffect(() => {
-    const node = diffRef.current
-    if (!node) return
-    const updateWidth = () => setDiffWidth(node.clientWidth)
-    updateWidth()
-    const observer = new ResizeObserver(updateWidth)
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    setScrollLeft((current) => Math.min(current, scrollRange))
-  }, [scrollRange])
-
-  useEffect(() => {
-    const node = diffRef.current
-    if (!node) return
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    if (!context) return
-    context.font = window.getComputedStyle(node).font
-    const widest = rows.reduce((width, row) => {
-      if (row.type === 'collapse') return width
-      return Math.max(width, context.measureText(row.oldText).width, context.measureText(row.newText).width)
-    }, 0)
-    setMeasuredTextWidth(Math.ceil(widest) + 56)
-  }, [oldBody, newBody])
-
-  const panDiff = (next: number) => {
-    setScrollLeft(Math.max(0, Math.min(scrollRange, next)))
-  }
+  const rows = buildUnifiedDiff(oldBody, newBody)
+  const added = rows.filter((row) => row.type === 'row' && row.kind === 'add').length
+  const removed = rows.filter((row) => row.type === 'row' && row.kind === 'del').length
 
   const saveComment = () => {
     const body = draft.trim()
@@ -528,55 +516,28 @@ function DiffViewer({
   }
 
   return (
-    <div ref={diffRef} className="overflow-hidden bg-surface-sunk font-mono text-sm">
+    <div className="overflow-hidden bg-surface-sunk font-mono text-sm">
       <div>
         <div className="flex items-center gap-3 border-b border-border bg-bg px-4 py-3">
-          <SectionLabel className="text-fg">skill pack proposal</SectionLabel>
+          <SectionLabel className="text-fg">product skill proposal</SectionLabel>
           <div className="flex-1" />
           <Small className="font-mono text-success">+{added}</Small>
           <Small className="font-mono text-danger">-{removed}</Small>
         </div>
-        <div
-          className="nexus-scrollbar-visible max-h-[70vh] min-h-[420px] overflow-y-auto"
-          onWheel={(event) => {
-            if (scrollRange === 0 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
-            event.preventDefault()
-            panDiff(scrollLeft + event.deltaX)
-          }}
-        >
+        <div className="nexus-scrollbar-visible max-h-[70vh] min-h-[420px] overflow-y-auto">
           {rows.map((row) => {
             if (row.type === 'collapse') {
               return (
-                <div key={row.key} className="grid grid-cols-2 border-b border-border">
-                  <CollapseBand count={row.count} />
-                  <CollapseBand count={row.count} />
-                </div>
+                <CollapseBand key={row.key} count={row.count} />
               )
             }
             const line = row.newLine ?? row.oldLine ?? 0
             const rowComments = comments.filter((comment) => comment.line === line)
-            const changed = row.kind === 'add' || row.kind === 'del' || row.kind === 'change'
+            const changed = row.kind === 'add' || row.kind === 'del'
             return (
               <div key={row.key}>
-                <div className="group relative grid grid-cols-2 border-b border-border/60">
-                  <DiffCell
-                    side="old"
-                    line={row.oldLine}
-                    text={row.oldText}
-                    kind={row.kind}
-                    blank={row.kind === 'add'}
-                    scrollLeft={clampedScrollLeft}
-                    paneTextWidth={paneTextWidth}
-                  />
-                  <DiffCell
-                    side="new"
-                    line={row.newLine}
-                    text={row.newText}
-                    kind={row.kind}
-                    blank={row.kind === 'del'}
-                    scrollLeft={clampedScrollLeft}
-                    paneTextWidth={paneTextWidth}
-                  />
+                <div className="group relative border-b border-border/60">
+                  <UnifiedDiffLine row={row} />
                   {changed && (
                     <button
                       type="button"
@@ -584,7 +545,7 @@ function DiffViewer({
                         setActiveLine(line)
                         setDraft('')
                       }}
-                      className="absolute left-1/2 top-1 -translate-x-1/2 rounded-md border border-border-strong bg-fg px-2 py-0.5 text-base leading-none text-bg opacity-0 shadow-card transition-opacity group-hover:opacity-100"
+                      className="absolute right-3 top-1 rounded-md border border-border-strong bg-fg px-2 py-0.5 text-base leading-none text-bg opacity-0 shadow-card transition-opacity group-hover:opacity-100"
                       aria-label={`Comment on line ${line}`}
                     >
                       +
@@ -619,18 +580,6 @@ function DiffViewer({
             )
           })}
         </div>
-        <div className="border-t border-border bg-bg px-4 py-2">
-          <input
-            type="range"
-            min={0}
-            max={scrollRange}
-            value={clampedScrollLeft}
-            onChange={(event) => panDiff(Number(event.currentTarget.value))}
-            disabled={scrollRange === 0}
-            className="diff-scroll-range w-full"
-            aria-label="Scroll diff horizontally"
-          />
-        </div>
       </div>
     </div>
   )
@@ -638,40 +587,23 @@ function DiffViewer({
 
 function CollapseBand({ count }: { count: number }) {
   return (
-    <div className="flex items-center gap-3 border-r border-border bg-bg-active px-3 py-2 text-fg-subtle">
+    <div className="flex items-center justify-center gap-3 border-b border-border bg-bg-active px-3 py-2 text-fg-subtle">
       <ChevronDown className="h-4 w-4" />
       <Small className="font-mono">{count} unmodified lines</Small>
     </div>
   )
 }
 
-function DiffCell({
-  side,
-  line,
-  text,
-  kind,
-  blank,
-  scrollLeft,
-  paneTextWidth,
-}: {
-  side: 'old' | 'new'
-  line: number | null
-  text: string
-  kind: 'add' | 'del' | 'ctx' | 'change'
-  blank: boolean
-  scrollLeft: number
-  paneTextWidth: number
-}) {
-  const deleted = side === 'old' && (kind === 'del' || kind === 'change')
-  const added = side === 'new' && (kind === 'add' || kind === 'change')
+function UnifiedDiffLine({ row }: { row: Extract<UnifiedDiffRow, { type: 'row' }> }) {
+  const deleted = row.kind === 'del'
+  const added = row.kind === 'add'
   return (
     <div
       className={[
-        'grid min-h-8 grid-cols-[4rem_minmax(0,1fr)] overflow-hidden border-r border-border',
+        'grid min-h-8 grid-cols-[4rem_4rem_minmax(0,1fr)]',
         deleted ? 'bg-danger/20 text-danger' : '',
         added ? 'bg-success/15 text-success' : '',
-        !deleted && !added && !blank ? 'bg-surface-sunk text-fg-muted' : '',
-        blank ? 'bg-[repeating-linear-gradient(135deg,var(--color-bg)_0,var(--color-bg)_8px,var(--color-surface)_8px,var(--color-surface)_10px)] text-fg-subtle' : '',
+        !deleted && !added ? 'bg-surface-sunk text-fg-muted' : '',
       ].filter(Boolean).join(' ')}
     >
       <span
@@ -682,62 +614,36 @@ function DiffCell({
           !deleted && !added ? 'text-fg-subtle' : '',
         ].filter(Boolean).join(' ')}
       >
-        {line ?? ''}
+        {row.oldLine ?? ''}
       </span>
-      <span className="overflow-hidden px-4 py-1">
-        <span
-          className="block whitespace-pre will-change-transform"
-          style={{ width: paneTextWidth, transform: `translateX(-${scrollLeft}px)` }}
-        >
-          {blank ? '' : text || ' '}
-        </span>
+      <span
+        className={[
+          'select-none border-r border-border px-3 py-1 text-right',
+          deleted ? 'text-danger/50' : '',
+          added ? 'text-success' : '',
+          !deleted && !added ? 'text-fg-subtle' : '',
+        ].filter(Boolean).join(' ')}
+      >
+        {row.newLine ?? ''}
+      </span>
+      <span className="min-w-0 whitespace-pre-wrap break-words px-4 py-1 pr-14">
+        {row.text || ' '}
       </span>
     </div>
   )
 }
 
-function buildSplitDiff(oldBody: string, newBody: string): DiffPaneRow[] {
-  return collapseContext(pairRows(buildLineDiff(oldBody, newBody)))
+function buildUnifiedDiff(oldBody: string, newBody: string): UnifiedDiffRow[] {
+  return collapseContext(buildLineDiff(oldBody, newBody))
 }
 
-function pairRows(rows: DiffRow[]): DiffPaneRow[] {
-  const paired: DiffPaneRow[] = []
-  for (let i = 0; i < rows.length; i += 1) {
-    const row = rows[i]
-    const next = rows[i + 1]
-    if (row.kind === 'del' && next?.kind === 'add') {
-      paired.push({
-        type: 'row',
-        key: `change-${row.key}-${next.key}`,
-        kind: 'change',
-        oldLine: row.oldLine,
-        newLine: next.newLine,
-        oldText: row.text,
-        newText: next.text,
-      })
-      i += 1
-      continue
-    }
-    paired.push({
-      type: 'row',
-      key: row.key,
-      kind: row.kind,
-      oldLine: row.oldLine,
-      newLine: row.newLine,
-      oldText: row.kind === 'add' ? '' : row.text,
-      newText: row.kind === 'del' ? '' : row.text,
-    })
-  }
-  return paired
-}
-
-function collapseContext(rows: DiffPaneRow[]): DiffPaneRow[] {
-  const out: DiffPaneRow[] = []
+function collapseContext(rows: DiffRow[]): UnifiedDiffRow[] {
+  const out: UnifiedDiffRow[] = []
   let index = 0
   while (index < rows.length) {
     const row = rows[index]
-    if (row.type !== 'row' || row.kind !== 'ctx') {
-      out.push(row)
+    if (row.kind !== 'ctx') {
+      out.push({ type: 'row', ...row })
       index += 1
       continue
     }
@@ -745,17 +651,17 @@ function collapseContext(rows: DiffPaneRow[]): DiffPaneRow[] {
     const start = index
     while (index < rows.length) {
       const current = rows[index]
-      if (current.type !== 'row' || current.kind !== 'ctx') break
+      if (current.kind !== 'ctx') break
       index += 1
     }
     const chunk = rows.slice(start, index)
     if (chunk.length <= 10) {
-      out.push(...chunk)
+      out.push(...chunk.map((item) => ({ type: 'row' as const, ...item })))
       continue
     }
-    out.push(...chunk.slice(0, 3))
+    out.push(...chunk.slice(0, 3).map((item) => ({ type: 'row' as const, ...item })))
     out.push({ type: 'collapse', key: `collapse-${start}-${index}`, count: chunk.length - 6 })
-    out.push(...chunk.slice(-3))
+    out.push(...chunk.slice(-3).map((item) => ({ type: 'row' as const, ...item })))
   }
   return out
 }

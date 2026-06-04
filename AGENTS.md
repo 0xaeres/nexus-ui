@@ -41,9 +41,9 @@ Backend was deliberately slimmed down (see `../nexus/ENGINEERING.md §13`).
   Skills; no composition graph on skill detail).
 - No Activity timeline route, no Proposals power-user route, no Settings
   route.
-- Skills are delivered as a bounded product skill pack: one
-  `product_master` plus focused skills with `tier`, `parent`, `related`,
-  and `coverage`.
+- Skills are delivered as a bounded three-skill product pack: context,
+  architecture, and engineering, with `tier`, `parent`, `related`, and
+  `coverage`.
 - No org library or reusable composition graph. `related` is pack metadata,
   not cross-product adoption/composition.
 - No `cumulative_revisions` counter — only `provenance.revision_count`

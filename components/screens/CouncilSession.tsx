@@ -1,7 +1,8 @@
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronLeft, ChevronRight, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, ChevronLeft, ChevronRight, Loader2, RefreshCw, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,8 @@ import { PageHeader } from '@/components/ui/page'
 import { H1, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { useEventStream } from '@/lib/hooks/useEventStream'
 import {
+  ApiError,
+  createSession,
   getProposal,
   getSession,
   sessionStreamUrl,
@@ -24,19 +27,33 @@ import {
   type CouncilPriors,
   type DeliberationMessage,
   type ProposalSection,
+  type SkillEvalResult,
   type SkillProposal,
 } from '@/lib/types'
 import { useProduct } from '@/lib/product-context'
-import { coverageSummary, sortByTier, tierLabel } from '@/lib/skills'
+import { coverageSummary, evalStatusLabel, evalStatusVariant, sortByTier, tierLabel } from '@/lib/skills'
 import { cn } from '@/lib/utils'
 
-const KNOWN_AGENTS = new Set<AgentRole>(['drafter', 'critic', 'reviser'])
+const KNOWN_AGENTS = new Set<AgentRole>(COUNCIL_ROSTER)
 
 type CouncilNotice = {
   level?: 'info' | 'warning' | 'error'
   reason?: string
   message: string
   detail?: string
+}
+
+type LlmToken = {
+  role?: string
+  model?: string
+  provider?: string
+  text?: string
+}
+
+const TOKEN_AGENT: Record<string, AgentRole> = {
+  drafter: 'synthesizer',
+  critic: 'experts',
+  reviser: 'repair',
 }
 
 function asAgentRole(value: string): AgentRole | null {
@@ -55,18 +72,24 @@ function agentLabel(name: string): string {
 
 export function CouncilSession({ sessionId }: { sessionId: string }) {
   const { currentProductId } = useProduct()
+  const router = useRouter()
   const [leftOpen, setLeftOpen] = useState(true)
   const [rightOpen, setRightOpen] = useState(true)
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
   const [costs, setCosts] = useState<AgentCost[]>([])
+  const [tokenText, setTokenText] = useState('')
+  const [activeAgent, setActiveAgent] = useState<AgentRole>('planner')
   const [topic, setTopic] = useState<string>('')
   const [proposalIds, setProposalIds] = useState<string[]>([])
+  const [evalResults, setEvalResults] = useState<SkillEvalResult[]>([])
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [proposals, setProposals] = useState<Record<string, SkillProposal>>({})
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
   const [ended, setEnded] = useState(false)
   const [notice, setNotice] = useState<CouncilNotice | null>(null)
   const [priors, setPriors] = useState<CouncilPriors | null>(null)
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -77,6 +100,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         setTopic(sess.topic ?? '')
         if (sess.deliberation?.length) setMessages(sess.deliberation as DeliberationMessage[])
         if (sess.costs?.length) setCosts(sess.costs as AgentCost[])
+        if (sess.eval_results?.length) setEvalResults(sess.eval_results)
         const ids = sess.proposal_ids?.length ? sess.proposal_ids : sess.proposal_id ? [sess.proposal_id] : []
         if (ids.length) {
           setProposalIds(ids)
@@ -88,12 +112,18 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
     return () => { cancelled = true }
   }, [sessionId])
 
-  const { events, status } = useEventStream(sessionStreamUrl(sessionId))
-
-  useEffect(() => {
-    for (const ev of events) {
+  const onStreamEvent = useCallback((ev: { event: string; data: unknown }) => {
       if (ev.event === 'message' && typeof ev.data === 'object') {
-        setMessages(prev => prev.concat(ev.data as DeliberationMessage))
+        const msg = ev.data as DeliberationMessage
+        const role = asAgentRole(msg.agent)
+        if (role) setActiveAgent(role)
+        setTokenText('')
+        setMessages(prev => prev.concat(msg))
+      } else if (ev.event === 'llm_token' && typeof ev.data === 'object') {
+        const token = ev.data as LlmToken
+        const mapped = TOKEN_AGENT[token.role ?? ''] ?? asAgentRole(token.role ?? '') ?? activeAgent
+        setActiveAgent(mapped)
+        setTokenText((current) => (current + (token.text ?? '')).slice(-2200))
       } else if (ev.event === 'cost' && typeof ev.data === 'object') {
         setCosts(prev => prev.concat(ev.data as AgentCost))
       } else if (ev.event === 'notice' && typeof ev.data === 'object') {
@@ -101,6 +131,13 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
       } else if (ev.event === 'critique' && typeof ev.data === 'object') {
         const sev = (ev.data as { severity?: string }).severity
         if (sev) setCritiqueSeverity(sev)
+      } else if (ev.event === 'skill_eval' && typeof ev.data === 'object') {
+        const result = ev.data as SkillEvalResult
+        setEvalResults(prev => {
+          const key = `${result.skill_name}:${result.attempts}:${result.status}`
+          const exists = prev.some(item => `${item.skill_name}:${item.attempts}:${item.status}` === key)
+          return exists ? prev : prev.concat(result)
+        })
       } else if (
         (ev.event === 'proposal' || ev.event === 'proposal_preview') &&
         typeof ev.data === 'object'
@@ -117,8 +154,11 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
       } else if (ev.event === 'session_end') {
         setEnded(true)
       }
-    }
-  }, [events])
+  }, [activeAgent])
+
+  const { status } = useEventStream(sessionStreamUrl(sessionId), {
+    onEvent: onStreamEvent,
+  })
 
   useEffect(() => {
     const missing = proposalIds.filter((id) => !proposals[id])
@@ -141,23 +181,31 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages])
+  }, [messages, tokenText])
 
   const totalTokens = useMemo(
     () => costs.reduce((sum, c) => sum + (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0), 0),
     [costs],
   )
+  const streamLive = status === 'open' || status === 'connecting'
+  const completedAgents = useMemo(
+    () => new Set(messages.map((message) => asAgentRole(message.agent)).filter(Boolean) as AgentRole[]),
+    [messages],
+  )
+  const visibleActiveAgent =
+    tokenText || !streamLive || ended
+      ? activeAgent
+      : COUNCIL_ROSTER.find((role) => !completedAgents.has(role)) ?? activeAgent
 
   const roster = useMemo(() => {
-    const seen = new Set(messages.map(m => m.agent))
     return COUNCIL_ROSTER.map(role => ({
       role,
       label: COUNCIL_AGENT_LABELS[role],
       hue: COUNCIL_AGENT_HUES[role],
-      status: (seen.has(role) ? 'done' : ended ? 'idle' : 'thinking') as
+      status: (role === visibleActiveAgent && streamLive && !ended ? 'thinking' : completedAgents.has(role) ? 'done' : 'idle') as
         | 'done' | 'thinking' | 'idle',
     }))
-  }, [messages, ended])
+  }, [completedAgents, ended, visibleActiveAgent, streamLive])
 
   const proposalList = useMemo(
     () => sortByTier(proposalIds.map((id) => proposals[id]).filter(Boolean)),
@@ -165,8 +213,24 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   )
   const selectedProposal =
     proposalList.find((item) => item.id === selectedProposalId) ?? proposalList[0] ?? null
+  const evalPassed = evalResults.filter(item => item.status === 'passed' || item.status === 'repaired').length
+  const evalFailed = evalResults.filter(item => item.status === 'failed').length
 
-  const streamLive = status === 'open' || status === 'connecting'
+  const retryCouncil = async () => {
+    if (!currentProductId) return
+    setRetrying(true)
+    setRetryError(null)
+    try {
+      const { session_id } = await createSession(currentProductId, {
+        topic: topic.trim() || `${currentProductId} overview`,
+      })
+      router.push(`/p/${currentProductId}/council/${session_id}`)
+    } catch (e: unknown) {
+      setRetryError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -188,6 +252,11 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         {totalTokens > 0 && (
           <Badge variant="outline" className="font-mono">
             {totalTokens.toLocaleString()} tok
+          </Badge>
+        )}
+        {evalResults.length > 0 && (
+          <Badge variant={evalFailed > 0 ? 'warning' : 'success'} className="font-mono">
+            eval {evalPassed}/{evalResults.length}
           </Badge>
         )}
       </PageHeader>
@@ -244,14 +313,36 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
             )}
             {notice && (
               <Card variant="glass" className="border-warning/40 bg-warning/10 p-4">
-                <div className="flex flex-col gap-1">
-                  <Small className="font-medium text-warning">Council stopped</Small>
-                  <p className="m-0 text-sm text-fg">{notice.message}</p>
-                  {notice.detail && <Small className="font-mono text-fg-muted">{notice.detail}</Small>}
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1 flex flex-col gap-1">
+                    <Small className="font-medium text-warning">Council stopped</Small>
+                    <p className="m-0 text-sm text-fg">{notice.message}</p>
+                    {notice.detail && <Small className="font-mono text-fg-muted">{notice.detail}</Small>}
+                    {retryError && <Small className="font-mono text-danger">{retryError}</Small>}
+                  </div>
+                  <Button size="sm" variant="outline" onClick={retryCouncil} disabled={retrying}>
+                    {retrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Retry
+                  </Button>
                 </div>
               </Card>
             )}
             {messages.map((msg, i) => <DeliberationMsg key={i} msg={msg} />)}
+            {streamLive && !ended && (
+              <Card variant="surface" className="max-w-[860px] border-border-strong p-4 shadow-glow">
+                <div className="mb-2 flex items-center gap-2">
+                  <StatusDot status="thinking" size={6} />
+                  <span className="text-sm font-medium" style={{ color: agentHue(visibleActiveAgent) }}>
+                    {agentLabel(visibleActiveAgent)} typing
+                  </span>
+                  <Small className="font-mono text-fg-subtle">live model tokens</Small>
+                </div>
+                <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
+                  {tokenText || 'Preparing next turn...'}
+                  <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
+                </p>
+              </Card>
+            )}
             {ended && messages.length > 0 && (
               <Muted className="text-center py-4 font-mono">— session ended —</Muted>
             )}
@@ -307,6 +398,9 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                           <span className="text-xs font-mono text-fg truncate">{item.name}</span>
                           <div className="flex-1" />
                           <Badge variant="outline" className="font-mono text-xs">{tierLabel(item.tier)}</Badge>
+                          <Badge variant={evalStatusVariant(item.eval_status)} className="font-mono text-xs">
+                            {Math.round((item.quality_score ?? 0) * 100)}%
+                          </Badge>
                         </div>
                         <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>
                       </button>
@@ -322,7 +416,13 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
                     <Badge variant="outline" className="font-mono">
                       {selectedProposal.citations.length} citations
                     </Badge>
+                    <Badge variant={evalStatusVariant(selectedProposal.eval_status)} className="font-mono">
+                      {evalStatusLabel(selectedProposal.eval_status)}
+                    </Badge>
                   </div>
+                  {selectedProposal.eval_summary && (
+                    <Small className="mt-2 block text-fg-subtle">{selectedProposal.eval_summary}</Small>
+                  )}
                 </div>
 
                 <div className="px-5 py-4 flex-1 overflow-auto flex flex-col gap-4">

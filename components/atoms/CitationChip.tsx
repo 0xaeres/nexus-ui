@@ -1,8 +1,8 @@
 'use client'
-import { COUNCIL_AGENT_HUES, type AgentRole } from '@/lib/types'
+import { COUNCIL_AGENT_HUES, COUNCIL_ROSTER, type AgentRole } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-const KNOWN = new Set<AgentRole>(['drafter', 'critic', 'reviser'])
+const KNOWN = new Set<AgentRole>(COUNCIL_ROSTER)
 
 function hueFor(agent: string | undefined): string | undefined {
   if (!agent) return undefined

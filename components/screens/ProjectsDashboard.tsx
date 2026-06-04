@@ -105,7 +105,7 @@ function stageVisual(status: ProductStatus): StageVisual {
       label: 'Skill ready',
       badge: 'success',
       icon: CheckCircle2,
-      cta: 'View skills',
+      cta: 'View skill',
       href: (id) => `/p/${id}/skills`,
       primary: false,
       pending: 'No pending action',
@@ -473,7 +473,7 @@ function ProductCard({
           <Button asChild variant="secondary" size="sm">
             <Link href={`/p/${product.id}/skills`}>
               <BookOpen className="h-3.5 w-3.5" />
-              View skills
+              View skill
             </Link>
           </Button>
         </div>
@@ -533,7 +533,7 @@ function ProductCard({
         <Button asChild variant="secondary" size="sm">
           <Link href={`/p/${product.id}/skills`}>
             <BookOpen className="h-3.5 w-3.5" />
-            View skills
+            View skill
           </Link>
         </Button>
         <Button asChild variant={v.primary ? 'default' : 'secondary'} size="sm">

@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Users } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,7 @@ export function CouncilLanding() {
   const [open, setOpen] = useState(false)
   const [sessions, setSessions] = useState<CouncilSessionSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -51,6 +52,20 @@ export function CouncilLanding() {
   }, [currentProductId])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  const retrySession = async (session: CouncilSessionSummary) => {
+    setRetryingId(session.id)
+    setError(null)
+    try {
+      const r = await createSession(currentProductId, { topic: session.topic })
+      await refresh()
+      router.push(`${base}/council/${r.session_id}`)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+    } finally {
+      setRetryingId(null)
+    }
+  }
 
   return (
     <>
@@ -106,6 +121,7 @@ export function CouncilLanding() {
                       <TableHead className="w-[160px]">Started</TableHead>
                       <TableHead className="w-[120px]">Status</TableHead>
                       <TableHead>Topic</TableHead>
+                      <TableHead className="w-[96px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -125,6 +141,26 @@ export function CouncilLanding() {
                         </TableCell>
                         <TableCell className="font-mono text-sm text-fg truncate max-w-[480px]">
                           {s.topic}
+                        </TableCell>
+                        <TableCell>
+                          {perms.canRunCouncil && ['failed', 'stopped'].includes(s.status) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                void retrySession(s)
+                              }}
+                              disabled={retryingId === s.id}
+                            >
+                              {retryingId === s.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                              Retry
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

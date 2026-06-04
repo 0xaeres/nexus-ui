@@ -6,6 +6,7 @@ import { CheckCircle2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { MarkdownContent } from '@/components/ui/markdown'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import {
@@ -14,7 +15,15 @@ import {
   getProductStatus,
   listProductSkills,
 } from '@/lib/api'
-import { coverageSummary, groupByTier, masterSkill, SKILL_TIER_ORDER, tierLabel } from '@/lib/skills'
+import {
+  coverageSummary,
+  evalStatusLabel,
+  evalStatusVariant,
+  groupByTier,
+  masterSkill,
+  SKILL_TIER_ORDER,
+  tierLabel,
+} from '@/lib/skills'
 import type { Product, ProductSkillsResponse, ProductStatus, Skill } from '@/lib/types'
 
 export function SkillStage({ productId }: { productId: string }) {
@@ -77,14 +86,14 @@ export function SkillStage({ productId }: { productId: string }) {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div className="flex flex-col gap-1 min-w-0 flex-1">
-                <H3>{product?.name ?? productId} skill pack</H3>
-                <Muted>{skills.skills.length} approved skills for product context.</Muted>
+                <H3>{product?.name ?? productId} product skill</H3>
+                <Muted>Approved product context skill served through MCP.</Muted>
               </div>
               <div className="flex flex-wrap items-center gap-2 justify-end">
                 {masterSkill(skills.skills) && (
-                  <Badge variant="success">{Math.round(masterSkill(skills.skills)!.confidence * 100)}% master confidence</Badge>
+                  <Badge variant="success">{Math.round(masterSkill(skills.skills)!.confidence * 100)}% confidence</Badge>
                 )}
-                <Badge variant="outline" className="font-mono">{skills.skills.length} skills</Badge>
+                <Badge variant="outline" className="font-mono">{skills.skills.length} approved</Badge>
               </div>
             </CardContent>
           </Card>
@@ -121,7 +130,7 @@ export function SkillStage({ productId }: { productId: string }) {
       )}
 
       {!skills && !error && (
-        <Small className="font-mono text-fg-subtle text-center block">Loading skill pack…</Small>
+        <Small className="font-mono text-fg-subtle text-center block">Loading product skill...</Small>
       )}
     </StageShell>
   )
@@ -137,12 +146,21 @@ function SkillPackCard({ skill, productId, featured = false }: { skill: Skill; p
               <H3>{skill.name}</H3>
               <Badge variant="accent">{tierLabel(skill.tier)}</Badge>
               <Badge variant="outline" className="font-mono">v{skill.version}</Badge>
+              <Badge variant={evalStatusVariant(skill.eval_status)} className="font-mono">
+                {evalStatusLabel(skill.eval_status)}
+              </Badge>
             </div>
             <Small className="font-mono text-fg-subtle">{coverageSummary(skill.coverage)}</Small>
+            {skill.description && <Small className="block text-fg-subtle">{skill.description}</Small>}
           </div>
           <Badge variant={skill.confidence >= 0.8 ? 'success' : 'outline'} className="font-mono">
             {Math.round(skill.confidence * 100)}%
           </Badge>
+          {skill.quality_score > 0 && (
+            <Badge variant={evalStatusVariant(skill.eval_status)} className="font-mono">
+              q {Math.round(skill.quality_score * 100)}%
+            </Badge>
+          )}
         </div>
         {(skill.parent || (skill.related?.length ?? 0) > 0) && (
           <div className="flex flex-wrap gap-2">
@@ -150,9 +168,9 @@ function SkillPackCard({ skill, productId, featured = false }: { skill: Skill; p
             {(skill.related ?? []).map((id) => <Badge key={id} variant="outline" className="font-mono">rel {id}</Badge>)}
           </div>
         )}
-        <pre className="max-h-48 overflow-auto text-sm font-mono whitespace-pre-wrap text-fg-muted leading-relaxed m-0">
+        <MarkdownContent compact className="max-h-48 overflow-auto">
           {skill.body}
-        </pre>
+        </MarkdownContent>
         <div className="flex items-center gap-2">
           <Small className="font-mono text-fg-subtle">{skill.provenance.evidence_chunks.length} evidence</Small>
           <div className="flex-1" />

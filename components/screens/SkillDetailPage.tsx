@@ -6,6 +6,7 @@ import { ChevronLeft, Hexagon, GitBranch, RefreshCw, Loader2 } from 'lucide-reac
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { MarkdownContent } from '@/components/ui/markdown'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
@@ -24,18 +25,20 @@ import {
   ApiError,
   createSession,
   getSkill,
+  getSkillQuality,
   listSkillCorrections,
   listSkillCouncilHistory,
   listSkillRejections,
 } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
-import { coverageSummary, tierLabel } from '@/lib/skills'
+import { coverageSummary, evalStatusLabel, evalStatusVariant, tierLabel } from '@/lib/skills'
 import {
   COUNCIL_ROSTER,
   EVIDENCE_CHUNKS_PER_SESSION_CAP,
   type CorrectionsResponse,
   type CouncilSessionSummary,
   type Skill,
+  type SkillQualityResponse,
   type SkillProposal,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -55,6 +58,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
   const [history, setHistory] = useState<CouncilSessionSummary[]>([])
   const [corrections, setCorrections] = useState<CorrectionsResponse | null>(null)
   const [rejections, setRejections] = useState<SkillProposal[]>([])
+  const [quality, setQuality] = useState<SkillQualityResponse | null>(null)
   const [confirmRerun, setConfirmRerun] = useState(false)
   const [rerunBusy, setRerunBusy] = useState(false)
   const [rerunError, setRerunError] = useState<string | null>(null)
@@ -78,11 +82,13 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
       safe(listSkillCouncilHistory(skillId)),
       safe(listSkillCorrections(skillId)),
       safe(listSkillRejections(skillId)),
-    ]).then(([h, c, r]) => {
+      safe(getSkillQuality(skillId)),
+    ]).then(([h, c, r, q]) => {
       if (cancelled) return
       if (h) setHistory(h)
       if (c) setCorrections(c)
       if (r) setRejections(r)
+      if (q) setQuality(q)
     })
     return () => { cancelled = true }
   }, [skillId])
@@ -190,6 +196,9 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
               <CardContent className="flex flex-col gap-3">
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="accent">{tierLabel(skill.tier)}</Badge>
+                  <Badge variant={evalStatusVariant(skill.eval_status)} className="font-mono">
+                    {evalStatusLabel(skill.eval_status)}
+                  </Badge>
                   <Badge variant="outline" className="font-mono">{coverageSummary(skill.coverage)}</Badge>
                   {skill.parent && <Badge variant="outline" className="font-mono">parent {skill.parent}</Badge>}
                 </div>
@@ -230,6 +239,49 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
                         <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
                       ))}
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {(skill.quality_score > 0 || quality?.latest_eval) && (
+            <div className="col-span-12">
+              <Card variant="surface">
+                <CardHeader>
+                  <SectionLabel>Quality</SectionLabel>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <Progress
+                      value={Math.round((quality?.latest_eval?.quality_score ?? skill.quality_score) * 100)}
+                      className="flex-1"
+                      indicatorClassName={
+                        skill.eval_status === 'failed' ? 'bg-danger' :
+                        skill.eval_status === 'repaired' ? 'bg-warning' : 'bg-success'
+                      }
+                    />
+                    <Code className="shrink-0 font-mono">
+                      {Math.round((quality?.latest_eval?.quality_score ?? skill.quality_score) * 100)}%
+                    </Code>
+                    <Badge variant={evalStatusVariant(quality?.latest_eval?.status ?? skill.eval_status)}>
+                      {evalStatusLabel(quality?.latest_eval?.status ?? skill.eval_status)}
+                    </Badge>
+                  </div>
+                  {(quality?.latest_eval?.summary || skill.eval_summary) && (
+                    <Small className="text-fg-subtle">
+                      {quality?.latest_eval?.summary ?? skill.eval_summary}
+                    </Small>
+                  )}
+                  {(quality?.latest_eval?.failures?.length ?? skill.eval_failures.length) > 0 && (
+                    <div className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2">
+                      {(quality?.latest_eval?.failures ?? skill.eval_failures).slice(0, 4).map((failure) => (
+                        <Small key={failure} className="block text-danger">{failure}</Small>
+                      ))}
+                    </div>
+                  )}
+                  {quality?.regeneration_recommended && (
+                    <Badge variant="warning" className="w-fit">regeneration recommended</Badge>
                   )}
                 </CardContent>
               </Card>
@@ -281,9 +333,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
                 <SectionLabel>Body</SectionLabel>
               </CardHeader>
               <CardContent>
-                <pre className="font-mono text-sm whitespace-pre-wrap leading-relaxed text-fg-muted overflow-x-auto">
-                  {skill.body}
-                </pre>
+                <MarkdownContent>{skill.body}</MarkdownContent>
               </CardContent>
             </Card>
           </div>

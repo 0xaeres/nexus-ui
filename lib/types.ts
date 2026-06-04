@@ -4,10 +4,17 @@ export type ProductId = string
 export type UserId = string
 export type UserRole = 'org_admin' | 'product_admin' | 'sme'
 
-export type AgentRole = 'drafter' | 'critic' | 'reviser'
+export type AgentRole =
+  | 'planner'
+  | 'experts'
+  | 'synthesizer'
+  | 'repair'
+  | 'skill-eval'
+  | 'finalizer'
 
 export type SessionStatus = 'drafting' | 'awaiting_approval' | 'completed' | 'failed' | 'stopped'
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'edited' | 'revision_requested'
+export type EvalStatus = 'not_run' | 'passed' | 'failed' | 'repaired'
 export type RejectCategory = 'factual' | 'out-of-scope' | 'duplicate' | 'other'
 export type SkillTier =
   | 'product_master'
@@ -83,14 +90,14 @@ export interface Provenance {
   validated_at: string
   evidence_chunks: string[]
   adversary_critique: string | null
-  // Per-session targeted callback cap. v1 records this as 0 or 1 so older
-  // confidence/provenance displays remain binary.
+  // Kept for older approved skills that recorded repair/revision state.
   revision_count: 0 | 1
 }
 
 export interface Skill {
   id: string
   name: string
+  description: string
   product: ProductId
   version: number
   tier: SkillTier
@@ -98,6 +105,11 @@ export interface Skill {
   related: string[]
   coverage: SkillCoverage
   confidence: number
+  eval_status: EvalStatus
+  eval_summary: string
+  eval_failures: string[]
+  quality_score: number
+  signals_used: string[]
   applies_to: AppliesTo
   provenance: Provenance
   body: string
@@ -132,6 +144,7 @@ export interface SkillProposal {
   session_id: string | null
   product_id: ProductId
   name: string
+  description: string
   tier: SkillTier
   parent: string | null
   related: string[]
@@ -141,6 +154,11 @@ export interface SkillProposal {
   confidence: number
   status: ProposalStatus
   citations: Citation[]
+  eval_status: EvalStatus
+  eval_summary: string
+  eval_failures: string[]
+  quality_score: number
+  signals_used: string[]
   adversary_critique: Critique | null
   created_at: string
   approved_by: string | null
@@ -148,6 +166,42 @@ export interface SkillProposal {
   reject_reason?: RejectReason | null
   deliberation: DeliberationMessage[]
   costs: AgentCost[]
+}
+
+export interface SkillSignal {
+  id: string
+  product_id: ProductId
+  source_type: string
+  skill_name: string | null
+  proposal_id: string | null
+  session_id: string | null
+  text: string
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface SkillEvalResult {
+  id?: string
+  run_id?: string
+  session_id?: string
+  product_id?: ProductId
+  proposal_id?: string | null
+  skill_name: string
+  status: EvalStatus
+  summary: string
+  failures: string[]
+  quality_score: number
+  attempts: number
+  signals_used: string[]
+  created_at?: string
+}
+
+export interface SkillQualityResponse {
+  skill_id: string
+  latest_eval: SkillEvalResult | null
+  eval_results: SkillEvalResult[]
+  signals: SkillSignal[]
+  regeneration_recommended: boolean
 }
 
 export interface DeliberationMessage {
@@ -180,6 +234,7 @@ export interface CouncilSession {
   proposal_ids: string[]
   status: SessionStatus | string
   deliberation: DeliberationMessage[]
+  eval_results?: SkillEvalResult[]
   costs: AgentCost[]
   priors?: CouncilPriors
   trigger?: CouncilTrigger
@@ -253,16 +308,29 @@ export interface DashboardData {
 export const EVIDENCE_CHUNKS_PER_SESSION_CAP = 20
 
 // Fallback display roster for council events that still use legacy role names.
-export const COUNCIL_ROSTER: AgentRole[] = ['drafter', 'critic', 'reviser']
+export const COUNCIL_ROSTER: AgentRole[] = [
+  'planner',
+  'experts',
+  'synthesizer',
+  'repair',
+  'skill-eval',
+  'finalizer',
+]
 
 export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {
-  drafter: 'Drafter',
-  critic: 'Critic',
-  reviser: 'Reviser',
+  planner: 'Planner',
+  experts: 'Experts',
+  synthesizer: 'Synthesizer',
+  repair: 'Repair',
+  'skill-eval': 'Skill eval',
+  finalizer: 'Finalizer',
 }
 
 export const COUNCIL_AGENT_HUES: Record<AgentRole, string> = {
-  drafter: '#7C8CFF',
-  critic: '#FF9159',
-  reviser: '#C58BFF',
+  planner: '#7C8CFF',
+  experts: '#FF9159',
+  synthesizer: '#3FB6A8',
+  repair: '#C58BFF',
+  'skill-eval': '#D7A72F',
+  finalizer: '#4EBA6F',
 }

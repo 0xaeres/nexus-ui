@@ -36,9 +36,9 @@ Two invariants:
    surfaces them at `/p/[product]/review` for human approval. Nothing
    becomes a `.skill.md` without an explicit human action.
 
-The Skill belongs to a product-scoped pack: one `product_master` plus focused
-skills. Pack metadata is display/review context only; it is not org library
-scope or cross-product composition.
+The Skill belongs to a product-scoped three-skill pack: context, architecture,
+and engineering. Pack metadata is display/review context only; it is not org
+library scope or cross-product composition.
 
 ```ts
 interface Skill {

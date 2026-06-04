@@ -1,4 +1,4 @@
-import type { Skill, SkillCoverage, SkillTier } from './types'
+import type { EvalStatus, Skill, SkillCoverage, SkillTier } from './types'
 
 export const SKILL_TIER_ORDER: SkillTier[] = [
   'product_master',
@@ -48,5 +48,19 @@ export function coverageSummary(coverage?: Partial<SkillCoverage> | null): strin
 }
 
 export function masterSkill(skills: Skill[]): Skill | null {
-  return skills.find((skill) => skill.tier === 'product_master') ?? null
+  return skills.find((skill) => skill.name === 'product-skill') ?? skills.find((skill) => skill.tier === 'product_master') ?? null
+}
+
+export function evalStatusLabel(status?: EvalStatus | null): string {
+  if (!status || status === 'not_run') return 'eval not run'
+  if (status === 'passed') return 'eval passed'
+  if (status === 'repaired') return 'eval repaired'
+  return 'eval failed'
+}
+
+export function evalStatusVariant(status?: EvalStatus | null): 'outline' | 'success' | 'warning' | 'danger' {
+  if (status === 'passed') return 'success'
+  if (status === 'repaired') return 'warning'
+  if (status === 'failed') return 'danger'
+  return 'outline'
 }

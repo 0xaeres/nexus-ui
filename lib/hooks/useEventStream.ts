@@ -87,6 +87,17 @@ export function useEventStream(
         return next.length > bufferSize ? next.slice(-bufferSize) : next
       })
       onEventRef.current?.(sse)
+      if (
+        name === 'message' &&
+        parsed &&
+        typeof parsed === 'object' &&
+        'level' in parsed &&
+        ['done', 'success', 'error'].includes(String(parsed.level))
+      ) {
+        source.close()
+        setStatus('closed')
+        return
+      }
       if (name === 'session_end') {
         source.close()
         setStatus('closed')
@@ -98,6 +109,7 @@ export function useEventStream(
     const KNOWN_EVENTS = [
       'session_start',
       'message',
+      'llm_token',
       'cost',
       'critique',
       'proposal_preview',

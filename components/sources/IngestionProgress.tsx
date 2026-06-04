@@ -41,8 +41,6 @@ export function IngestionProgress({ productId, source, forceRunning = false, onS
   const [retrying, setRetrying] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastStatusRef = useRef<IngestStatus>(initial)
-  const hasEmbedWarnRef = useRef(false)
-  const autoRetriedRef = useRef(false)
 
   useEffect(() => {
     if (status !== lastStatusRef.current) {
@@ -70,8 +68,6 @@ export function IngestionProgress({ productId, source, forceRunning = false, onS
       }
 
       if (item.level === 'warn') {
-        const isEmbedWarn = /embed|EMBEDDER|token limit/i.test(item.msg ?? '')
-        if (isEmbedWarn) hasEmbedWarnRef.current = true
         setLines((prev) => [...prev, item])
         return
       }
@@ -81,19 +77,6 @@ export function IngestionProgress({ productId, source, forceRunning = false, onS
       if (item.level === 'done' || item.level === 'success') {
         if (!done) {
           done = true
-          if (hasEmbedWarnRef.current && !autoRetriedRef.current) {
-            autoRetriedRef.current = true
-            hasEmbedWarnRef.current = false
-            setLines((prev) => [...prev, { level: 'info', msg: 'Embed errors detected — auto-retrying sync…' }])
-            syncSource(productId, source.id)
-              .then(() => {
-                setProgress(null)
-                setLines([{ level: 'info', msg: 'Auto-retrying ingestion…' }])
-                setStatus('running')
-              })
-              .catch(() => setStatus('done'))
-            return
-          }
           setStatus('done')
         }
       } else if (item.level === 'error') {

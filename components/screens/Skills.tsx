@@ -10,11 +10,20 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SkillsSkeleton } from '@/components/skeletons/SkillsSkeleton'
 import { PageHeader } from '@/components/ui/page'
-import { H1, SectionLabel, Body, Subtle, Code, Small, Muted } from '@/components/ui/typography'
+import { MarkdownContent } from '@/components/ui/markdown'
+import { H1, SectionLabel, Subtle, Code, Small, Muted } from '@/components/ui/typography'
 import { useProduct } from '@/lib/product-context'
 import { ApiError, listProductSkills } from '@/lib/api'
 import type { ProductSkillsResponse, Skill } from '@/lib/types'
-import { coverageSummary, groupByTier, masterSkill, SKILL_TIER_ORDER, tierLabel } from '@/lib/skills'
+import {
+  coverageSummary,
+  evalStatusLabel,
+  evalStatusVariant,
+  groupByTier,
+  masterSkill,
+  SKILL_TIER_ORDER,
+  tierLabel,
+} from '@/lib/skills'
 import { cn } from '@/lib/utils'
 
 function confColor(c: number) {
@@ -52,6 +61,7 @@ export function Skills() {
     return q
       ? data.skills.filter(s =>
           s.name.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q) ||
           tierLabel(s.tier).toLowerCase().includes(q) ||
           coverageSummary(s.coverage).toLowerCase().includes(q),
         )
@@ -129,6 +139,9 @@ export function Skills() {
                           <span className={cn('font-mono text-xs', confColor(s.confidence))}>
                             {Math.round(s.confidence * 100)}%
                           </span>
+                          <Badge variant={evalStatusVariant(s.eval_status)} className="font-mono text-xs">
+                            {Math.round((s.quality_score ?? 0) * 100)}%
+                          </Badge>
                         </button>
                       )
                     })}
@@ -160,8 +173,12 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
           <div className="flex items-baseline gap-2 flex-wrap">
             <Code className="text-xl">{skill.name}</Code>
             <Badge variant="accent">{tierLabel(skill.tier)}</Badge>
+            <Badge variant={evalStatusVariant(skill.eval_status)}>
+              {evalStatusLabel(skill.eval_status)}
+            </Badge>
           </div>
           <Subtle className="font-mono">v{skill.version} · {coverageSummary(skill.coverage)}</Subtle>
+          {skill.description && <Subtle>{skill.description}</Subtle>}
         </div>
         <Link
           href={`/p/${productId}/skills/${encodeURIComponent(skill.id)}`}
@@ -183,6 +200,23 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
           {Math.round(skill.confidence * 100)}%
         </Code>
       </Card>
+
+      {skill.quality_score > 0 && (
+        <Card variant="surface" className="p-4 flex items-center gap-3">
+          <SectionLabel className="shrink-0 w-32">Quality</SectionLabel>
+          <Progress
+            value={Math.round(skill.quality_score * 100)}
+            className="flex-1"
+            indicatorClassName={
+              skill.eval_status === 'failed' ? 'bg-danger' :
+              skill.eval_status === 'repaired' ? 'bg-warning' : 'bg-success'
+            }
+          />
+          <Code className="shrink-0 font-mono">
+            {Math.round(skill.quality_score * 100)}%
+          </Code>
+        </Card>
+      )}
 
       {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
         <Card variant="surface">
@@ -234,9 +268,7 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
           <SectionLabel>Body</SectionLabel>
         </CardHeader>
         <CardContent>
-          <Body className="font-mono whitespace-pre-wrap text-sm leading-relaxed">
-            {skill.body}
-          </Body>
+          <MarkdownContent>{skill.body}</MarkdownContent>
         </CardContent>
       </Card>
     </div>

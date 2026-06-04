@@ -90,7 +90,7 @@ export function NewProduct() {
               <CardHeader className="gap-2">
                 <H3>Tell Nexus what to ingest</H3>
                 <Muted>
-                  Point us at the product repositories. We&rsquo;ll clone, chunk, enrich,
+                  Point us at the product repositories. We&rsquo;ll clone, chunk,
                   and embed them, then the LLM Council drafts your first skill for review.
                 </Muted>
               </CardHeader>
