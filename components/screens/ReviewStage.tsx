@@ -33,6 +33,7 @@ import {
   evalStatusLabel,
   evalStatusVariant,
   groupByTier,
+  skillRouteId,
   SKILL_TIER_ORDER,
   tierLabel,
 } from '@/lib/skills'
@@ -111,8 +112,12 @@ export function ReviewStage({ productId }: { productId: string }) {
     setBusy('approve')
     setError(null)
     try {
-      await approveProposal(selectedProposal.id, actor)
-      router.replace(`/p/${productId}/skill`)
+      const result = await approveProposal(selectedProposal.id, actor)
+      router.replace(
+        result.skill_id
+          ? `/p/${productId}/skills/${skillRouteId(result.skill_id)}`
+          : `/p/${productId}/skill`,
+      )
     } catch (e: unknown) {
       setError(e instanceof ApiError ? e.message : String(e))
       setBusy(null)

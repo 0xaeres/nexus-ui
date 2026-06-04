@@ -22,6 +22,7 @@ import {
   groupByTier,
   masterSkill,
   SKILL_TIER_ORDER,
+  skillRouteId,
   tierLabel,
 } from '@/lib/skills'
 import { cn } from '@/lib/utils'
@@ -181,7 +182,7 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
           {skill.description && <Subtle>{skill.description}</Subtle>}
         </div>
         <Link
-          href={`/p/${productId}/skills/${encodeURIComponent(skill.id)}`}
+          href={`/p/${productId}/skills/${skillRouteId(skill.id)}`}
           className="flex items-center gap-1 text-xs text-accent hover:underline shrink-0"
         >
           Full detail

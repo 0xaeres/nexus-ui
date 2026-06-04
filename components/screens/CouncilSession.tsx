@@ -52,7 +52,8 @@ type LlmToken = {
 
 const TOKEN_AGENT: Record<string, AgentRole> = {
   drafter: 'synthesizer',
-  critic: 'experts',
+  critic: 'domain_expert',
+  experts: 'domain_expert',
   reviser: 'repair',
 }
 
@@ -77,7 +78,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
   const [rightOpen, setRightOpen] = useState(true)
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
   const [costs, setCosts] = useState<AgentCost[]>([])
-  const [tokenText, setTokenText] = useState('')
+  const [tokenTextByAgent, setTokenTextByAgent] = useState<Partial<Record<AgentRole, string>>>({})
   const [activeAgent, setActiveAgent] = useState<AgentRole>('planner')
   const [topic, setTopic] = useState<string>('')
   const [proposalIds, setProposalIds] = useState<string[]>([])
@@ -117,13 +118,22 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         const msg = ev.data as DeliberationMessage
         const role = asAgentRole(msg.agent)
         if (role) setActiveAgent(role)
-        setTokenText('')
+        if (role) {
+          setTokenTextByAgent((current) => {
+            const next = { ...current }
+            delete next[role]
+            return next
+          })
+        }
         setMessages(prev => prev.concat(msg))
       } else if (ev.event === 'llm_token' && typeof ev.data === 'object') {
         const token = ev.data as LlmToken
         const mapped = TOKEN_AGENT[token.role ?? ''] ?? asAgentRole(token.role ?? '') ?? activeAgent
         setActiveAgent(mapped)
-        setTokenText((current) => (current + (token.text ?? '')).slice(-2200))
+        setTokenTextByAgent((current) => ({
+          ...current,
+          [mapped]: ((current[mapped] ?? '') + (token.text ?? '')).slice(-2200),
+        }))
       } else if (ev.event === 'cost' && typeof ev.data === 'object') {
         setCosts(prev => prev.concat(ev.data as AgentCost))
       } else if (ev.event === 'notice' && typeof ev.data === 'object') {
@@ -181,7 +191,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages, tokenText])
+  }, [messages, tokenTextByAgent])
 
   const totalTokens = useMemo(
     () => costs.reduce((sum, c) => sum + (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0), 0),
@@ -192,8 +202,14 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
     () => new Set(messages.map((message) => asAgentRole(message.agent)).filter(Boolean) as AgentRole[]),
     [messages],
   )
+  const activeTokenEntries = useMemo(
+    () => COUNCIL_ROSTER
+      .map((role) => ({ role, text: tokenTextByAgent[role] ?? '' }))
+      .filter((entry) => entry.text),
+    [tokenTextByAgent],
+  )
   const visibleActiveAgent =
-    tokenText || !streamLive || ended
+    activeTokenEntries.length > 0 || !streamLive || ended
       ? activeAgent
       : COUNCIL_ROSTER.find((role) => !completedAgents.has(role)) ?? activeAgent
 
@@ -202,10 +218,14 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
       role,
       label: COUNCIL_AGENT_LABELS[role],
       hue: COUNCIL_AGENT_HUES[role],
-      status: (role === visibleActiveAgent && streamLive && !ended ? 'thinking' : completedAgents.has(role) ? 'done' : 'idle') as
+      status: (
+        (role === visibleActiveAgent || activeTokenEntries.some((entry) => entry.role === role)) && streamLive && !ended
+          ? 'thinking'
+          : completedAgents.has(role) ? 'done' : 'idle'
+      ) as
         | 'done' | 'thinking' | 'idle',
     }))
-  }, [completedAgents, ended, visibleActiveAgent, streamLive])
+  }, [activeTokenEntries, completedAgents, ended, visibleActiveAgent, streamLive])
 
   const proposalList = useMemo(
     () => sortByTier(proposalIds.map((id) => proposals[id]).filter(Boolean)),
@@ -328,21 +348,12 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
               </Card>
             )}
             {messages.map((msg, i) => <DeliberationMsg key={i} msg={msg} />)}
-            {streamLive && !ended && (
-              <Card variant="surface" className="max-w-[860px] border-border-strong p-4 shadow-glow">
-                <div className="mb-2 flex items-center gap-2">
-                  <StatusDot status="thinking" size={6} />
-                  <span className="text-sm font-medium" style={{ color: agentHue(visibleActiveAgent) }}>
-                    {agentLabel(visibleActiveAgent)} typing
-                  </span>
-                  <Small className="font-mono text-fg-subtle">live model tokens</Small>
-                </div>
-                <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
-                  {tokenText || 'Preparing next turn...'}
-                  <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
-                </p>
-              </Card>
+            {streamLive && !ended && activeTokenEntries.length === 0 && (
+              <TypingCard role={visibleActiveAgent} text="" label="live model tokens" />
             )}
+            {streamLive && !ended && activeTokenEntries.map((entry) => (
+              <TypingCard key={entry.role} role={entry.role} text={entry.text} label="live model tokens" />
+            ))}
             {ended && messages.length > 0 && (
               <Muted className="text-center py-4 font-mono">— session ended —</Muted>
             )}
@@ -473,6 +484,24 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         )}
       </div>
     </div>
+  )
+}
+
+function TypingCard({ role, text, label }: { role: AgentRole; text: string; label: string }) {
+  return (
+    <Card variant="surface" className="max-w-[860px] border-border-strong p-4 shadow-glow">
+      <div className="mb-2 flex items-center gap-2">
+        <StatusDot status="thinking" size={6} />
+        <span className="text-sm font-medium" style={{ color: agentHue(role) }}>
+          {agentLabel(role)} typing
+        </span>
+        <Small className="font-mono text-fg-subtle">{label}</Small>
+      </div>
+      <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
+        {text || 'Preparing next turn...'}
+        <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
+      </p>
+    </Card>
   )
 }
 

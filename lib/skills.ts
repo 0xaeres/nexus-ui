@@ -48,7 +48,11 @@ export function coverageSummary(coverage?: Partial<SkillCoverage> | null): strin
 }
 
 export function masterSkill(skills: Skill[]): Skill | null {
-  return skills.find((skill) => skill.name === 'product-skill') ?? skills.find((skill) => skill.tier === 'product_master') ?? null
+  return skills.find((skill) => skill.tier === 'product_master') ?? null
+}
+
+export function skillRouteId(skillId: string): string {
+  return skillId.split('/').map(encodeURIComponent).join('/')
 }
 
 export function evalStatusLabel(status?: EvalStatus | null): string {

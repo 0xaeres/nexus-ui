@@ -6,7 +6,9 @@ export type UserRole = 'org_admin' | 'product_admin' | 'sme'
 
 export type AgentRole =
   | 'planner'
-  | 'experts'
+  | 'architect'
+  | 'domain_expert'
+  | 'quality_expert'
   | 'synthesizer'
   | 'repair'
   | 'skill-eval'
@@ -310,7 +312,9 @@ export const EVIDENCE_CHUNKS_PER_SESSION_CAP = 20
 // Fallback display roster for council events that still use legacy role names.
 export const COUNCIL_ROSTER: AgentRole[] = [
   'planner',
-  'experts',
+  'architect',
+  'domain_expert',
+  'quality_expert',
   'synthesizer',
   'repair',
   'skill-eval',
@@ -319,7 +323,9 @@ export const COUNCIL_ROSTER: AgentRole[] = [
 
 export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {
   planner: 'Planner',
-  experts: 'Experts',
+  architect: 'Architect',
+  domain_expert: 'Domain expert',
+  quality_expert: 'Quality expert',
   synthesizer: 'Synthesizer',
   repair: 'Repair',
   'skill-eval': 'Skill eval',
@@ -328,7 +334,9 @@ export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {
 
 export const COUNCIL_AGENT_HUES: Record<AgentRole, string> = {
   planner: '#7C8CFF',
-  experts: '#FF9159',
+  architect: '#E8B86B',
+  domain_expert: '#FF9159',
+  quality_expert: '#F26D6D',
   synthesizer: '#3FB6A8',
   repair: '#C58BFF',
   'skill-eval': '#D7A72F',

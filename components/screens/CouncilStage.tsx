@@ -57,7 +57,8 @@ type LlmToken = {
 
 const TOKEN_AGENT: Record<string, AgentRole> = {
   drafter: 'synthesizer',
-  critic: 'experts',
+  critic: 'domain_expert',
+  experts: 'domain_expert',
   reviser: 'repair',
 }
 
@@ -79,10 +80,6 @@ export function CouncilStage({ productId }: { productId: string }) {
         if (cancelled) return
         setProduct(p)
         setStatus(s)
-        if (s.currentStage === 'skill') {
-          router.replace(`/p/${productId}/skill`)
-          return
-        }
         if (s.currentStage === 'review') {
           router.replace(`/p/${productId}/review`)
           return
@@ -212,7 +209,7 @@ function CouncilLive({
   void productId
   const [messages, setMessages] = useState<DeliberationMessage[]>([])
   const [costs, setCosts] = useState<AgentCost[]>([])
-  const [tokenText, setTokenText] = useState('')
+  const [tokenTextByAgent, setTokenTextByAgent] = useState<Partial<Record<AgentRole, string>>>({})
   const [activeAgent, setActiveAgent] = useState<AgentRole>('planner')
   const [ended, setEnded] = useState(false)
   const [notice, setNotice] = useState<CouncilNotice | null>(null)
@@ -224,13 +221,22 @@ function CouncilLive({
         const msg = ev.data as DeliberationMessage
         const role = asAgentRole(msg.agent)
         if (role) setActiveAgent(role)
-        setTokenText('')
+        if (role) {
+          setTokenTextByAgent((current) => {
+            const next = { ...current }
+            delete next[role]
+            return next
+          })
+        }
         setMessages((prev) => prev.concat(msg))
       } else if (ev.event === 'llm_token' && typeof ev.data === 'object') {
         const token = ev.data as LlmToken
         const mapped = TOKEN_AGENT[token.role ?? ''] ?? asAgentRole(token.role ?? '') ?? activeAgent
         setActiveAgent(mapped)
-        setTokenText((current) => (current + (token.text ?? '')).slice(-1800))
+        setTokenTextByAgent((current) => ({
+          ...current,
+          [mapped]: ((current[mapped] ?? '') + (token.text ?? '')).slice(-1800),
+        }))
       } else if (ev.event === 'cost' && typeof ev.data === 'object') {
         setCosts((prev) => prev.concat(ev.data as AgentCost))
       } else if (ev.event === 'notice' && typeof ev.data === 'object') {
@@ -254,7 +260,7 @@ function CouncilLive({
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages, tokenText])
+  }, [messages, tokenTextByAgent])
 
   const totalTokens = useMemo(
     () =>
@@ -270,8 +276,14 @@ function CouncilLive({
     () => new Set(messages.map((message) => asAgentRole(message.agent)).filter(Boolean) as AgentRole[]),
     [messages],
   )
+  const activeTokenEntries = useMemo(
+    () => COUNCIL_ROSTER
+      .map((role) => ({ role, text: tokenTextByAgent[role] ?? '' }))
+      .filter((entry) => entry.text),
+    [tokenTextByAgent],
+  )
   const visibleActiveAgent =
-    tokenText || !live || ended
+    activeTokenEntries.length > 0 || !live || ended
       ? activeAgent
       : COUNCIL_ROSTER.find((role) => !completedAgents.has(role)) ?? activeAgent
   const currentAgentLabel = agentLabel(visibleActiveAgent)
@@ -302,7 +314,9 @@ function CouncilLive({
       <Card variant="surface" className="p-3">
         <div className="flex flex-wrap items-center gap-2">
           {COUNCIL_ROSTER.map((role, index) => {
-            const active = role === visibleActiveAgent && live && !ended
+            const active = (
+              role === visibleActiveAgent || activeTokenEntries.some((entry) => entry.role === role)
+            ) && live && !ended
             const done = index < progressIndex || completedAgents.has(role)
             return (
               <div
@@ -369,21 +383,12 @@ function CouncilLive({
             </p>
           </Card>
         ))}
-        {live && !ended && (
-          <Card variant="surface" className="max-w-[880px] border-border-strong p-4 shadow-glow">
-            <div className="mb-2 flex items-center gap-2">
-              <StatusDot status="thinking" size={6} />
-              <span className="text-sm font-medium" style={{ color: agentHue(visibleActiveAgent) }}>
-                {currentAgentLabel} typing
-              </span>
-              <Small className="font-mono text-fg-subtle">streaming tokens</Small>
-            </div>
-            <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
-              {tokenText || 'Preparing next turn...'}
-              <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
-            </p>
-          </Card>
+        {live && !ended && activeTokenEntries.length === 0 && (
+          <TypingCard role={visibleActiveAgent} text="" label="streaming tokens" />
         )}
+        {live && !ended && activeTokenEntries.map((entry) => (
+          <TypingCard key={entry.role} role={entry.role} text={entry.text} label="streaming tokens" />
+        ))}
         {ended && !notice && (
           <Muted className="text-center py-2 font-mono">— forwarding to review —</Muted>
         )}
@@ -392,5 +397,23 @@ function CouncilLive({
         )}
       </div>
     </div>
+  )
+}
+
+function TypingCard({ role, text, label }: { role: AgentRole; text: string; label: string }) {
+  return (
+    <Card variant="surface" className="max-w-[880px] border-border-strong p-4 shadow-glow">
+      <div className="mb-2 flex items-center gap-2">
+        <StatusDot status="thinking" size={6} />
+        <span className="text-sm font-medium" style={{ color: agentHue(role) }}>
+          {agentLabel(role)} typing
+        </span>
+        <Small className="font-mono text-fg-subtle">{label}</Small>
+      </div>
+      <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
+        {text || 'Preparing next turn...'}
+        <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
+      </p>
+    </Card>
   )
 }

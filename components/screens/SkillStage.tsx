@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,7 @@ import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import {
   ApiError,
+  createSession,
   getProduct,
   getProductStatus,
   listProductSkills,
@@ -22,6 +23,7 @@ import {
   groupByTier,
   masterSkill,
   SKILL_TIER_ORDER,
+  skillRouteId,
   tierLabel,
 } from '@/lib/skills'
 import type { Product, ProductSkillsResponse, ProductStatus, Skill } from '@/lib/types'
@@ -32,6 +34,7 @@ export function SkillStage({ productId }: { productId: string }) {
   const [status, setStatus] = useState<ProductStatus | null>(null)
   const [skills, setSkills] = useState<ProductSkillsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [launchingCouncil, setLaunchingCouncil] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -61,6 +64,20 @@ export function SkillStage({ productId }: { productId: string }) {
     }
   }, [productId, router])
 
+  const runCouncil = async () => {
+    setLaunchingCouncil(true)
+    setError(null)
+    try {
+      const { session_id } = await createSession(productId, {
+        topic: `${product?.name ?? productId} overview`,
+      })
+      router.push(`/p/${productId}/council?session=${session_id}`)
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : String(e))
+      setLaunchingCouncil(false)
+    }
+  }
+
   return (
     <StageShell
       productId={productId}
@@ -68,11 +85,18 @@ export function SkillStage({ productId }: { productId: string }) {
       stage="skill"
       reached={status?.currentStage ?? 'none'}
       headerExtra={
-        <Button asChild variant="secondary" size="sm">
-          <Link href={`/p/${productId}/council`}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Run another council
-          </Link>
+        <Button variant="secondary" size="sm" onClick={runCouncil} disabled={launchingCouncil}>
+          {launchingCouncil ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Starting...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-3.5 w-3.5" />
+              Run another council
+            </>
+          )}
         </Button>
       }
     >
@@ -175,7 +199,7 @@ function SkillPackCard({ skill, productId, featured = false }: { skill: Skill; p
           <Small className="font-mono text-fg-subtle">{skill.provenance.evidence_chunks.length} evidence</Small>
           <div className="flex-1" />
           <Button asChild variant="secondary" size="sm">
-            <Link href={`/p/${productId}/skills/${encodeURIComponent(skill.id)}`}>Open</Link>
+            <Link href={`/p/${productId}/skills/${skillRouteId(skill.id)}`}>Open</Link>
           </Button>
         </div>
       </CardContent>
