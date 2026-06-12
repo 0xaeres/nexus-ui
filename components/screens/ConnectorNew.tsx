@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { BrandIcon } from '@/components/icons/BrandIcon'
 import { ApiError, addSource } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
@@ -31,13 +32,6 @@ const CONNECTOR_OPTIONS: Array<{
       { key: 'token', placeholder: 'ghp_...', secret: true },
       { key: 'repos', placeholder: 'https://github.com/myorg/repo, https://github.com/myorg/other' },
     ],
-  },
-  {
-    id: 'filesystem',
-    name: 'Local filesystem',
-    auth: 'command',
-    desc: 'A local directory walked by Nexus directly',
-    fields: [{ key: 'roots', placeholder: '/path/to/code' }],
   },
 ]
 
@@ -144,6 +138,7 @@ export function ConnectorNew({ productId }: { productId?: string }) {
                   )}
                 >
                   <div className="flex items-center gap-2">
+                    {c.id === 'github' && <BrandIcon id="github" className="h-4 w-4" />}
                     <span className="font-mono text-base font-medium text-fg">{c.name}</span>
                     <div className="flex-1" />
                     <Badge variant="outline" className="font-mono text-xs">{c.auth}</Badge>

@@ -1,15 +1,10 @@
 'use client'
 import * as React from 'react'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
-import { Check, ChevronRight, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const DropdownMenu = DropdownMenuPrimitive.Root
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
-export const DropdownMenuGroup = DropdownMenuPrimitive.Group
-export const DropdownMenuPortal = DropdownMenuPrimitive.Portal
-export const DropdownMenuSub = DropdownMenuPrimitive.Sub
-export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup
 
 export const DropdownMenuContent = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.Content>,
@@ -51,7 +46,7 @@ export const DropdownMenuLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
-    className={cn('px-2.5 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-fg-subtle', className)}
+    className={cn('px-2.5 py-1.5 text-xs uppercase tracking-wider font-semibold text-fg-subtle', className)}
     {...props}
   />
 ))
@@ -64,6 +59,3 @@ export const DropdownMenuSeparator = React.forwardRef<
   <DropdownMenuPrimitive.Separator ref={ref} className={cn('-mx-1 my-1 h-px bg-border', className)} {...props} />
 ))
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName
-
-// keep references so unused icons don't get tree-shaken from .d.ts
-export const _icons = { Check, ChevronRight, Circle }

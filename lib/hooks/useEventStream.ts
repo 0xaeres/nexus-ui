@@ -50,7 +50,7 @@ export function useEventStream(
     setEvents([])
     setError(null)
 
-    const source = new EventSource(url)
+    const source = new EventSource(url, { withCredentials: true })
     let cancelled = false
 
     source.onopen = () => {

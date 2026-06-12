@@ -22,7 +22,7 @@ const cardVariants = cva('rounded-lg text-fg overflow-hidden', {
   defaultVariants: { variant: 'surface' },
 })
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {
   glowColor?: string
 }
 
@@ -44,20 +44,6 @@ export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<
   ),
 )
 CardHeader.displayName = 'CardHeader'
-
-export const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('text-base font-semibold leading-snug text-fg tracking-tight', className)} {...props} />
-  ),
-)
-CardTitle.displayName = 'CardTitle'
-
-export const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn('text-sm text-fg-muted leading-relaxed', className)} {...props} />
-  ),
-)
-CardDescription.displayName = 'CardDescription'
 
 export const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (

@@ -2,7 +2,8 @@
 
 export type ProductId = string
 export type UserId = string
-export type UserRole = 'org_admin' | 'product_admin' | 'sme'
+export type UserRole = 'admin' | 'editor' | 'viewer'
+export type ProductRole = 'owner' | 'editor' | 'viewer'
 
 export type AgentRole =
   | 'planner'
@@ -62,8 +63,10 @@ export interface Product {
 
 export interface User {
   id: UserId
-  name: string
+  name?: string
+  email?: string
   role: UserRole
+  status?: string
   products: ProductId[]
 }
 

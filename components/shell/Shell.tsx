@@ -8,7 +8,7 @@ import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { ProductContext, getPerms } from '@/lib/product-context'
 import { getMe, listProducts } from '@/lib/api'
-import type { Product, User, UserRole } from '@/lib/types'
+import type { Product, ProductRole, User } from '@/lib/types'
 
 // Vim-style "g then x" chords. `h` = home (org dashboard); the rest are
 // product-scoped and only fire when a current product is set.
@@ -25,30 +25,41 @@ const PRODUCT_CHORDS: Record<string, string> = {
 export function Shell({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [debugRole, setDebugRole] = useState<UserRole | null>(null)
   const [currentProductId, setCurrentProductId] = useState('')
   const [user, setUser] = useState<User | null>(null)
+  const [memberships, setMemberships] = useState<Record<string, ProductRole>>({})
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname() ?? '/'
+  const publicAuthPath = pathname === '/login' || pathname === '/request-access'
   const pendingG = useRef(false)
   const pendingGTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      if (publicAuthPath) {
+        setLoading(false)
+        return
+      }
       try {
         const [me, prods] = await Promise.all([getMe(), listProducts()])
         if (cancelled) return
         setUser(me.user)
+        setMemberships(me.memberships ?? {})
         setProducts(prods)
+        if (me.user.status && me.user.status !== 'approved') {
+          router.replace('/request-access')
+          return
+        }
         if (prods.length && !prods.find(p => p.id === currentProductId)) {
           setCurrentProductId(prods[0].id)
         }
       } catch {
         // Backend unreachable — keep placeholder state so screens can render
         // their own error UIs. The TopBar product switcher shows no options.
+        router.replace('/login')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -57,7 +68,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [publicAuthPath, router])
 
   useEffect(() => {
     const match = pathname.match(/^\/p\/([^/]+)/)
@@ -71,11 +82,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
     user ?? {
       id: 'unknown',
       name: 'Loading...',
-      role: 'sme',
+      role: 'viewer',
       products: [],
     }
-  const effectiveRole = debugRole ?? baseUser.role
   const currentProduct = products.find(p => p.id === currentProductId)
+  const currentProductRole = memberships[currentProductId] ?? null
+  const perms = getPerms(baseUser.role, currentProductRole)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -151,21 +163,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [paletteOpen, helpOpen, currentProductId, router])
 
+  if (publicAuthPath) {
+    return <div className="min-h-screen bg-bg text-fg">{children}</div>
+  }
+
   return (
     <TooltipProvider delayDuration={250}>
       <ProductContext.Provider value={{
         currentProductId,
         currentProduct,
-        currentUser: { ...baseUser, role: effectiveRole },
-        perms: getPerms(effectiveRole),
-        debugRole,
+        currentUser: baseUser,
+        perms,
+        memberships,
         loading,
       }}>
         <div className="flex flex-col h-screen overflow-hidden">
           <TopBar
             onOpenPalette={() => setPaletteOpen(true)}
-            onDebugRoleChange={setDebugRole}
-            debugRole={debugRole}
             onProductChange={setCurrentProductId}
           />
           <div className="flex flex-1 min-h-0">

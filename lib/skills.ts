@@ -9,7 +9,7 @@ export const SKILL_TIER_ORDER: SkillTier[] = [
   'quality_security',
 ]
 
-export const SKILL_TIER_LABELS: Record<SkillTier, string> = {
+const SKILL_TIER_LABELS: Record<SkillTier, string> = {
   product_master: 'Product master',
   application: 'Application',
   domain: 'Domain',
@@ -22,7 +22,7 @@ export function tierLabel(tier?: SkillTier | null): string {
   return tier ? SKILL_TIER_LABELS[tier] ?? tier : 'Domain'
 }
 
-export function tierRank(tier?: SkillTier | null): number {
+function tierRank(tier?: SkillTier | null): number {
   const index = SKILL_TIER_ORDER.indexOf((tier ?? 'domain') as SkillTier)
   return index === -1 ? SKILL_TIER_ORDER.length : index
 }

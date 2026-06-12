@@ -1,26 +1,28 @@
 'use client'
 import { createContext, useContext } from 'react'
-import type { Permissions, Product, ProductId, User, UserRole } from './types'
+import type { Permissions, Product, ProductId, ProductRole, User, UserRole } from './types'
 
 export type ProductPerms = Permissions
 
-export type ProductContextValue = {
+type ProductContextValue = {
   currentProductId: ProductId
   currentProduct: Product | undefined
   currentUser: User
   perms: ProductPerms
-  debugRole: UserRole | null
+  memberships: Record<ProductId, ProductRole>
   // True while /me + /products are loading on app boot
   loading: boolean
 }
 
-export function getPerms(role: UserRole): ProductPerms {
+export function getPerms(role: UserRole, productRole?: ProductRole | null): ProductPerms {
+  const isOrgAdmin = role === 'admin'
+  const canWriteProduct = isOrgAdmin || productRole === 'owner' || productRole === 'editor'
   return {
-    canManageSources: role !== 'sme',
-    canRunCouncil: role !== 'sme',
-    canOnboard: role === 'org_admin',
-    isOrgAdmin: role === 'org_admin',
-    settingsReadOnly: role === 'sme',
+    canManageSources: canWriteProduct,
+    canRunCouncil: canWriteProduct,
+    canOnboard: true,
+    isOrgAdmin,
+    settingsReadOnly: !isOrgAdmin,
   }
 }
 
@@ -28,7 +30,7 @@ export function getPerms(role: UserRole): ProductPerms {
 const PLACEHOLDER_USER: User = {
   id: 'unknown',
   name: 'Loading...',
-  role: 'sme',
+  role: 'viewer',
   products: [],
 }
 
@@ -36,8 +38,8 @@ export const ProductContext = createContext<ProductContextValue>({
   currentProductId: '',
   currentProduct: undefined,
   currentUser: PLACEHOLDER_USER,
-  perms: getPerms('sme'),
-  debugRole: null,
+  perms: getPerms('viewer'),
+  memberships: {},
   loading: true,
 })
 

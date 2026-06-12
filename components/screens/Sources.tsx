@@ -9,6 +9,7 @@ import { StatusDot } from '@/components/ui/status-dot'
 import { SourcesSkeleton } from '@/components/skeletons/SourcesSkeleton'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, SectionLabel, Muted, Subtle, Code } from '@/components/ui/typography'
+import { BrandIcon } from '@/components/icons/BrandIcon'
 import { useProduct } from '@/lib/product-context'
 import { ApiError, listSources, syncSource } from '@/lib/api'
 import type { Source } from '@/lib/types'
@@ -143,7 +144,11 @@ function SourceCard({ src, base }: { src: Source; base: string }) {
         className="p-4 flex flex-col gap-3 h-full"
       >
         <div className="flex items-center gap-2.5">
-          <span className="h-2 w-2 rounded-full bg-accent" />
+          {src.type === 'github' ? (
+            <BrandIcon id="github" className="h-4 w-4 shrink-0" />
+          ) : (
+            <span className="h-2 w-2 rounded-full bg-accent" />
+          )}
           <Code className="flex-1 truncate">{src.name}</Code>
           <Badge variant={badge}>{src.status}</Badge>
         </div>

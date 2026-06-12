@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Body, Code, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
+import { ProposalQueueRow } from '@/components/screens/proposal-queue-row'
 import {
   ApiError,
   approveProposal,
@@ -190,32 +191,15 @@ export function ReviewStage({ productId }: { productId: string }) {
                 return (
                   <div key={tier} className="flex flex-col gap-1">
                     <SectionLabel className="px-2">{tierLabel(tier)}</SectionLabel>
-                    {items.map((item) => {
-                      const active = item.id === selectedProposal.id
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setSelectedProposalId(item.id)}
-                          className={cn(
-                            'rounded-md px-3 py-2 text-left transition-colors',
-                            active ? 'bg-bg-active' : 'hover:bg-surface',
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Code className="truncate">{item.name}</Code>
-                            <div className="flex-1" />
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {Math.round(item.confidence * 100)}%
-                            </Badge>
-                            <Badge variant={evalStatusVariant(item.eval_status)} className="font-mono text-xs">
-                              {Math.round((item.quality_score ?? 0) * 100)}%
-                            </Badge>
-                          </div>
-                          <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>
-                        </button>
-                      )
-                    })}
+                    {items.map((item) => (
+                      <ProposalQueueRow
+                        key={item.id}
+                        item={item}
+                        active={item.id === selectedProposal.id}
+                        metric="confidence"
+                        onSelect={() => setSelectedProposalId(item.id)}
+                      />
+                    ))}
                   </div>
                 )
               })}

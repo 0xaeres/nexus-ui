@@ -115,10 +115,6 @@ function Stepper({
   )
 }
 
-export function StageHint({ children }: { children: React.ReactNode }) {
-  return <Muted className="text-center max-w-xl">{children}</Muted>
-}
-
 export function StageError({ message }: { message: string }) {
   return <Small className="font-mono text-danger block">{message}</Small>
 }

@@ -51,7 +51,7 @@ export function IngestionProgress({ productId, source, forceRunning = false, onS
 
   useEffect(() => {
     if (status === 'done' || status === 'error') return
-    const es = new EventSource(sourceLogUrl(productId, source.id))
+    const es = new EventSource(sourceLogUrl(productId, source.id), { withCredentials: true })
     let done = false
 
     es.onmessage = (e) => {

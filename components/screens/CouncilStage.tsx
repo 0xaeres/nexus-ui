@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { StatusDot } from '@/components/ui/status-dot'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
 import { StageError, StageShell } from '@/components/stages/StageShell'
-import { useEventStream } from '@/lib/hooks/useEventStream'
 import {
   ApiError,
   createSession,
@@ -20,47 +19,10 @@ import {
   COUNCIL_AGENT_HUES,
   COUNCIL_AGENT_LABELS,
   COUNCIL_ROSTER,
-  type AgentCost,
-  type AgentRole,
-  type DeliberationMessage,
   type Product,
   type ProductStatus,
 } from '@/lib/types'
-
-const KNOWN_AGENTS = new Set<AgentRole>(COUNCIL_ROSTER)
-
-const asAgentRole = (v: string): AgentRole | null =>
-  KNOWN_AGENTS.has(v as AgentRole) ? (v as AgentRole) : null
-
-const agentHue = (n: string) => {
-  const role = asAgentRole(n)
-  return role ? COUNCIL_AGENT_HUES[role] : '#7C8CFF'
-}
-const agentLabel = (n: string) => {
-  const role = asAgentRole(n)
-  return role ? COUNCIL_AGENT_LABELS[role] : n
-}
-
-type CouncilNotice = {
-  level?: 'info' | 'warning' | 'error'
-  reason?: string
-  message: string
-  detail?: string
-}
-
-type LlmToken = {
-  role?: string
-  model?: string
-  provider?: string
-  text?: string
-}
-
-const TOKEN_AGENT: Record<string, AgentRole> = {
-  drafter: 'synthesizer',
-  critic: 'domain_expert',
-  experts: 'domain_expert',
-  reviser: 'repair',
-}
+import { TypingCard, agentHue, agentLabel, useCouncilStream } from '@/components/screens/council-stream'
 
 export function CouncilStage({ productId }: { productId: string }) {
   const router = useRouter()
@@ -207,47 +169,21 @@ function CouncilLive({
   retrying: boolean
 }) {
   void productId
-  const [messages, setMessages] = useState<DeliberationMessage[]>([])
-  const [costs, setCosts] = useState<AgentCost[]>([])
-  const [tokenTextByAgent, setTokenTextByAgent] = useState<Partial<Record<AgentRole, string>>>({})
-  const [activeAgent, setActiveAgent] = useState<AgentRole>('planner')
-  const [ended, setEnded] = useState(false)
-  const [notice, setNotice] = useState<CouncilNotice | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const completedRef = useRef(false)
-
-  const onStreamEvent = useCallback((ev: { event: string; data: unknown }) => {
-      if (ev.event === 'message' && typeof ev.data === 'object') {
-        const msg = ev.data as DeliberationMessage
-        const role = asAgentRole(msg.agent)
-        if (role) setActiveAgent(role)
-        if (role) {
-          setTokenTextByAgent((current) => {
-            const next = { ...current }
-            delete next[role]
-            return next
-          })
-        }
-        setMessages((prev) => prev.concat(msg))
-      } else if (ev.event === 'llm_token' && typeof ev.data === 'object') {
-        const token = ev.data as LlmToken
-        const mapped = TOKEN_AGENT[token.role ?? ''] ?? asAgentRole(token.role ?? '') ?? activeAgent
-        setActiveAgent(mapped)
-        setTokenTextByAgent((current) => ({
-          ...current,
-          [mapped]: ((current[mapped] ?? '') + (token.text ?? '')).slice(-1800),
-        }))
-      } else if (ev.event === 'cost' && typeof ev.data === 'object') {
-        setCosts((prev) => prev.concat(ev.data as AgentCost))
-      } else if (ev.event === 'notice' && typeof ev.data === 'object') {
-        setNotice(ev.data as CouncilNotice)
-      } else if (ev.event === 'session_end') {
-        setEnded(true)
-      }
-  }, [activeAgent])
-
-  const { status: streamStatus } = useEventStream(sessionStreamUrl(sessionId), {
-    onEvent: onStreamEvent,
+  const {
+    activeTokenEntries,
+    completedAgents,
+    ended,
+    messages,
+    notice,
+    streamLive: live,
+    totalTokens,
+    visibleActiveAgent,
+  } = useCouncilStream({
+    sessionId,
+    streamUrl: sessionStreamUrl(sessionId),
+    tokenLimit: 1800,
   })
 
   useEffect(() => {
@@ -260,32 +196,7 @@ function CouncilLive({
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages, tokenTextByAgent])
-
-  const totalTokens = useMemo(
-    () =>
-      costs.reduce(
-        (sum, c) => sum + (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0),
-        0,
-      ),
-    [costs],
-  )
-
-  const live = streamStatus === 'open' || streamStatus === 'connecting'
-  const completedAgents = useMemo(
-    () => new Set(messages.map((message) => asAgentRole(message.agent)).filter(Boolean) as AgentRole[]),
-    [messages],
-  )
-  const activeTokenEntries = useMemo(
-    () => COUNCIL_ROSTER
-      .map((role) => ({ role, text: tokenTextByAgent[role] ?? '' }))
-      .filter((entry) => entry.text),
-    [tokenTextByAgent],
-  )
-  const visibleActiveAgent =
-    activeTokenEntries.length > 0 || !live || ended
-      ? activeAgent
-      : COUNCIL_ROSTER.find((role) => !completedAgents.has(role)) ?? activeAgent
+  }, [messages, activeTokenEntries])
   const currentAgentLabel = agentLabel(visibleActiveAgent)
   const progressIndex = Math.max(0, COUNCIL_ROSTER.indexOf(visibleActiveAgent))
 
@@ -397,23 +308,5 @@ function CouncilLive({
         )}
       </div>
     </div>
-  )
-}
-
-function TypingCard({ role, text, label }: { role: AgentRole; text: string; label: string }) {
-  return (
-    <Card variant="surface" className="max-w-[880px] border-border-strong p-4 shadow-glow">
-      <div className="mb-2 flex items-center gap-2">
-        <StatusDot status="thinking" size={6} />
-        <span className="text-sm font-medium" style={{ color: agentHue(role) }}>
-          {agentLabel(role)} typing
-        </span>
-        <Small className="font-mono text-fg-subtle">{label}</Small>
-      </div>
-      <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
-        {text || 'Preparing next turn...'}
-        <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
-      </p>
-    </Card>
   )
 }

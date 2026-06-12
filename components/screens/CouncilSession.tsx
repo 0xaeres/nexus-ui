@@ -10,7 +10,6 @@ import { Progress } from '@/components/ui/progress'
 import { StatusDot } from '@/components/ui/status-dot'
 import { PageHeader } from '@/components/ui/page'
 import { H1, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
-import { useEventStream } from '@/lib/hooks/useEventStream'
 import {
   ApiError,
   createSession,
@@ -33,65 +32,77 @@ import {
 import { useProduct } from '@/lib/product-context'
 import { coverageSummary, evalStatusLabel, evalStatusVariant, sortByTier, tierLabel } from '@/lib/skills'
 import { cn } from '@/lib/utils'
-
-const KNOWN_AGENTS = new Set<AgentRole>(COUNCIL_ROSTER)
-
-type CouncilNotice = {
-  level?: 'info' | 'warning' | 'error'
-  reason?: string
-  message: string
-  detail?: string
-}
-
-type LlmToken = {
-  role?: string
-  model?: string
-  provider?: string
-  text?: string
-}
-
-const TOKEN_AGENT: Record<string, AgentRole> = {
-  drafter: 'synthesizer',
-  critic: 'domain_expert',
-  experts: 'domain_expert',
-  reviser: 'repair',
-}
-
-function asAgentRole(value: string): AgentRole | null {
-  return KNOWN_AGENTS.has(value as AgentRole) ? (value as AgentRole) : null
-}
-
-function agentHue(name: string): string {
-  const role = asAgentRole(name)
-  return role ? COUNCIL_AGENT_HUES[role] : '#7C8CFF'
-}
-
-function agentLabel(name: string): string {
-  const role = asAgentRole(name)
-  return role ? COUNCIL_AGENT_LABELS[role] : name
-}
+import { TypingCard, agentHue, agentLabel, useCouncilStream } from '@/components/screens/council-stream'
+import { ProposalQueueRow } from '@/components/screens/proposal-queue-row'
 
 export function CouncilSession({ sessionId }: { sessionId: string }) {
   const { currentProductId } = useProduct()
   const router = useRouter()
   const [leftOpen, setLeftOpen] = useState(true)
   const [rightOpen, setRightOpen] = useState(true)
-  const [messages, setMessages] = useState<DeliberationMessage[]>([])
-  const [costs, setCosts] = useState<AgentCost[]>([])
-  const [tokenTextByAgent, setTokenTextByAgent] = useState<Partial<Record<AgentRole, string>>>({})
-  const [activeAgent, setActiveAgent] = useState<AgentRole>('planner')
   const [topic, setTopic] = useState<string>('')
   const [proposalIds, setProposalIds] = useState<string[]>([])
   const [evalResults, setEvalResults] = useState<SkillEvalResult[]>([])
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null)
   const [proposals, setProposals] = useState<Record<string, SkillProposal>>({})
   const [critiqueSeverity, setCritiqueSeverity] = useState<string | null>(null)
-  const [ended, setEnded] = useState(false)
-  const [notice, setNotice] = useState<CouncilNotice | null>(null)
   const [priors, setPriors] = useState<CouncilPriors | null>(null)
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const handleExtraStreamEvent = useCallback((ev: { event: string; data: unknown }) => {
+    if (ev.event === 'critique' && typeof ev.data === 'object') {
+      const sev = (ev.data as { severity?: string }).severity
+      if (sev) setCritiqueSeverity(sev)
+      return
+    }
+
+    if (ev.event === 'skill_eval' && typeof ev.data === 'object') {
+      const result = ev.data as SkillEvalResult
+      setEvalResults(prev => {
+        const key = `${result.skill_name}:${result.attempts}:${result.status}`
+        const exists = prev.some(item => `${item.skill_name}:${item.attempts}:${item.status}` === key)
+        return exists ? prev : prev.concat(result)
+      })
+      return
+    }
+
+    if ((ev.event === 'proposal' || ev.event === 'proposal_preview') && typeof ev.data === 'object') {
+      const d = ev.data as { proposal_id?: string; proposal_ids?: string[]; id?: string }
+      const ids = d.proposal_ids?.length ? d.proposal_ids : [d.proposal_id ?? d.id].filter(Boolean) as string[]
+      if (ids.length) {
+        setProposalIds((prev) => Array.from(new Set(prev.concat(ids))))
+        setSelectedProposalId((current) => current ?? ids[0])
+      }
+      return
+    }
+
+    if (ev.event === 'session_start' && typeof ev.data === 'object') {
+      const d = ev.data as { topic?: string }
+      if (d.topic) setTopic(d.topic)
+    }
+  }, [])
+
+  const {
+    activeTokenEntries,
+    completedAgents,
+    costs,
+    ended,
+    messages,
+    notice,
+    setCosts,
+    setMessages,
+    status,
+    streamLive,
+    totalTokens,
+    visibleActiveAgent,
+  } = useCouncilStream({
+    sessionId,
+    streamUrl: sessionStreamUrl(sessionId),
+    tokenLimit: 2200,
+    onUnhandledEvent: handleExtraStreamEvent,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -112,63 +123,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
       .catch(() => {/* not yet persisted */})
     return () => { cancelled = true }
   }, [sessionId])
-
-  const onStreamEvent = useCallback((ev: { event: string; data: unknown }) => {
-      if (ev.event === 'message' && typeof ev.data === 'object') {
-        const msg = ev.data as DeliberationMessage
-        const role = asAgentRole(msg.agent)
-        if (role) setActiveAgent(role)
-        if (role) {
-          setTokenTextByAgent((current) => {
-            const next = { ...current }
-            delete next[role]
-            return next
-          })
-        }
-        setMessages(prev => prev.concat(msg))
-      } else if (ev.event === 'llm_token' && typeof ev.data === 'object') {
-        const token = ev.data as LlmToken
-        const mapped = TOKEN_AGENT[token.role ?? ''] ?? asAgentRole(token.role ?? '') ?? activeAgent
-        setActiveAgent(mapped)
-        setTokenTextByAgent((current) => ({
-          ...current,
-          [mapped]: ((current[mapped] ?? '') + (token.text ?? '')).slice(-2200),
-        }))
-      } else if (ev.event === 'cost' && typeof ev.data === 'object') {
-        setCosts(prev => prev.concat(ev.data as AgentCost))
-      } else if (ev.event === 'notice' && typeof ev.data === 'object') {
-        setNotice(ev.data as CouncilNotice)
-      } else if (ev.event === 'critique' && typeof ev.data === 'object') {
-        const sev = (ev.data as { severity?: string }).severity
-        if (sev) setCritiqueSeverity(sev)
-      } else if (ev.event === 'skill_eval' && typeof ev.data === 'object') {
-        const result = ev.data as SkillEvalResult
-        setEvalResults(prev => {
-          const key = `${result.skill_name}:${result.attempts}:${result.status}`
-          const exists = prev.some(item => `${item.skill_name}:${item.attempts}:${item.status}` === key)
-          return exists ? prev : prev.concat(result)
-        })
-      } else if (
-        (ev.event === 'proposal' || ev.event === 'proposal_preview') &&
-        typeof ev.data === 'object'
-      ) {
-        const d = ev.data as { proposal_id?: string; proposal_ids?: string[]; id?: string }
-        const ids = d.proposal_ids?.length ? d.proposal_ids : [d.proposal_id ?? d.id].filter(Boolean) as string[]
-        if (ids.length) {
-          setProposalIds((prev) => Array.from(new Set(prev.concat(ids))))
-          setSelectedProposalId((current) => current ?? ids[0])
-        }
-      } else if (ev.event === 'session_start' && typeof ev.data === 'object') {
-        const d = ev.data as { topic?: string }
-        if (d.topic) setTopic(d.topic)
-      } else if (ev.event === 'session_end') {
-        setEnded(true)
-      }
-  }, [activeAgent])
-
-  const { status } = useEventStream(sessionStreamUrl(sessionId), {
-    onEvent: onStreamEvent,
-  })
 
   useEffect(() => {
     const missing = proposalIds.filter((id) => !proposals[id])
@@ -191,27 +145,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages, tokenTextByAgent])
-
-  const totalTokens = useMemo(
-    () => costs.reduce((sum, c) => sum + (c.prompt_tokens ?? 0) + (c.completion_tokens ?? 0), 0),
-    [costs],
-  )
-  const streamLive = status === 'open' || status === 'connecting'
-  const completedAgents = useMemo(
-    () => new Set(messages.map((message) => asAgentRole(message.agent)).filter(Boolean) as AgentRole[]),
-    [messages],
-  )
-  const activeTokenEntries = useMemo(
-    () => COUNCIL_ROSTER
-      .map((role) => ({ role, text: tokenTextByAgent[role] ?? '' }))
-      .filter((entry) => entry.text),
-    [tokenTextByAgent],
-  )
-  const visibleActiveAgent =
-    activeTokenEntries.length > 0 || !streamLive || ended
-      ? activeAgent
-      : COUNCIL_ROSTER.find((role) => !completedAgents.has(role)) ?? activeAgent
+  }, [messages, activeTokenEntries])
 
   const roster = useMemo(() => {
     return COUNCIL_ROSTER.map(role => ({
@@ -349,10 +283,10 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
             )}
             {messages.map((msg, i) => <DeliberationMsg key={i} msg={msg} />)}
             {streamLive && !ended && activeTokenEntries.length === 0 && (
-              <TypingCard role={visibleActiveAgent} text="" label="live model tokens" />
+              <TypingCard role={visibleActiveAgent} text="" label="live model tokens" className="max-w-[860px]" />
             )}
             {streamLive && !ended && activeTokenEntries.map((entry) => (
-              <TypingCard key={entry.role} role={entry.role} text={entry.text} label="live model tokens" />
+              <TypingCard key={entry.role} role={entry.role} text={entry.text} label="live model tokens" className="max-w-[860px]" />
             ))}
             {ended && messages.length > 0 && (
               <Muted className="text-center py-4 font-mono">— session ended —</Muted>
@@ -393,30 +327,15 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
             ) : (
               <div className="flex-1 overflow-auto flex flex-col">
                 <div className="px-3 py-3 border-b border-border flex flex-col gap-1">
-                  {proposalList.map((item) => {
-                    const active = item.id === selectedProposal.id
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setSelectedProposalId(item.id)}
-                        className={cn(
-                          'rounded-md px-3 py-2 text-left transition-colors',
-                          active ? 'bg-bg-active' : 'hover:bg-surface',
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-fg truncate">{item.name}</span>
-                          <div className="flex-1" />
-                          <Badge variant="outline" className="font-mono text-xs">{tierLabel(item.tier)}</Badge>
-                          <Badge variant={evalStatusVariant(item.eval_status)} className="font-mono text-xs">
-                            {Math.round((item.quality_score ?? 0) * 100)}%
-                          </Badge>
-                        </div>
-                        <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>
-                      </button>
-                    )
-                  })}
+                  {proposalList.map((item) => (
+                    <ProposalQueueRow
+                      key={item.id}
+                      item={item}
+                      active={item.id === selectedProposal.id}
+                      metric="tier"
+                      onSelect={() => setSelectedProposalId(item.id)}
+                    />
+                  ))}
                 </div>
                 <div className="px-5 py-4 border-b border-border">
                   <span className="text-sm font-mono text-fg break-all">{selectedProposal.name}</span>
@@ -484,24 +403,6 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
         )}
       </div>
     </div>
-  )
-}
-
-function TypingCard({ role, text, label }: { role: AgentRole; text: string; label: string }) {
-  return (
-    <Card variant="surface" className="max-w-[860px] border-border-strong p-4 shadow-glow">
-      <div className="mb-2 flex items-center gap-2">
-        <StatusDot status="thinking" size={6} />
-        <span className="text-sm font-medium" style={{ color: agentHue(role) }}>
-          {agentLabel(role)} typing
-        </span>
-        <Small className="font-mono text-fg-subtle">{label}</Small>
-      </div>
-      <p className="m-0 min-h-10 whitespace-pre-wrap text-sm leading-relaxed text-fg-muted">
-        {text || 'Preparing next turn...'}
-        <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-fg-muted" />
-      </p>
-    </Card>
   )
 }
 
