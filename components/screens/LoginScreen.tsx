@@ -44,7 +44,9 @@ export function LoginScreen() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <form onSubmit={submit} className="flex flex-col gap-3">
+            <label htmlFor="login-email" className="sr-only">Email</label>
             <Input
+              id="login-email"
               type="email"
               autoComplete="email"
               value={email}
@@ -53,7 +55,9 @@ export function LoginScreen() {
               disabled={busy}
               required
             />
+            <label htmlFor="login-password" className="sr-only">Password</label>
             <Input
+              id="login-password"
               type="password"
               autoComplete="current-password"
               value={password}
