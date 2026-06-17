@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { auth0 } from '@/lib/auth0'
 
 const BACKEND = process.env.NEXUS_API_URL ?? process.env.NEXT_PUBLIC_NEXUS_API ?? 'http://localhost:8000'
 
@@ -11,16 +10,8 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const headers = new Headers()
   for (const [key, value] of request.headers.entries()) {
     const lower = key.toLowerCase()
-    if (['host', 'connection', 'content-length', 'cookie'].includes(lower)) continue
+    if (['host', 'connection', 'content-length'].includes(lower)) continue
     headers.set(key, value)
-  }
-
-  try {
-    const tokenResult = await auth0.getAccessToken() as { token?: string; accessToken?: string }
-    const token = tokenResult.token ?? tokenResult.accessToken
-    if (token) headers.set('authorization', `Bearer ${token}`)
-  } catch {
-    return Response.json({ detail: 'authentication required' }, { status: 401 })
   }
 
   const init: RequestInit = {

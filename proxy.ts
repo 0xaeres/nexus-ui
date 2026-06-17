@@ -1,8 +1,11 @@
 import type { NextRequest } from 'next/server'
-import { auth0 } from './lib/auth0'
+import { NextResponse } from 'next/server'
 
 export async function proxy(request: NextRequest) {
-  return auth0.middleware(request)
+  if (request.nextUrl.pathname.startsWith('/auth/')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+  return NextResponse.next()
 }
 
 export const config = {

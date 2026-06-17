@@ -190,6 +190,73 @@ function parseInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes
 }
 
+const CODE_TOKEN_RE = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/.*|#.*|\b(?:async|await|class|const|def|elif|else|export|finally|for|from|function|if|import|in|interface|let|return|try|type|while)\b|\b(?:false|null|none|true|undefined)\b|\b\d+(?:\.\d+)?\b)/gi
+
+function highlightCodeLine(line: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  let last = 0
+  let index = 0
+  for (const match of line.matchAll(CODE_TOKEN_RE)) {
+    const token = match[0]
+    const start = match.index ?? 0
+    if (start > last) nodes.push(line.slice(last, start))
+    const lower = token.toLowerCase()
+    const className =
+      token.startsWith('"') || token.startsWith("'") || token.startsWith('`')
+        ? 'text-success'
+        : token.startsWith('//') || token.startsWith('#')
+          ? 'text-fg-subtle'
+          : /^\d/.test(token)
+            ? 'text-warning'
+            : ['false', 'null', 'none', 'true', 'undefined'].includes(lower)
+              ? 'text-violet'
+              : 'text-accent'
+    nodes.push(
+      <span key={`${keyPrefix}-${index}`} className={className}>
+        {token}
+      </span>,
+    )
+    last = start + token.length
+    index += 1
+  }
+  if (last < line.length) nodes.push(line.slice(last))
+  return nodes.length ? nodes : [line]
+}
+
+function CodeBlock({
+  content,
+  lang,
+  compact,
+}: {
+  content: string
+  lang: string
+  compact: boolean
+}) {
+  const label = lang || 'code'
+  const lines = content.split('\n')
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-bg-active">
+      <div className="flex items-center justify-between border-b border-border bg-surface px-3 py-1.5">
+        <span className="font-mono text-xs uppercase text-fg-subtle">{label}</span>
+      </div>
+      <pre
+        className={cn(
+          'm-0 overflow-x-auto p-3 font-mono text-sm leading-relaxed text-fg-muted',
+          compact && 'max-h-48 text-xs',
+        )}
+      >
+        <code>
+          {lines.map((line, lineIndex) => (
+            <span key={`line-${lineIndex}`} className="block min-h-[1.5em]">
+              {highlightCodeLine(line, `line-${lineIndex}`)}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
+  )
+}
+
 export function MarkdownContent({
   children,
   className,
@@ -206,17 +273,7 @@ export function MarkdownContent({
       {blocks.map((block, index) => {
         const key = `md-${index}`
         if (block.type === 'code') {
-          return (
-            <pre
-              key={key}
-              className={cn(
-                'm-0 overflow-x-auto rounded-md border border-border bg-bg-active p-3 font-mono text-sm leading-relaxed text-fg-muted',
-                compact && 'max-h-48 text-xs',
-              )}
-            >
-              <code>{block.content}</code>
-            </pre>
-          )
+          return <CodeBlock key={key} content={block.content} lang={block.lang} compact={compact} />
         }
         if (block.type === 'heading') {
           return block.depth <= 2 ? (

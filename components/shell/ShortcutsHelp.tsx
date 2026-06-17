@@ -16,6 +16,7 @@ const GROUPS: { label: string; items: { keys: string[]; desc: string }[] }[] = [
     items: [
       { keys: ['g', 'h'], desc: 'Products (home)' },
       { keys: ['g', 'n'], desc: 'New product' },
+      { keys: ['g', 'a'], desc: 'Ask' },
       { keys: ['g', 'i'], desc: 'Ingest' },
       { keys: ['g', 'c'], desc: 'Council' },
       { keys: ['g', 'r'], desc: 'Review' },

@@ -8,6 +8,9 @@ import type {
   CouncilSession,
   CouncilSessionSummary,
   DashboardData,
+  DeleteProductReport,
+  GraphRAGAnswer,
+  GraphRAGMessage,
   Permissions,
   Product,
   ProductSkillsResponse,
@@ -75,10 +78,32 @@ export const createProduct = (body: {
   owner?: { team?: string; lead?: string }
 }) => api.post<Product>('/products', body)
 
+export const deleteProduct = (id: string) =>
+  api.del<{ ok: boolean; report: DeleteProductReport }>(
+    `/products/${encodeURIComponent(id)}`,
+  )
+
 // ---- dashboard -----------------------------------------------------------
 
 export const getDashboard = (productId: string) =>
   api.get<DashboardData>(`/products/${productId}/dashboard`)
+
+// ---- product agent --------------------------------------------------------
+
+export const askProductAgent = (
+  productId: string,
+  body: {
+    message: string
+    history?: GraphRAGMessage[]
+    current_file?: string | null
+    max_depth?: number
+    top_k?: number
+    model?: string
+  },
+) => api.post<GraphRAGAnswer>(`/products/${productId}/agent/messages`, body)
+
+export const listProductAgentModels = (productId: string) =>
+  api.get<{ models: string[]; default: string }>(`/products/${productId}/agent/models`)
 
 // ---- skills --------------------------------------------------------------
 

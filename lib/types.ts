@@ -61,6 +61,17 @@ export interface Product {
   lastCouncil: string | null
 }
 
+export interface DeleteProductReport {
+  product_id: ProductId
+  registry: Record<string, number>
+  queue: Record<string, number | string[]>
+  skills: number
+  index: Record<string, number>
+  graph_deleted: boolean
+  repomap_deleted: boolean
+  checkpoints: number
+}
+
 export interface User {
   id: UserId
   name?: string
@@ -309,6 +320,54 @@ export interface DashboardData {
   recentActivity: Activity[]
 }
 
+export interface GraphRAGMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface GraphContextEntity {
+  stable_id: string
+  labels: string[]
+  name: string
+  resource_uri: string | null
+  start_line: number | null
+  end_line: number | null
+  confidence: number
+}
+
+export interface GraphRAGCitation {
+  id: string
+  anchor: string
+  source: string
+  context_path: string | null
+  graph_node_ids: string[]
+  excerpt: string
+}
+
+export interface GraphRAGPath {
+  seed_id: string
+  node_ids: string[]
+  edge_ids: string[]
+  summary: string
+  confidence: number
+}
+
+export interface GraphRAGAnswer {
+  product_id: ProductId
+  query: string
+  answer: string
+  citations: GraphRAGCitation[]
+  graph_paths: GraphRAGPath[]
+  resolved_entities: GraphContextEntity[]
+  confidence: number
+  graph_available: boolean
+  graph_used: boolean
+  reranked: boolean
+  needs_clarification: boolean
+  clarification_options: GraphContextEntity[]
+  unknowns: string[]
+}
+
 // Per-session cap on evidence chunks fed to the council's prompt.
 export const EVIDENCE_CHUNKS_PER_SESSION_CAP = 20
 
@@ -336,12 +395,12 @@ export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {
 }
 
 export const COUNCIL_AGENT_HUES: Record<AgentRole, string> = {
-  planner: '#7C8CFF',
+  planner: '#40D389',
   architect: '#E8B86B',
   domain_expert: '#FF9159',
   quality_expert: '#F26D6D',
   synthesizer: '#3FB6A8',
-  repair: '#C58BFF',
+  repair: '#8AB4FF',
   'skill-eval': '#D7A72F',
   finalizer: '#4EBA6F',
 }

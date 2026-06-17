@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { PageBody, PageHeader, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import { ApiError, addSource, createProduct, syncSource } from '@/lib/api'
 
 const GITHUB_REPO_RE = /^(https?:\/\/github\.com\/[^\s/]+\/[^\s/]+?|git@github\.com:[^\s/]+\/[^\s/]+?)(?:\.git)?\/?$/
@@ -24,6 +25,7 @@ function slugify(s: string): string {
 
 export function NewProduct() {
   const router = useRouter()
+  const toast = useToast()
   const [name, setName] = useState('')
   const [team, setTeam] = useState('')
   const [repoUrls, setRepoUrls] = useState('')
@@ -63,9 +65,16 @@ export function NewProduct() {
         /* surfaced on /ingest */
       })
 
+      toast({
+        title: 'Product created',
+        description: 'GitHub ingest is starting now.',
+        variant: 'success',
+      })
       router.push(`/p/${id}/ingest`)
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Product setup failed', description: message, variant: 'danger', duration: 7000 })
       setBusy(false)
     }
   }
@@ -141,7 +150,10 @@ export function NewProduct() {
                   )}
                 </Field>
 
-                <Field label="GitHub token" hint="One-time setup per product. Stored encrypted.">
+                <Field
+                  label="Product source GitHub token"
+                  hint="Used only to read the repos above. Stored encrypted per product."
+                >
                   <Input
                     type="password"
                     value={token}

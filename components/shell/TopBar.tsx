@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { StatusDot } from '@/components/ui/status-dot'
 import { ProductSwitcher } from './ProductSwitcher'
 import { useProduct } from '@/lib/product-context'
+import { logout } from '@/lib/api'
 
 export function TopBar({
   onOpenPalette, onProductChange,
@@ -15,8 +16,12 @@ export function TopBar({
   onProductChange: (id: string) => void
 }) {
   const { loading } = useProduct()
-  const doLogout = () => {
-    window.location.href = '/auth/logout'
+  const doLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      window.location.href = '/login'
+    }
   }
   return (
     <div className="h-14 shrink-0 bg-surface-glass/80 backdrop-blur-md border-b border-border flex items-center px-5 gap-4">

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import { BrandIcon } from '@/components/icons/BrandIcon'
 import { ApiError, addSource } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
@@ -38,6 +39,7 @@ const CONNECTOR_OPTIONS: Array<{
 
 export function ConnectorNew({ productId }: { productId?: string }) {
   const router = useRouter()
+  const toast = useToast()
   const sp = useSearchParams()
   const { currentProductId, perms } = useProduct()
   const activeProductId = productId || currentProductId
@@ -92,9 +94,16 @@ export function ConnectorNew({ productId }: { productId?: string }) {
         config: parsedConfig,
       })
       setDone(true)
+      toast({
+        title: 'Source added',
+        description: `${name.trim()} is ready to ingest.`,
+        variant: 'success',
+      })
       setTimeout(() => router.push(`${base}/sources`), 600)
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Source setup failed', description: message, variant: 'danger', duration: 7000 })
     } finally {
       setSubmitting(false)
     }

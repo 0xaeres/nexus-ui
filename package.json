@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "fallow": "fallow dead-code --fail-on-issues",
     "start": "next start"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^4.22.0",
     "@icons-pack/react-simple-icons": "^13.13.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",

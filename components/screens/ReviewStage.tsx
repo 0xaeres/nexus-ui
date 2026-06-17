@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Body, Code, H3, Muted, SectionLabel, Small, Subtle } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import { ProposalQueueRow } from '@/components/screens/proposal-queue-row'
 import {
@@ -46,6 +47,7 @@ type ReviewComment = { line: number; body: string }
 
 export function ReviewStage({ productId }: { productId: string }) {
   const router = useRouter()
+  const toast = useToast()
   const { currentUser } = useProduct()
   const [product, setProduct] = useState<Product | null>(null)
   const [status, setStatus] = useState<ProductStatus | null>(null)
@@ -114,13 +116,16 @@ export function ReviewStage({ productId }: { productId: string }) {
     setError(null)
     try {
       const result = await approveProposal(selectedProposal.id, actor)
+      toast({ title: 'Skill approved', description: `${selectedProposal.name} is now live.`, variant: 'success' })
       router.replace(
         result.skill_id
           ? `/p/${productId}/skills/${skillRouteId(result.skill_id)}`
           : `/p/${productId}/skill`,
       )
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Approve failed', description: message, variant: 'danger', duration: 7000 })
       setBusy(null)
     }
   }
@@ -130,6 +135,7 @@ export function ReviewStage({ productId }: { productId: string }) {
     const reason = rejectReason.trim()
     if (!reason) {
       setError('Rejection reason is required.')
+      toast({ title: 'Reason required', description: 'Add a short reason before rejecting.', variant: 'warning' })
       return
     }
     setBusy('reject')
@@ -138,10 +144,13 @@ export function ReviewStage({ productId }: { productId: string }) {
       await rejectProposal(selectedProposal.id, { reason, actor })
       setRejectOpen(false)
       setRejectReason('')
+      toast({ title: 'Proposal rejected', description: `${selectedProposal.name} returned to council context.`, variant: 'success' })
       await load()
       setBusy(null)
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Reject failed', description: message, variant: 'danger', duration: 7000 })
       setBusy(null)
     }
   }
@@ -151,6 +160,7 @@ export function ReviewStage({ productId }: { productId: string }) {
     const summary = revisionAsk.trim()
     if (!summary && reviewComments.length === 0) {
       setError('Revision request is required.')
+      toast({ title: 'Revision request required', description: 'Add a summary or line comment.', variant: 'warning' })
       return
     }
     setBusy('revise')
@@ -161,9 +171,12 @@ export function ReviewStage({ productId }: { productId: string }) {
         actor,
         comments: reviewComments,
       })
+      toast({ title: 'Revision started', description: 'Council is drafting an update.', variant: 'success' })
       router.push(`/p/${productId}/council/${session_id}`)
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Revision failed', description: message, variant: 'danger', duration: 7000 })
       setBusy(null)
     }
   }

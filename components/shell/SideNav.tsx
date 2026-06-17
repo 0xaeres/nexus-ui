@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, Plug, Settings, Shield, Sparkles, Terminal } from 'lucide-react'
+import { BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, MessageSquareText, Plug, Settings, Shield, Sparkles, Terminal } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
@@ -36,6 +36,12 @@ export function SideNav() {
             icon={Plug}
             label="Sources"
             active={pathname.startsWith(`${base}/sources`)}
+          />
+          <NavLink
+            href={`${base}/ask`}
+            icon={MessageSquareText}
+            label="Ask"
+            active={pathname === `${base}/ask`}
           />
           <NavLink
             href={`${base}/ingest`}

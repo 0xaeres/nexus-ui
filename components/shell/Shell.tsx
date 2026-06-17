@@ -6,8 +6,9 @@ import { TopBar } from './TopBar'
 import { SideNav } from './SideNav'
 import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
+import { ToastProvider } from '@/components/ui/toast'
 import { ProductContext, getPerms } from '@/lib/product-context'
-import { getMe, listProducts } from '@/lib/api'
+import { getMe, getSetupStatus, listProducts } from '@/lib/api'
 import type { Product, ProductRole, User } from '@/lib/types'
 
 // Vim-style "g then x" chords. `h` = home (org dashboard); the rest are
@@ -15,6 +16,7 @@ import type { Product, ProductRole, User } from '@/lib/types'
 const PRODUCT_CHORDS: Record<string, string> = {
   o: '',           // overview (stage page)
   i: 'ingest',
+  a: 'ask',
   c: 'council',
   r: 'review',
   k: 'skill',
@@ -44,13 +46,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
         return
       }
       try {
-        const [me, prods] = await Promise.all([getMe(), listProducts()])
+        const [me, prods, setup] = await Promise.all([
+          getMe(),
+          listProducts(),
+          getSetupStatus(),
+        ])
         if (cancelled) return
+        const role = String((me.user as { role?: unknown }).role ?? '')
+        if (me.user.id === 'dev-admin' || role === 'org_admin') {
+          router.replace('/login')
+          return
+        }
         setUser(me.user)
         setMemberships(me.memberships ?? {})
         setProducts(prods)
         if (me.user.status && me.user.status !== 'approved') {
           router.replace('/request-access')
+          return
+        }
+        if (!setup.configured && pathname !== '/setup') {
+          router.replace('/setup')
           return
         }
         if (prods.length && !prods.find(p => p.id === currentProductId)) {
@@ -167,6 +182,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return <div className="min-h-screen bg-bg text-fg">{children}</div>
   }
 
+  if (loading || !user) {
+    return (
+      <div className="grid h-screen place-items-center bg-bg text-fg">
+        <span className="font-mono text-sm text-fg-subtle">connecting</span>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider delayDuration={250}>
       <ProductContext.Provider value={{
@@ -177,6 +200,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         memberships,
         loading,
       }}>
+      <ToastProvider>
         <div className="flex flex-col h-screen overflow-hidden">
           <TopBar
             onOpenPalette={() => setPaletteOpen(true)}
@@ -191,6 +215,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
           <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
         </div>
+      </ToastProvider>
       </ProductContext.Provider>
     </TooltipProvider>
   )

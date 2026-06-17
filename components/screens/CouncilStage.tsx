@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StatusDot } from '@/components/ui/status-dot'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import {
   ApiError,
@@ -26,6 +27,7 @@ import { TypingCard, agentHue, agentLabel, useCouncilStream } from '@/components
 
 export function CouncilStage({ productId }: { productId: string }) {
   const router = useRouter()
+  const toast = useToast()
   const params = useSearchParams()
   const sessionFromUrl = params.get('session')
 
@@ -69,8 +71,11 @@ export function CouncilStage({ productId }: { productId: string }) {
         topic: `${product?.name ?? productId} overview`,
       })
       setSessionId(session_id)
+      toast({ title: 'Council started', description: 'Expert pack is drafting proposals.', variant: 'success' })
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Council failed to start', description: message, variant: 'danger', duration: 7000 })
     } finally {
       setLaunching(false)
     }

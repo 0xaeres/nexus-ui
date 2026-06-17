@@ -48,7 +48,7 @@ function asAgentRole(value: string): AgentRole | null {
 
 export function agentHue(name: string): string {
   const role = asAgentRole(name)
-  return role ? COUNCIL_AGENT_HUES[role] : '#7C8CFF'
+  return role ? COUNCIL_AGENT_HUES[role] : COUNCIL_AGENT_HUES.planner
 }
 
 export function agentLabel(name: string): string {

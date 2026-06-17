@@ -15,7 +15,7 @@
   --color-surface-glass-raised: rgba(23, 23, 27, 0.72);
   --color-bg-hover: rgba(255,255,255,0.04);
   --color-bg-active: rgba(255,255,255,0.07);
-  --color-bg-selected: rgba(124,140,255,0.10);
+  --color-bg-selected: rgba(64,211,137,0.10);
 
   --color-fg: #ECECEE;
   --color-fg-muted: #A1A1AA;
@@ -25,25 +25,25 @@
 
   --color-border: rgba(255,255,255,0.08);
   --color-border-strong: rgba(255,255,255,0.14);
-  --color-border-glow: rgba(124,140,255,0.18);
+  --color-border-glow: rgba(64,211,137,0.18);
 
-  --color-accent: #7C8CFF;
-  --color-accent-hover: #95A2FF;
-  --color-accent-soft: rgba(124,140,255,0.14);
+  --color-accent: #40D389;
+  --color-accent-hover: #66E3A5;
+  --color-accent-soft: rgba(64,211,137,0.14);
 
   --color-success: #4DD4AC;
   --color-warning: #E8B86B;
   --color-danger: #F26D6D;
   --color-high: #FF9159;
-  --color-violet: #C58BFF;
-  --color-info: #7C8CFF;
+  --color-violet: #8AB4FF;
+  --color-info: #40D389;
 
   --color-agent-archaeologist: #E8B86B;
   --color-agent-security: #F26D6D;
-  --color-agent-synthesizer: #C58BFF;
+  --color-agent-synthesizer: #8AB4FF;
   --color-agent-adversary: #FF9159;
   --color-agent-cartographer: #4DD4AC;
-  --color-agent-domain: #7C8CFF;
+  --color-agent-domain: #40D389;
 
   --font-sans: var(--font-inter, 'Inter'), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains, 'JetBrains Mono'), ui-monospace, 'SF Mono', 'Menlo', monospace;
@@ -54,7 +54,7 @@
 
   --shadow-card: 0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04);
   --shadow-card-raised: 0 4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
-  --shadow-glow: 0 0 40px rgba(124,140,255,0.08);
+  --shadow-glow: 0 0 40px rgba(64,211,137,0.08);
 
   --animate-pulse-slow: nexus-pulse 2.4s ease-in-out infinite;
   --animate-flow: nexus-flow 2s linear infinite;
