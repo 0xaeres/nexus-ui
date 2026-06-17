@@ -3,7 +3,7 @@
  * No env-flag fallback to mocks — backend is the source of truth.
  */
 
-const DEFAULT_BASE = process.env.NEXT_PUBLIC_NEXUS_API ?? 'http://localhost:8000'
+const DEFAULT_BASE = '/api/nexus'
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -14,10 +14,20 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith('http') ? path : `${DEFAULT_BASE}${path}`
+  const csrf = typeof document === 'undefined'
+    ? ''
+    : document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('nexus_csrf='))
+        ?.split('=')
+        .slice(1)
+        .join('=') ?? ''
   const resp = await fetch(url, {
     ...init,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrf ? { 'X-Nexus-CSRF': decodeURIComponent(csrf) } : {}),
       ...(init?.headers ?? {}),
     },
     cache: 'no-store',

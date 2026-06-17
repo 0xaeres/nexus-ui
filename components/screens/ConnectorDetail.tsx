@@ -9,6 +9,7 @@ import { StatusDot } from '@/components/ui/status-dot'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Code, Subtle } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import { ApiError, getProductStatus, getSource, syncSource, sourceLogUrl } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
 import { useEventStream } from '@/lib/hooks/useEventStream'
@@ -24,6 +25,7 @@ const STATE_VARIANT: Record<string, 'success' | 'accent' | 'warning' | 'danger'>
 
 export function ConnectorDetail({ productId, name }: { productId?: string; name: string }) {
   const { currentProductId } = useProduct()
+  const toast = useToast()
   const activeProductId = productId || currentProductId
   const base = `/p/${activeProductId}`
   const [source, setSource] = useState<Source | null>(null)
@@ -62,12 +64,15 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
     try {
       await syncSource(activeProductId, source.name)
       setLogUrl(sourceLogUrl(activeProductId, source.name))
+      toast({ title: 'Sync started', description: `${source.name} is ingesting.`, variant: 'success' })
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Sync failed to start', description: message, variant: 'danger', duration: 7000 })
     } finally {
       setSyncing(false)
     }
-  }, [activeProductId, source])
+  }, [activeProductId, source, toast])
 
   useEffect(() => {
     if (logStatus === 'closed') void refresh()

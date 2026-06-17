@@ -12,6 +12,7 @@ import {
 } from 'ag-grid-community'
 import {
   ArrowRight,
+  AlertTriangle,
   BookOpen,
   CheckCircle2,
   Database,
@@ -20,20 +21,33 @@ import {
   Plus,
   RefreshCw,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { PageBody, PageHeader, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Small } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import {
   ApiError,
+  deleteProduct,
   getProductStatus,
   listProducts,
   listProposals,
   listSources,
   syncSource,
 } from '@/lib/api'
+import { useProduct } from '@/lib/product-context'
 import type { Product, ProductStage, ProductStatus, SkillProposal } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -168,11 +182,17 @@ function stageVisual(status: ProductStatus): StageVisual {
 
 export function ProjectsDashboard() {
   const router = useRouter()
+  const toast = useToast()
+  const { currentUser, memberships } = useProduct()
   const [products, setProducts] = useState<Product[] | null>(null)
   const [statuses, setStatuses] = useState<Record<string, CardState>>({})
   const [pendingProposals, setPendingProposals] = useState<SkillProposal[]>([])
   const [listError, setListError] = useState<string | null>(null)
   const [syncingProduct, setSyncingProduct] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deletingProduct, setDeletingProduct] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -214,16 +234,77 @@ export function ProjectsDashboard() {
     try {
       const sources = await listSources(productId)
       if (sources.length === 0) {
+        toast({ title: 'No sources yet', description: 'Add a source before ingesting.', variant: 'info' })
         router.push(`/p/${productId}/sources/new`)
         return
       }
-      await Promise.allSettled(sources.map((source) => syncSource(productId, source.id)))
+      const results = await Promise.allSettled(sources.map((source) => syncSource(productId, source.id)))
+      const failed = results.filter((result) => result.status === 'rejected').length
+      const queued = sources.length - failed
+      if (failed > 0) {
+        const message = `${failed}/${sources.length} source sync request${failed === 1 ? '' : 's'} failed to start.`
+        setListError(message)
+        toast({ title: queued > 0 ? 'Ingest partly started' : 'Ingest failed to start', description: message, variant: queued > 0 ? 'warning' : 'danger', duration: 7000 })
+        if (queued === 0) {
+          setSyncingProduct(null)
+          return
+        }
+      }
+      toast({ title: 'Ingest started', description: `${queued} source${queued === 1 ? '' : 's'} queued.`, variant: 'success' })
       router.push(`/p/${productId}/ingest?sync=1`)
     } catch (e: unknown) {
-      setListError(e instanceof ApiError ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : String(e)
+      setListError(message)
+      toast({ title: 'Ingest failed to start', description: message, variant: 'danger', duration: 7000 })
       setSyncingProduct(null)
     }
-  }, [router])
+  }, [router, toast])
+
+  const canDeleteProduct = useCallback((productId: string) => {
+    return currentUser.role === 'admin' || memberships[productId] === 'owner'
+  }, [currentUser.role, memberships])
+
+  const openDeleteDialog = useCallback((product: Product) => {
+    setDeleteTarget(product)
+    setDeleteConfirm('')
+    setDeleteError(null)
+  }, [])
+
+  const closeDeleteDialog = useCallback(() => {
+    if (deletingProduct) return
+    setDeleteTarget(null)
+    setDeleteConfirm('')
+    setDeleteError(null)
+  }, [deletingProduct])
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget || deleteConfirm !== deleteTarget.id || deletingProduct) return
+    setDeletingProduct(deleteTarget.id)
+    setDeleteError(null)
+    setListError(null)
+    try {
+      await deleteProduct(deleteTarget.id)
+      setProducts((current) => current?.filter((p) => p.id !== deleteTarget.id) ?? current)
+      setStatuses((current) => {
+        const next = { ...current }
+        delete next[deleteTarget.id]
+        return next
+      })
+      setPendingProposals((current) =>
+        current.filter((proposal) => proposal.product_id !== deleteTarget.id),
+      )
+      setDeleteTarget(null)
+      setDeleteConfirm('')
+      toast({ title: 'Product deleted', description: `${deleteTarget.name} was removed.`, variant: 'success' })
+      window.location.href = '/'
+    } catch (e: unknown) {
+      const message = e instanceof ApiError ? e.message : String(e)
+      setDeleteError(message)
+      toast({ title: 'Delete failed', description: message, variant: 'danger', duration: 7000 })
+    } finally {
+      setDeletingProduct(null)
+    }
+  }, [deleteConfirm, deleteTarget, deletingProduct, toast])
 
   const proposalByProduct = useMemo(() => {
     const map = new Map<string, SkillProposal>()
@@ -361,7 +442,10 @@ export function ProjectsDashboard() {
                     product={product}
                     state={statuses[product.id] ?? null}
                     syncing={syncingProduct === product.id}
+                    deleting={deletingProduct === product.id}
+                    canDelete={canDeleteProduct(product.id)}
                     onResync={() => void resyncProduct(product.id)}
+                    onDelete={() => openDeleteDialog(product)}
                   />
                 ))}
               </div>
@@ -410,6 +494,82 @@ export function ProjectsDashboard() {
           )}
         </PageGrid>
       </PageBody>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => {
+        if (!open) closeDeleteDialog()
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-danger" />
+              <DialogTitle>Delete product</DialogTitle>
+            </div>
+            <DialogDescription>
+              This permanently purges the product, sources, indexed chunks, graph facts,
+              proposals, sessions, skills, repo map, and council checkpoints.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <div className="grid gap-3">
+              <div className="rounded-md border border-danger/30 bg-danger/5 p-3">
+                <Small className="block font-mono text-danger">
+                  {deleteTarget.name} ({deleteTarget.id})
+                </Small>
+              </div>
+              <div className="grid gap-1.5">
+                <Small className="font-mono text-fg-subtle">
+                  Type {deleteTarget.id} to confirm.
+                </Small>
+                <Input
+                  value={deleteConfirm}
+                  onChange={(event) => setDeleteConfirm(event.target.value)}
+                  disabled={deletingProduct !== null}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </div>
+              {deleteError && (
+                <Small className="rounded-md border border-danger/30 bg-danger/5 p-3 font-mono text-danger">
+                  {deleteError}
+                </Small>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={deletingProduct !== null}
+              onClick={closeDeleteDialog}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={
+                !deleteTarget ||
+                deleteConfirm !== deleteTarget.id ||
+                deletingProduct !== null
+              }
+              onClick={() => void confirmDelete()}
+            >
+              {deletingProduct ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete product
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
@@ -441,12 +601,18 @@ function ProductCard({
   product,
   state,
   syncing,
+  deleting,
+  canDelete,
   onResync,
+  onDelete,
 }: {
   product: Product
   state: CardState
   syncing: boolean
+  deleting: boolean
+  canDelete: boolean
   onResync: () => void
+  onDelete: () => void
 }) {
   const isLoading = state === null
   const isError = state !== null && 'error' in state
@@ -470,6 +636,24 @@ function ProductCard({
           </Small>
         )}
         <div className="flex items-center gap-2">
+          {canDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-danger hover:bg-danger/10 hover:text-danger"
+              disabled={deleting}
+              title="Delete product"
+              onClick={onDelete}
+            >
+              {deleting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
+          <div className="flex-1" />
           <Button asChild variant="secondary" size="sm">
             <Link href={`/p/${product.id}/skills`}>
               <BookOpen className="h-3.5 w-3.5" />
@@ -514,6 +698,23 @@ function ProductCard({
       </div>
 
       <div className="mt-auto flex items-center gap-2">
+        {canDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-danger hover:bg-danger/10 hover:text-danger"
+            disabled={deleting}
+            title="Delete product"
+            onClick={onDelete}
+          >
+            {deleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"

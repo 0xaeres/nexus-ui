@@ -101,8 +101,8 @@ export function Setup() {
                     <div className="space-y-1.5">
                       <H3>Create a new repo</H3>
                       <Muted className="block">
-                        Nexus creates a private GitHub repo and verifies it can clone it.
-                        Requires <code>GITHUB_TOKEN</code> in env.
+                        Nexus creates the org-wide skills repo and verifies clone access.
+                        Requires <code>NEXUS_SKILLS_REPO_TOKEN</code> in env.
                       </Muted>
                     </div>
                   </CardContent>
@@ -190,7 +190,8 @@ function CreateForm(props: {
             disabled={props.busy}
           />
           <Small className="block text-fg-subtle">
-            The PAT must have <code>repo</code> + (if creating in an org) <code>write:org</code>.
+            Use the skills-repo PAT, not a product source token. It needs{' '}
+            <code>repo</code> + (if creating in an org) <code>write:org</code>.
           </Small>
         </Field>
         <Field label="Repo name">
@@ -244,8 +245,8 @@ function ExistingForm(props: {
             disabled={props.busy}
           />
           <Small className="block text-fg-subtle">
-            HTTPS recommended — Nexus uses <code>GITHUB_TOKEN</code> for auth. SSH URLs
-            work too if the host has matching keys.
+            HTTPS recommended — Nexus uses <code>NEXUS_SKILLS_REPO_TOKEN</code> for
+            skills-repo auth. Product source tokens are configured later.
           </Small>
         </Field>
       </CardContent>

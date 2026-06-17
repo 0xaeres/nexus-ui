@@ -8,8 +8,12 @@ import type {
   CouncilSession,
   CouncilSessionSummary,
   DashboardData,
+  DeleteProductReport,
+  GraphRAGAnswer,
+  GraphRAGMessage,
   Permissions,
   Product,
+  ProductRole,
   ProductSkillsResponse,
   ProductStatus,
   RejectCategory,
@@ -26,12 +30,41 @@ export { ApiError }
 
 // ---- /me + /products -----------------------------------------------------
 
-export interface MeResponse {
+interface MeResponse {
   user: User
   permissions: Permissions
+  memberships?: Record<string, ProductRole>
 }
 
 export const getMe = () => api.get<MeResponse>('/me')
+export const login = (body: { email: string; password: string }) =>
+  api.post<MeResponse & { csrf_token: string }>('/auth/login', body)
+export const logout = () => api.post<{ ok: boolean }>('/auth/logout', {})
+export const requestAccess = (body: { email: string; name?: string; reason?: string }) =>
+  api.post<{ ok: boolean }>('/auth/request-access', body)
+export const listAccessRequests = (status = 'pending') =>
+  api
+    .get<{ requests: AccessRequest[] }>(`/auth/access-requests?status=${status}`)
+    .then((r) => r.requests)
+export const approveAccessRequest = (
+  id: string,
+  body: { role: 'admin' | 'editor' | 'viewer'; password: string },
+) => api.post<{ ok: boolean; request: AccessRequest }>(`/auth/access-requests/${id}/approve`, body)
+export const rejectAccessRequest = (id: string) =>
+  api.post<{ ok: boolean; request: AccessRequest }>(`/auth/access-requests/${id}/reject`, {})
+export const listUsers = () =>
+  api.get<{ users: User[] }>('/auth/users').then((r) => r.users)
+export const revokeUser = (email: string) =>
+  api.post<{ ok: boolean; user: User }>(`/auth/users/${encodeURIComponent(email)}/revoke`, {})
+
+export interface AccessRequest {
+  id: string
+  email: string
+  name: string
+  reason: string
+  status: string
+  created_at: string
+}
 export const listProducts = () =>
   api.get<{ products: Product[] }>('/products').then((r) => r.products)
 export const getProduct = (id: string) => api.get<Product>(`/products/${id}`)
@@ -46,10 +79,34 @@ export const createProduct = (body: {
   owner?: { team?: string; lead?: string }
 }) => api.post<Product>('/products', body)
 
+export const deleteProduct = (id: string) =>
+  api.del<{ ok: boolean; report: DeleteProductReport }>(
+    `/products/${encodeURIComponent(id)}`,
+  )
+
 // ---- dashboard -----------------------------------------------------------
 
 export const getDashboard = (productId: string) =>
   api.get<DashboardData>(`/products/${productId}/dashboard`)
+
+// ---- product agent --------------------------------------------------------
+
+export const askProductAgent = (
+  productId: string,
+  body: {
+    message: string
+    history?: GraphRAGMessage[]
+    current_file?: string | null
+    max_depth?: number
+    top_k?: number
+    model?: string
+  },
+) => api.post<GraphRAGAnswer>(`/products/${encodeURIComponent(productId)}/agent/messages`, body)
+
+export const listProductAgentModels = (productId: string) =>
+  api.get<{ models: string[]; default: string }>(
+    `/products/${encodeURIComponent(productId)}/agent/models`,
+  )
 
 // ---- skills --------------------------------------------------------------
 
@@ -92,9 +149,6 @@ export const addSource = (
   body: { name: string; type: string; config?: Record<string, unknown> },
 ) => api.post<Source>(`/products/${productId}/sources`, body)
 
-export const deleteSource = (productId: string, sourceId: string) =>
-  api.del<{ ok: boolean }>(`/products/${productId}/sources/${sourceId}`)
-
 export const syncSource = (productId: string, sourceId: string) =>
   api.post<{ ok: boolean; delta?: SyncDelta }>(
     `/products/${productId}/sources/${sourceId}/sync`,
@@ -105,13 +159,6 @@ export const sourceLogUrl = (productId: string, sourceId: string) =>
   `${api.baseUrl}/products/${productId}/sources/${encodeURIComponent(sourceId)}/log`
 
 // ---- council -------------------------------------------------------------
-
-export const listSessions = (productId: string) =>
-  api
-    .get<{ sessions: CouncilSessionSummary[] }>(
-      `/products/${productId}/council/sessions`,
-    )
-    .then((r) => r.sessions)
 
 export const createSession = (
   productId: string,
@@ -169,12 +216,9 @@ export const reviseProposal = (
     body,
   )
 
-export const editProposal = (id: string, body: string, actor: string) =>
-  api.post<{ ok: boolean }>(`/proposals/${id}/edit`, { body, actor })
-
 // ---- setup (first-run skills_repo bootstrap) -----------------------------
 
-export interface SetupStatus {
+interface SetupStatus {
   configured: boolean
   skills_repo_url: string | null
   source: 'config' | 'runtime' | null

@@ -9,6 +9,8 @@ import { StatusDot } from '@/components/ui/status-dot'
 import { SourcesSkeleton } from '@/components/skeletons/SourcesSkeleton'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, SectionLabel, Muted, Subtle, Code } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
+import { BrandIcon, hasBrandIcon } from '@/components/icons/BrandIcon'
 import { useProduct } from '@/lib/product-context'
 import { ApiError, listSources, syncSource } from '@/lib/api'
 import type { Source } from '@/lib/types'
@@ -23,6 +25,7 @@ const STATE_BADGE: Record<string, 'success' | 'accent' | 'warning' | 'danger'> =
 
 export function Sources({ productId }: { productId?: string }) {
   const { currentProductId, perms } = useProduct()
+  const toast = useToast()
   const activeProductId = productId || currentProductId
   const base = `/p/${activeProductId}`
   const [sources, setSources] = useState<Source[] | null>(null)
@@ -47,10 +50,16 @@ export function Sources({ productId }: { productId?: string }) {
     if (!sources || sources.length === 0) return
     setIngesting(true)
     try {
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         sources.map(s => syncSource(activeProductId, s.id)),
       )
       await refresh()
+      const failed = results.filter((result) => result.status === 'rejected').length
+      toast({
+        title: failed ? 'Ingest partly started' : 'Ingest started',
+        description: failed ? `${failed} source${failed === 1 ? '' : 's'} did not start.` : `${sources.length} source${sources.length === 1 ? '' : 's'} queued.`,
+        variant: failed ? 'warning' : 'success',
+      })
     } finally {
       setIngesting(false)
     }
@@ -143,7 +152,11 @@ function SourceCard({ src, base }: { src: Source; base: string }) {
         className="p-4 flex flex-col gap-3 h-full"
       >
         <div className="flex items-center gap-2.5">
-          <span className="h-2 w-2 rounded-full bg-accent" />
+          {hasBrandIcon(src.type) ? (
+            <BrandIcon id={src.type} className="h-4 w-4 shrink-0" />
+          ) : (
+            <span className="h-4 w-4 shrink-0 rounded-full border border-accent/60 bg-accent/20" />
+          )}
           <Code className="flex-1 truncate">{src.name}</Code>
           <Badge variant={badge}>{src.status}</Badge>
         </div>

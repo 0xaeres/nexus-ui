@@ -1,79 +1,32 @@
 'use client'
 import Link from 'next/link'
-import Image from 'next/image'
-import { Search, Bell } from 'lucide-react'
+import { Bell, LogOut, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { NexusLogo } from '@/components/icons/NexusLogo'
 import { Separator } from '@/components/ui/separator'
 import { StatusDot } from '@/components/ui/status-dot'
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
 import { ProductSwitcher } from './ProductSwitcher'
 import { useProduct } from '@/lib/product-context'
-import type { UserRole } from '@/lib/types'
-import { cn } from '@/lib/utils'
-
-const ROLES: { role: UserRole; label: string; color: string }[] = [
-  { role: 'org_admin',     label: 'Org Admin',     color: 'text-accent' },
-  { role: 'product_admin', label: 'Product Admin', color: 'text-success' },
-  { role: 'sme',           label: 'SME',           color: 'text-warning' },
-]
-
-function PersonaSwitch({ debugRole, onChange }: { debugRole: UserRole | null; onChange: (r: UserRole | null) => void }) {
-  const current = debugRole ?? 'org_admin'
-  const label = ROLES.find(r => r.role === current)?.label ?? 'Persona'
-  const color = ROLES.find(r => r.role === current)?.color ?? 'text-fg-muted'
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className={cn(
-          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium border transition-colors',
-          'bg-surface border-border-strong hover:bg-bg-active',
-          color,
-        )}>
-          <span className="h-1 w-1 rounded-full bg-current" />
-          {label}
-          {debugRole === null && <span className="text-fg-subtle text-xs">(default)</span>}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Debug persona</DropdownMenuLabel>
-        {ROLES.map(r => (
-          <DropdownMenuItem key={r.role} onSelect={() => onChange(r.role)}>
-            <span className={cn('h-1.5 w-1.5 rounded-full', {
-              'bg-accent': r.role === 'org_admin',
-              'bg-success': r.role === 'product_admin',
-              'bg-warning': r.role === 'sme',
-            })} />
-            {r.label}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onChange(null)}>
-          <span className="h-1.5 w-1.5 rounded-full bg-fg-subtle" />
-          Reset to default
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
+import { logout } from '@/lib/api'
 
 export function TopBar({
-  onOpenPalette, onDebugRoleChange, debugRole, onProductChange,
+  onOpenPalette, onProductChange,
 }: {
   onOpenPalette: () => void
-  onDebugRoleChange: (r: UserRole | null) => void
-  debugRole: UserRole | null
   onProductChange: (id: string) => void
 }) {
   const { loading } = useProduct()
+  const doLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      window.location.href = '/login'
+    }
+  }
   return (
     <div className="h-14 shrink-0 bg-surface-glass/80 backdrop-blur-md border-b border-border flex items-center px-5 gap-4">
-      <Link href="/" className="flex items-center gap-2.5 text-fg no-underline">
-        <Image src="/nexus-logo.svg" alt="" width={22} height={22} className="invert-[0.92]" priority />
-        <span className="text-base font-semibold tracking-tight">nexus</span>
+      <Link href="/" className="flex items-center text-fg no-underline">
+        <NexusLogo priority />
       </Link>
       <Separator orientation="vertical" className="h-5" />
       <ProductSwitcher onProductChange={onProductChange} />
@@ -85,18 +38,29 @@ export function TopBar({
         </span>
       </Badge>
       <div className="flex-1" />
-      <PersonaSwitch debugRole={debugRole} onChange={onDebugRoleChange} />
       <button
         onClick={onOpenPalette}
         className="inline-flex items-center gap-2 px-3 py-1.5 min-w-[280px] bg-surface-glass/60 border border-white/[0.08] rounded-md text-fg-subtle text-sm hover:bg-surface-glass-raised/60 transition-colors backdrop-blur-sm"
+        aria-label="Search or run a command"
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search or run a command…</span>
         <kbd className="text-xs font-mono px-1.5 py-0.5 bg-bg-active rounded border border-border-strong">⌘K</kbd>
       </button>
-      <button className="relative h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors">
+      <button
+        className="relative h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors"
+        aria-label="Notifications"
+      >
         <Bell className="h-[18px] w-[18px]" />
         <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-accent" />
+      </button>
+      <button
+        onClick={doLogout}
+        className="h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors"
+        title="Log out"
+        aria-label="Log out"
+      >
+        <LogOut className="h-[18px] w-[18px]" />
       </button>
     </div>
   )

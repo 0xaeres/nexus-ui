@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownContent } from '@/components/ui/markdown'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
+import { useToast } from '@/components/ui/toast'
 import { StageError, StageShell } from '@/components/stages/StageShell'
 import {
   ApiError,
@@ -30,6 +31,7 @@ import type { Product, ProductSkillsResponse, ProductStatus, Skill } from '@/lib
 
 export function SkillStage({ productId }: { productId: string }) {
   const router = useRouter()
+  const toast = useToast()
   const [product, setProduct] = useState<Product | null>(null)
   const [status, setStatus] = useState<ProductStatus | null>(null)
   const [skills, setSkills] = useState<ProductSkillsResponse | null>(null)
@@ -71,9 +73,12 @@ export function SkillStage({ productId }: { productId: string }) {
       const { session_id } = await createSession(productId, {
         topic: `${product?.name ?? productId} overview`,
       })
+      toast({ title: 'Council started', description: 'New proposal run is queued.', variant: 'success' })
       router.push(`/p/${productId}/council?session=${session_id}`)
     } catch (e: unknown) {
-      setError(e instanceof ApiError ? e.message : String(e))
+      const message = e instanceof ApiError ? e.message : String(e)
+      setError(message)
+      toast({ title: 'Council failed to start', description: message, variant: 'danger', duration: 7000 })
       setLaunchingCouncil(false)
     }
   }

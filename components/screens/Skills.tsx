@@ -12,6 +12,7 @@ import { SkillsSkeleton } from '@/components/skeletons/SkillsSkeleton'
 import { PageHeader } from '@/components/ui/page'
 import { MarkdownContent } from '@/components/ui/markdown'
 import { H1, SectionLabel, Subtle, Code, Small, Muted } from '@/components/ui/typography'
+import { SkillAppliesToCard, SkillConfidenceCard, SkillPackMetadataCard, confColor } from '@/components/screens/skill-facts'
 import { useProduct } from '@/lib/product-context'
 import { ApiError, listProductSkills } from '@/lib/api'
 import type { ProductSkillsResponse, Skill } from '@/lib/types'
@@ -26,12 +27,6 @@ import {
   tierLabel,
 } from '@/lib/skills'
 import { cn } from '@/lib/utils'
-
-function confColor(c: number) {
-  if (c < 0.5) return 'text-danger'
-  if (c < 0.8) return 'text-warning'
-  return 'text-success'
-}
 
 export function Skills() {
   const { currentProductId } = useProduct()
@@ -190,17 +185,7 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
         </Link>
       </div>
 
-      <Card variant="glass" className="p-4 flex items-center gap-3">
-        <SectionLabel className="shrink-0 w-32">Confidence</SectionLabel>
-        <Progress
-          value={Math.round(skill.confidence * 100)}
-          className="flex-1"
-          indicatorClassName={skill.confidence >= 0.8 ? 'bg-success' : skill.confidence >= 0.5 ? 'bg-warning' : 'bg-danger'}
-        />
-        <Code className={cn('shrink-0 font-mono', confColor(skill.confidence))}>
-          {Math.round(skill.confidence * 100)}%
-        </Code>
-      </Card>
+      <SkillConfidenceCard skill={skill} />
 
       {skill.quality_score > 0 && (
         <Card variant="surface" className="p-4 flex items-center gap-3">
@@ -219,50 +204,9 @@ function SkillDetail({ skill, productId }: { skill: Skill; productId: string }) 
         </Card>
       )}
 
-      {(skill.applies_to.files.length > 0 || skill.applies_to.contexts.length > 0) && (
-        <Card variant="surface">
-          <CardHeader>
-            <SectionLabel>Applies to</SectionLabel>
-          </CardHeader>
-          <CardContent>
-            {skill.applies_to.files.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {skill.applies_to.files.map(f => (
-                  <Badge key={f} variant="outline" className="font-mono text-xs">{f}</Badge>
-                ))}
-              </div>
-            )}
-            {skill.applies_to.contexts.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {skill.applies_to.contexts.map(c => (
-                  <Badge key={c} variant="accent" className="font-mono text-xs">{c}</Badge>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <SkillAppliesToCard skill={skill} />
 
-      {(skill.parent || (skill.related?.length ?? 0) > 0 || skill.coverage) && (
-        <Card variant="surface">
-          <CardHeader>
-            <SectionLabel>Pack metadata</SectionLabel>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {skill.parent && <Small className="font-mono">parent {skill.parent}</Small>}
-            {(skill.related?.length ?? 0) > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {(skill.related ?? []).map((id) => <Badge key={id} variant="outline" className="font-mono text-xs">rel {id}</Badge>)}
-              </div>
-            )}
-            <div className="flex flex-wrap gap-1.5">
-              {(skill.coverage?.repos ?? []).map((item) => <Badge key={`repo-${item}`} variant="outline" className="font-mono text-xs">{item}</Badge>)}
-              {(skill.coverage?.applications ?? []).map((item) => <Badge key={`app-${item}`} variant="accent" className="font-mono text-xs">{item}</Badge>)}
-              {(skill.coverage?.topics ?? []).map((item) => <Badge key={`topic-${item}`} variant="secondary" className="font-mono text-xs">{item}</Badge>)}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <SkillPackMetadataCard skill={skill} compact />
 
       <Card variant="surface">
         <CardHeader>

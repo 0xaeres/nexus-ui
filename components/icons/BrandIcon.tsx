@@ -3,12 +3,16 @@ import type { ComponentType } from 'react'
 
 type IconProps = { size?: number; className?: string; color?: string; title?: string }
 
-export const BRAND_ICONS: Record<string, ComponentType<IconProps>> = {
+const BRAND_ICONS: Record<string, ComponentType<IconProps>> = {
   github: SiGithub,
 }
 
-export const BRAND_COLORS: Record<string, string> = {
+const BRAND_COLORS: Record<string, string> = {
   github: '#ECECEE',
+}
+
+export function hasBrandIcon(id: string) {
+  return id in BRAND_ICONS
 }
 
 export function BrandIcon({

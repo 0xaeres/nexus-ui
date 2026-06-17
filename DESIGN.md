@@ -147,8 +147,8 @@ be flat surfaces with focused use of `stat` for emphasis.
 
 ### 6.4 Color identity
 
-- Accent `#7C8CFF` · Success `#4DD4AC` · Warning `#E8B86B` ·
-  Danger `#F26D6D` · High `#FF9159` · Violet `#C58BFF`
+- Accent `#40D389` · Success `#4DD4AC` · Warning `#E8B86B` ·
+  Danger `#F26D6D` · High `#FF9159` · Violet `#8AB4FF`
 - Connector state, severity tiers, and the confidence ramp use these
   same hues. Per-agent hex values live in `lib/types.ts`
   (`COUNCIL_AGENT_HUES`).

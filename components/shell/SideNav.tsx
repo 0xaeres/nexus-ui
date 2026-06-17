@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, Plug, Settings, Sparkles, Terminal } from 'lucide-react'
+import { BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, MessageSquareText, Plug, Settings, Shield, Sparkles, Terminal } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
@@ -36,6 +36,12 @@ export function SideNav() {
             icon={Plug}
             label="Sources"
             active={pathname.startsWith(`${base}/sources`)}
+          />
+          <NavLink
+            href={`${base}/ask`}
+            icon={MessageSquareText}
+            label="Ask"
+            active={pathname === `${base}/ask`}
           />
           <NavLink
             href={`${base}/ingest`}
@@ -75,6 +81,14 @@ export function SideNav() {
         label="Setup"
         active={pathname === '/setup'}
       />
+      {currentUser.role === 'admin' && (
+        <NavLink
+          href="/admin/access"
+          icon={Shield}
+          label="Access"
+          active={pathname === '/admin/access'}
+        />
+      )}
 
       <div className="flex items-center gap-3 px-3 py-2 rounded-md text-base text-fg-muted hover:bg-bg-hover transition-colors cursor-pointer">
         <Terminal className="h-[18px] w-[18px]" />
@@ -84,10 +98,10 @@ export function SideNav() {
       <Separator className="my-3" />
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="h-9 w-9 rounded-full bg-gradient-to-b from-fg-faint to-bg-active flex items-center justify-center text-sm font-medium text-fg">
-          {currentUser.name.slice(0, 2)}
+          {(currentUser.name || currentUser.email || 'NA').slice(0, 2)}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-sm text-fg truncate">{currentUser.name}</span>
+          <span className="text-sm text-fg truncate">{currentUser.name || currentUser.email}</span>
           <span className="text-xs font-mono text-fg-subtle truncate">{currentUser.role}</span>
         </div>
       </div>
