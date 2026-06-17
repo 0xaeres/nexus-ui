@@ -147,7 +147,7 @@ export function ConnectorNew({ productId }: { productId?: string }) {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    {c.id === 'github' && <BrandIcon id="github" className="h-4 w-4" />}
+                    <BrandIcon id={c.id} className="h-4 w-4" />
                     <span className="font-mono text-base font-medium text-fg">{c.name}</span>
                     <div className="flex-1" />
                     <Badge variant="outline" className="font-mono text-xs">{c.auth}</Badge>

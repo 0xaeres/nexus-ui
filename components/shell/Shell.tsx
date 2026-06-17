@@ -52,8 +52,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           getSetupStatus(),
         ])
         if (cancelled) return
-        const role = String((me.user as { role?: unknown }).role ?? '')
-        if (me.user.id === 'dev-admin' || role === 'org_admin') {
+        if (me.user.id === 'dev-admin') {
           router.replace('/login')
           return
         }

@@ -31,7 +31,7 @@ export function ProposalQueueRow({
           {metric === 'confidence' ? `${Math.round(item.confidence * 100)}%` : tierLabel(item.tier)}
         </Badge>
         <Badge variant={evalStatusVariant(item.eval_status)} className="font-mono text-xs">
-          {Math.round((item.quality_score ?? 0) * 100)}%
+          {item.quality_score == null ? 'N/A' : `${Math.round(item.quality_score * 100)}%`}
         </Badge>
       </div>
       <Small className="mt-1 block text-fg-subtle">{coverageSummary(item.coverage)}</Small>

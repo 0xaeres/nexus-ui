@@ -41,12 +41,16 @@ export function TopBar({
       <button
         onClick={onOpenPalette}
         className="inline-flex items-center gap-2 px-3 py-1.5 min-w-[280px] bg-surface-glass/60 border border-white/[0.08] rounded-md text-fg-subtle text-sm hover:bg-surface-glass-raised/60 transition-colors backdrop-blur-sm"
+        aria-label="Search or run a command"
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search or run a command…</span>
         <kbd className="text-xs font-mono px-1.5 py-0.5 bg-bg-active rounded border border-border-strong">⌘K</kbd>
       </button>
-      <button className="relative h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors">
+      <button
+        className="relative h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors"
+        aria-label="Notifications"
+      >
         <Bell className="h-[18px] w-[18px]" />
         <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-accent" />
       </button>
@@ -54,6 +58,7 @@ export function TopBar({
         onClick={doLogout}
         className="h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors"
         title="Log out"
+        aria-label="Log out"
       >
         <LogOut className="h-[18px] w-[18px]" />
       </button>

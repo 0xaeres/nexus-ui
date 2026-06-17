@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { H1, Muted } from '@/components/ui/typography'
+import { H1, Muted, Small } from '@/components/ui/typography'
 import { ApiError, requestAccess } from '@/lib/api'
 
 export default function RequestAccessPage() {
@@ -45,23 +45,32 @@ export default function RequestAccessPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-3">
-            <Input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <Input
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Textarea
-              placeholder="Why do you need access?"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
+            <label className="flex flex-col gap-1">
+              <Small className="font-medium text-fg">Email address required</Small>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <Small className="font-medium text-fg">Name</Small>
+              <Input
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <Small className="font-medium text-fg">Reason for access</Small>
+              <Textarea
+                placeholder="Why do you need access?"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </label>
             {message && <p className="text-sm text-success">{message}</p>}
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" disabled={busy} className="gap-2">

@@ -11,6 +11,10 @@ const BRAND_COLORS: Record<string, string> = {
   github: '#ECECEE',
 }
 
+export function hasBrandIcon(id: string) {
+  return id in BRAND_ICONS
+}
+
 export function BrandIcon({
   id,
   size = 18,

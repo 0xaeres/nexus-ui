@@ -13,6 +13,7 @@ import type {
   GraphRAGMessage,
   Permissions,
   Product,
+  ProductRole,
   ProductSkillsResponse,
   ProductStatus,
   RejectCategory,
@@ -32,7 +33,7 @@ export { ApiError }
 interface MeResponse {
   user: User
   permissions: Permissions
-  memberships?: Record<string, 'owner' | 'editor' | 'viewer'>
+  memberships?: Record<string, ProductRole>
 }
 
 export const getMe = () => api.get<MeResponse>('/me')

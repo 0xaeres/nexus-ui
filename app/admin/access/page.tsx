@@ -5,7 +5,7 @@ import { Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { H1, Muted, SectionLabel } from '@/components/ui/typography'
+import { H1, Muted, SectionLabel, Small } from '@/components/ui/typography'
 import {
   approveAccessRequest,
   listAccessRequests,
@@ -16,10 +16,19 @@ import {
 import type { User } from '@/lib/types'
 import type { AccessRequest } from '@/lib/api'
 
+const MIN_TEMP_PASSWORD_LENGTH = 8
+const USER_ROLES = ['viewer', 'editor', 'admin'] as const
+type ApprovalRole = (typeof USER_ROLES)[number]
+
+function errorMessage(e: unknown) {
+  return e instanceof Error ? e.message : String(e)
+}
+
 export default function AdminAccessPage() {
   const [requests, setRequests] = useState<AccessRequest[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [passwords, setPasswords] = useState<Record<string, string>>({})
+  const [roles, setRoles] = useState<Record<string, ApprovalRole>>({})
   const [error, setError] = useState<string | null>(null)
 
   const refresh = async () => {
@@ -29,12 +38,48 @@ export default function AdminAccessPage() {
   }
 
   useEffect(() => {
-    refresh().catch((e) => setError(e instanceof Error ? e.message : String(e)))
+    refresh().catch((e) => setError(errorMessage(e)))
   }, [])
 
   const approve = async (id: string) => {
-    await approveAccessRequest(id, { role: 'viewer', password: passwords[id] || '' })
-    await refresh()
+    const password = passwords[id] ?? ''
+    if (password.length < MIN_TEMP_PASSWORD_LENGTH) {
+      setError(`Temporary password must be at least ${MIN_TEMP_PASSWORD_LENGTH} characters.`)
+      return
+    }
+
+    try {
+      setError(null)
+      await approveAccessRequest(id, { role: roles[id] ?? 'viewer', password })
+      await refresh()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  const reject = async (id: string) => {
+    try {
+      setError(null)
+      await rejectAccessRequest(id)
+      await refresh()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  const revoke = async (user: User) => {
+    if (!user.email) {
+      setError('Cannot revoke user without an email address.')
+      return
+    }
+
+    try {
+      setError(null)
+      await revokeUser(user.email)
+      await refresh()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
   }
 
   return (
@@ -53,23 +98,40 @@ export default function AdminAccessPage() {
               <div className="font-mono text-sm">{req.email}</div>
               <Muted>{req.name || 'No name'} · {req.reason || 'No reason'}</Muted>
               <div className="flex gap-2">
-                <Input
-                  type="password"
-                  placeholder="Temporary password"
-                  value={passwords[req.id] || ''}
-                  onChange={(e) => setPasswords({ ...passwords, [req.id]: e.target.value })}
-                />
-                <Button size="sm" onClick={() => approve(req.id)}>
+                <div className="flex flex-1 flex-col gap-1">
+                  <Input
+                    type="password"
+                    placeholder="Temporary password"
+                    value={passwords[req.id] || ''}
+                    minLength={MIN_TEMP_PASSWORD_LENGTH}
+                    aria-label="Temporary password"
+                    aria-invalid={(passwords[req.id] ?? '').length > 0 && (passwords[req.id] ?? '').length < MIN_TEMP_PASSWORD_LENGTH}
+                    onChange={(e) => setPasswords({ ...passwords, [req.id]: e.target.value })}
+                  />
+                  {(passwords[req.id] ?? '').length > 0 && (passwords[req.id] ?? '').length < MIN_TEMP_PASSWORD_LENGTH && (
+                    <Small className="text-danger">
+                      Minimum {MIN_TEMP_PASSWORD_LENGTH} characters.
+                    </Small>
+                  )}
+                </div>
+                <select
+                  aria-label="Role"
+                  value={roles[req.id] ?? 'viewer'}
+                  onChange={(e) => setRoles({ ...roles, [req.id]: e.target.value as ApprovalRole })}
+                  className="h-9 rounded-md border border-border bg-surface px-3 font-mono text-xs text-fg"
+                >
+                  {USER_ROLES.map((role) => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+                <Button size="sm" onClick={() => approve(req.id)} disabled={(passwords[req.id] ?? '').length < MIN_TEMP_PASSWORD_LENGTH}>
                   <Check className="h-4 w-4" />
                   Approve
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={async () => {
-                    await rejectAccessRequest(req.id)
-                    await refresh()
-                  }}
+                  onClick={() => reject(req.id)}
                 >
                   <X className="h-4 w-4" />
                   Reject
@@ -85,18 +147,13 @@ export default function AdminAccessPage() {
           {users.map((user) => (
             <div key={user.id} className="flex items-center gap-3 rounded-md border border-border p-3">
               <div className="flex-1">
-                <div className="font-mono text-sm">{user.email || user.name}</div>
+                <div className="font-mono text-sm">{user.email || user.name || user.id || 'Unknown user'}</div>
                 <Muted>{user.role}</Muted>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={async () => {
-                  if (user.email) {
-                    await revokeUser(user.email)
-                    await refresh()
-                  }
-                }}
+                onClick={() => revoke(user)}
               >
                 Revoke
               </Button>
