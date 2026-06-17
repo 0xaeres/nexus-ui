@@ -1,6 +1,15 @@
 import { NextRequest } from 'next/server'
 
 const BACKEND = process.env.NEXUS_API_URL ?? process.env.NEXT_PUBLIC_NEXUS_API ?? 'http://localhost:8000'
+const FORWARDED_COOKIES = new Set(['nexus_session', 'nexus_csrf'])
+
+function filterCookieHeader(value: string) {
+  return value
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => FORWARDED_COOKIES.has(part.split('=')[0] ?? ''))
+    .join('; ')
+}
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params
@@ -10,16 +19,23 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const headers = new Headers()
   for (const [key, value] of request.headers.entries()) {
     const lower = key.toLowerCase()
+    if (lower === 'cookie') {
+      const filtered = filterCookieHeader(value)
+      if (filtered) headers.set('cookie', filtered)
+      continue
+    }
     if (['host', 'connection', 'content-length'].includes(lower)) continue
     headers.set(key, value)
   }
 
-  const init: RequestInit = {
+  const hasBody = !['GET', 'HEAD'].includes(request.method)
+  const init: RequestInit & { duplex?: 'half' } = {
     method: request.method,
     headers,
-    body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer(),
+    body: hasBody ? request.body : undefined,
     redirect: 'manual',
   }
+  if (hasBody) init.duplex = 'half'
 
   const response = await fetch(target, init)
   const outHeaders = new Headers(response.headers)

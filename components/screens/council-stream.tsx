@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { StatusDot } from '@/components/ui/status-dot'
 import { Small } from '@/components/ui/typography'
@@ -19,6 +19,11 @@ const KNOWN_AGENTS = new Set<AgentRole>(COUNCIL_ROSTER)
 type LlmToken = {
   role?: string
   text?: string
+}
+
+type TokenBuffer = {
+  chunks: string[]
+  length: number
 }
 
 const TOKEN_AGENT: Record<string, AgentRole> = {
@@ -68,6 +73,29 @@ export function useCouncilStream({
   const [activeAgent, setActiveAgent] = useState<AgentRole>('planner')
   const [ended, setEnded] = useState(false)
   const [notice, setNotice] = useState<CouncilNotice | null>(null)
+  const tokenBuffersRef = useRef<Partial<Record<AgentRole, TokenBuffer>>>({})
+
+  const appendToken = useCallback((role: AgentRole, text: string) => {
+    const buffers = tokenBuffersRef.current
+    const buffer = buffers[role] ?? { chunks: [], length: 0 }
+    if (text) {
+      buffer.chunks.push(text)
+      buffer.length += text.length
+    }
+    while (buffer.length > tokenLimit && buffer.chunks.length > 0) {
+      const overflow = buffer.length - tokenLimit
+      const first = buffer.chunks[0]
+      if (first.length <= overflow) {
+        buffer.length -= first.length
+        buffer.chunks.shift()
+      } else {
+        buffer.chunks[0] = first.slice(overflow)
+        buffer.length -= overflow
+      }
+    }
+    buffers[role] = buffer
+    return buffer.chunks.join('')
+  }, [tokenLimit])
 
   const onStreamEvent = useCallback((ev: SseEvent) => {
     if (ev.event === 'message' && typeof ev.data === 'object') {
@@ -75,6 +103,7 @@ export function useCouncilStream({
       const role = asAgentRole(msg.agent)
       if (role) {
         setActiveAgent(role)
+        delete tokenBuffersRef.current[role]
         setTokenTextByAgent((current) => {
           const next = { ...current }
           delete next[role]
@@ -89,9 +118,10 @@ export function useCouncilStream({
       const token = ev.data as LlmToken
       const mapped = TOKEN_AGENT[token.role ?? ''] ?? asAgentRole(token.role ?? '') ?? activeAgent
       setActiveAgent(mapped)
+      const text = appendToken(mapped, token.text ?? '')
       setTokenTextByAgent((current) => ({
         ...current,
-        [mapped]: ((current[mapped] ?? '') + (token.text ?? '')).slice(-tokenLimit),
+        [mapped]: text,
       }))
       return
     }
@@ -112,7 +142,7 @@ export function useCouncilStream({
     }
 
     onUnhandledEvent?.(ev)
-  }, [activeAgent, onUnhandledEvent, tokenLimit])
+  }, [activeAgent, appendToken, onUnhandledEvent])
 
   const { status } = useEventStream(streamUrl, { onEvent: onStreamEvent })
   const streamLive = status === 'open' || status === 'connecting'

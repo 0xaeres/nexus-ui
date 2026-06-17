@@ -25,6 +25,7 @@ export function ProductAsk({ productId }: { productId: string }) {
   const [models, setModels] = useState<string[]>([])
   const [model, setModel] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const submittingRef = useRef(false)
 
   const history = useMemo<GraphRAGMessage[]>(
     () => turns.map((turn) => ({
@@ -36,6 +37,13 @@ export function ProductAsk({ productId }: { productId: string }) {
 
   useEffect(() => {
     let alive = true
+    submittingRef.current = false
+    setTurns([])
+    setDraft('')
+    setError(null)
+    setLoading(false)
+    setModels([])
+    setModel('')
     listProductAgentModels(productId)
       .then((result) => {
         if (!alive) return
@@ -45,6 +53,7 @@ export function ProductAsk({ productId }: { productId: string }) {
       .catch(() => {
         if (!alive) return
         setModels([])
+        setModel('')
       })
     return () => {
       alive = false
@@ -53,8 +62,10 @@ export function ProductAsk({ productId }: { productId: string }) {
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault()
+    if (submittingRef.current) return
     const message = draft.trim()
     if (!message || loading) return
+    submittingRef.current = true
     setError(null)
     setLoading(true)
     setDraft('')
@@ -79,6 +90,7 @@ export function ProductAsk({ productId }: { productId: string }) {
       setError(err instanceof Error ? err.message : String(err))
       setDraft(message)
     } finally {
+      submittingRef.current = false
       setLoading(false)
       textareaRef.current?.focus()
     }
@@ -154,7 +166,7 @@ export function ProductAsk({ productId }: { productId: string }) {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                       e.preventDefault()
                       void submit()
                     }

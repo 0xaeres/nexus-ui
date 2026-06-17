@@ -238,8 +238,19 @@ export function ProjectsDashboard() {
         router.push(`/p/${productId}/sources/new`)
         return
       }
-      await Promise.allSettled(sources.map((source) => syncSource(productId, source.id)))
-      toast({ title: 'Ingest started', description: `${sources.length} source${sources.length === 1 ? '' : 's'} queued.`, variant: 'success' })
+      const results = await Promise.allSettled(sources.map((source) => syncSource(productId, source.id)))
+      const failed = results.filter((result) => result.status === 'rejected').length
+      const queued = sources.length - failed
+      if (failed > 0) {
+        const message = `${failed}/${sources.length} source sync request${failed === 1 ? '' : 's'} failed to start.`
+        setListError(message)
+        toast({ title: queued > 0 ? 'Ingest partly started' : 'Ingest failed to start', description: message, variant: queued > 0 ? 'warning' : 'danger', duration: 7000 })
+        if (queued === 0) {
+          setSyncingProduct(null)
+          return
+        }
+      }
+      toast({ title: 'Ingest started', description: `${queued} source${queued === 1 ? '' : 's'} queued.`, variant: 'success' })
       router.push(`/p/${productId}/ingest?sync=1`)
     } catch (e: unknown) {
       const message = e instanceof ApiError ? e.message : String(e)

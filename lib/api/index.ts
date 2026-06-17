@@ -101,10 +101,12 @@ export const askProductAgent = (
     top_k?: number
     model?: string
   },
-) => api.post<GraphRAGAnswer>(`/products/${productId}/agent/messages`, body)
+) => api.post<GraphRAGAnswer>(`/products/${encodeURIComponent(productId)}/agent/messages`, body)
 
 export const listProductAgentModels = (productId: string) =>
-  api.get<{ models: string[]; default: string }>(`/products/${productId}/agent/models`)
+  api.get<{ models: string[]; default: string }>(
+    `/products/${encodeURIComponent(productId)}/agent/models`,
+  )
 
 // ---- skills --------------------------------------------------------------
 

@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       title: message.title,
       description: message.description,
     }
-    setMessages((items) => [...items.slice(-3), item])
+    setMessages((items) => [...items.slice(-2), item])
     if (item.duration > 0) {
       timers.current.set(id, setTimeout(() => dismiss(id), item.duration))
     }
