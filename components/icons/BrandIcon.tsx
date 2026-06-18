@@ -11,8 +11,8 @@ const BRAND_ICONS: Record<string, ComponentType<IconProps>> = {
 
 const BRAND_COLORS: Record<string, string> = {
   github: 'var(--color-fg)',
-  jira: '#0052CC',
-  confluence: '#0052CC',
+  jira: 'var(--color-brand-jira)',
+  confluence: 'var(--color-brand-confluence)',
 }
 
 export function hasBrandIcon(id: string) {

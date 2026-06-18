@@ -6,10 +6,16 @@ import { FormEvent, useState } from 'react'
 import { Loader2, LogIn } from 'lucide-react'
 import { NexusLogo } from '@/components/icons/NexusLogo'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { H1, Muted, Small } from '@/components/ui/typography'
+import { H2, Small } from '@/components/ui/typography'
 import { ApiError, login } from '@/lib/api'
+
+function loginErrorMessage(e: unknown) {
+  if (e instanceof ApiError) {
+    return e.status === 401 ? 'Invalid email or password.' : 'Sign-in failed. Please try again.'
+  }
+  return 'Sign-in failed. Please try again.'
+}
 
 export function LoginScreen() {
   const router = useRouter()
@@ -28,7 +34,7 @@ export function LoginScreen() {
       router.replace('/')
       router.refresh()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e))
+      setError(loginErrorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -36,23 +42,23 @@ export function LoginScreen() {
 
   return (
     <main className="nexus-auth-shell grid min-h-screen place-items-center px-4">
-      <div className="w-full max-w-[400px] rounded-xl border border-border bg-[#09090c] p-8 shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-[400px] rounded-xl border border-border bg-surface-sunk p-8 shadow-2xl relative overflow-hidden">
         {/* Sleek top border highlight */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border-strong to-transparent" />
-        
+
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center text-center gap-2">
             <div className="flex h-10 items-center justify-center">
               <NexusLogo size="sm" priority className="opacity-95" />
             </div>
-            <h1 className="text-xl font-semibold text-fg tracking-tight mt-3">Sign in to your console</h1>
-            <p className="text-sm text-fg-subtle">Enter your credentials to manage products</p>
+            <H2 className="mt-3">Sign in to your console</H2>
+            <Small>Enter your credentials to manage products</Small>
           </div>
 
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <label htmlFor="login-email" className="text-xs font-medium text-fg-muted">
-                Email Address
+              <label htmlFor="login-email">
+                <Small className="font-medium">Email Address</Small>
               </label>
               <Input
                 id="login-email"
@@ -63,13 +69,13 @@ export function LoginScreen() {
                 placeholder="name@company.com"
                 disabled={busy}
                 required
-                className="h-10 px-3.5 bg-[#030304] border-border-strong focus-visible:ring-accent"
+                className="h-10 px-3.5 bg-bg border-border-strong focus-visible:ring-accent"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor="login-password" className="text-xs font-medium text-fg-muted">
-                Password
+              <label htmlFor="login-password">
+                <Small className="font-medium">Password</Small>
               </label>
               <Input
                 id="login-password"
@@ -80,14 +86,14 @@ export function LoginScreen() {
                 placeholder="••••••••"
                 disabled={busy}
                 required
-                className="h-10 px-3.5 bg-[#030304] border-border-strong focus-visible:ring-accent"
+                className="h-10 px-3.5 bg-bg border-border-strong focus-visible:ring-accent"
               />
             </div>
 
-            {error && <div className="text-xs text-danger font-medium">{error}</div>}
+            {error && <Small className="text-danger font-medium">{error}</Small>}
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={busy || !email.trim() || !password}
               className="w-full h-10 mt-2 bg-fg text-bg hover:bg-fg/90 transition-all font-medium rounded-md shadow-lg flex items-center justify-center gap-2 border border-transparent"
             >
@@ -106,11 +112,11 @@ export function LoginScreen() {
           </form>
 
           <div className="flex items-center justify-between gap-3 border-t border-border pt-5 mt-2">
-            <Link href="/request-access" className="text-xs text-fg-subtle hover:text-fg hover:underline transition-all">
-              Request access
+            <Link href="/request-access" className="hover:underline">
+              <Small className="hover:text-fg transition-all">Request access</Small>
             </Link>
-            <Link href="/landing" className="text-xs text-fg-subtle hover:text-fg hover:underline transition-all">
-              Product overview
+            <Link href="/landing" className="hover:underline">
+              <Small className="hover:text-fg transition-all">Product overview</Small>
             </Link>
           </div>
         </div>

@@ -186,8 +186,8 @@ function ProductFrame() {
           <div className="nexus-landing-side-item">Skills</div>
         </div>
         <div className="nexus-landing-preview-main">
-          <div className="border border-[rgba(255,255,255,0.06)] rounded-lg bg-[#07070a] px-3 py-2 flex items-center gap-2 shadow-inner">
-            <span className="text-[rgba(255,255,255,0.25)] font-mono text-xs select-none">Ask:</span>
+          <div className="border border-border rounded-lg bg-surface-sunk px-3 py-2 flex items-center gap-2 shadow-inner">
+            <span className="text-fg-subtle font-mono text-xs select-none">Ask:</span>
             <span className="text-fg text-xs font-medium font-sans">Why did checkout retry?</span>
             <span className="w-1 h-3.5 bg-accent animate-pulse-slow rounded-sm" />
           </div>

@@ -5,7 +5,7 @@ import { Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { H1, Muted, SectionLabel, Small } from '@/components/ui/typography'
+import { Code, H1, Muted, SectionLabel, Small } from '@/components/ui/typography'
 import {
   approveAccessRequest,
   listAccessRequests,
@@ -30,6 +30,8 @@ export function AdminAccessScreen() {
   const [passwords, setPasswords] = useState<Record<string, string>>({})
   const [roles, setRoles] = useState<Record<string, ApprovalRole>>({})
   const [error, setError] = useState<string | null>(null)
+  const [pendingByRequest, setPendingByRequest] = useState<Record<string, boolean>>({})
+  const [pendingRevokeByUser, setPendingRevokeByUser] = useState<Record<string, boolean>>({})
 
   const refresh = async () => {
     const [reqs, us] = await Promise.all([listAccessRequests(), listUsers()])
@@ -42,6 +44,7 @@ export function AdminAccessScreen() {
   }, [])
 
   const approve = async (id: string) => {
+    if (pendingByRequest[id]) return
     const password = passwords[id] ?? ''
     if (password.length < MIN_TEMP_PASSWORD_LENGTH) {
       setError(`Temporary password must be at least ${MIN_TEMP_PASSWORD_LENGTH} characters.`)
@@ -49,36 +52,47 @@ export function AdminAccessScreen() {
     }
 
     try {
+      setPendingByRequest((s) => ({ ...s, [id]: true }))
       setError(null)
       await approveAccessRequest(id, { role: roles[id] ?? 'viewer', password })
       await refresh()
     } catch (e) {
       setError(errorMessage(e))
+    } finally {
+      setPendingByRequest((s) => ({ ...s, [id]: false }))
     }
   }
 
   const reject = async (id: string) => {
+    if (pendingByRequest[id]) return
     try {
+      setPendingByRequest((s) => ({ ...s, [id]: true }))
       setError(null)
       await rejectAccessRequest(id)
       await refresh()
     } catch (e) {
       setError(errorMessage(e))
+    } finally {
+      setPendingByRequest((s) => ({ ...s, [id]: false }))
     }
   }
 
   const revoke = async (user: User) => {
+    if (pendingRevokeByUser[user.id]) return
     if (!user.email) {
       setError('Cannot revoke user without an email address.')
       return
     }
 
     try {
+      setPendingRevokeByUser((s) => ({ ...s, [user.id]: true }))
       setError(null)
       await revokeUser(user.email)
       await refresh()
     } catch (e) {
       setError(errorMessage(e))
+    } finally {
+      setPendingRevokeByUser((s) => ({ ...s, [user.id]: false }))
     }
   }
 
@@ -88,14 +102,14 @@ export function AdminAccessScreen() {
         <H1>Access</H1>
         <Muted>Approve requests and revoke users</Muted>
       </div>
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <Small className="text-danger">{error}</Small>}
       <Card variant="surface">
         <CardHeader><SectionLabel>Pending requests</SectionLabel></CardHeader>
         <CardContent className="flex flex-col gap-3">
           {requests.length === 0 && <Muted>No pending requests.</Muted>}
           {requests.map((req) => (
             <div key={req.id} className="grid gap-2 rounded-md border border-border p-3">
-              <div className="font-mono text-sm">{req.email}</div>
+              <Code>{req.email}</Code>
               <Muted>{req.name || 'No name'} · {req.reason || 'No reason'}</Muted>
               <div className="flex gap-2">
                 <div className="flex flex-1 flex-col gap-1">
@@ -118,13 +132,18 @@ export function AdminAccessScreen() {
                   aria-label="Role"
                   value={roles[req.id] ?? 'viewer'}
                   onChange={(e) => setRoles({ ...roles, [req.id]: e.target.value as ApprovalRole })}
+                  disabled={pendingByRequest[req.id]}
                   className="h-9 rounded-md border border-border bg-surface px-3 font-mono text-xs text-fg"
                 >
                   {USER_ROLES.map((role) => (
                     <option key={role} value={role}>{role}</option>
                   ))}
                 </select>
-                <Button size="sm" onClick={() => approve(req.id)} disabled={(passwords[req.id] ?? '').length < MIN_TEMP_PASSWORD_LENGTH}>
+                <Button
+                  size="sm"
+                  onClick={() => approve(req.id)}
+                  disabled={pendingByRequest[req.id] || (passwords[req.id] ?? '').length < MIN_TEMP_PASSWORD_LENGTH}
+                >
                   <Check className="h-4 w-4" />
                   Approve
                 </Button>
@@ -132,6 +151,7 @@ export function AdminAccessScreen() {
                   size="sm"
                   variant="outline"
                   onClick={() => reject(req.id)}
+                  disabled={pendingByRequest[req.id]}
                 >
                   <X className="h-4 w-4" />
                   Reject
@@ -147,13 +167,14 @@ export function AdminAccessScreen() {
           {users.map((user) => (
             <div key={user.id} className="flex items-center gap-3 rounded-md border border-border p-3">
               <div className="flex-1">
-                <div className="font-mono text-sm">{user.email || user.name || user.id || 'Unknown user'}</div>
+                <Code>{user.email || user.name || user.id || 'Unknown user'}</Code>
                 <Muted>{user.role}</Muted>
               </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => revoke(user)}
+                disabled={pendingRevokeByUser[user.id]}
               >
                 Revoke
               </Button>

@@ -22,7 +22,7 @@ const CONNECTOR_OPTIONS: Array<{
   name: string
   auth: 'oauth' | 'token' | 'command'
   desc: string
-  fields: Array<{ key: string; label?: string; placeholder: string; secret?: boolean; optional?: boolean }>
+  fields: Array<{ key: string; label?: string; placeholder: string; secret?: boolean; optional?: boolean; multivalue?: boolean }>
 }> = [
   {
     id: 'github',
@@ -31,7 +31,7 @@ const CONNECTOR_OPTIONS: Array<{
     desc: 'Product code repositories',
     fields: [
       { key: 'token', placeholder: 'ghp_...', secret: true },
-      { key: 'repos', placeholder: 'https://github.com/myorg/repo, https://github.com/myorg/other' },
+      { key: 'repos', placeholder: 'https://github.com/myorg/repo, https://github.com/myorg/other', multivalue: true },
     ],
   },
   {
@@ -55,7 +55,7 @@ const CONNECTOR_OPTIONS: Array<{
       { key: 'site_url', label: 'site url', placeholder: 'https://yourorg.atlassian.net' },
       { key: 'email', placeholder: 'you@yourorg.com' },
       { key: 'api_token', label: 'api token', placeholder: 'Atlassian API token', secret: true },
-      { key: 'space_keys', label: 'space keys (optional)', placeholder: 'DOCS, ENG  (blank = all spaces)', optional: true },
+      { key: 'space_keys', label: 'space keys (optional)', placeholder: 'DOCS, ENG  (blank = all spaces)', optional: true, multivalue: true },
     ],
   },
 ]
@@ -103,12 +103,12 @@ export function ConnectorNew({ productId }: { productId?: string }) {
     setSubmitting(true)
     setError(null)
 
-    // Parse comma-separated string fields into arrays for the backend.
+    // Parse only explicitly multivalue fields into arrays; JQL can contain commas.
     const parsedConfig: Record<string, unknown> = {}
     for (const field of selected.fields) {
       const raw = (config[field.key] ?? '').trim()
       if (!raw) continue
-      if (raw.includes(',') || raw.includes('\n')) {
+      if (field.multivalue && (raw.includes(',') || raw.includes('\n'))) {
         parsedConfig[field.key] = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
       } else {
         parsedConfig[field.key] = raw

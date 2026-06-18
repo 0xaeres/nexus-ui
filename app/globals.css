@@ -30,6 +30,8 @@
   --color-accent: oklch(76% 0.16 157);
   --color-accent-hover: oklch(82% 0.145 157);
   --color-accent-soft: color-mix(in oklch, var(--color-accent) 18%, transparent);
+  --color-brand-jira: #0052CC;
+  --color-brand-confluence: #0052CC;
 
   --color-success: #4DD4AC;
   --color-warning: #E8B86B;
@@ -521,7 +523,7 @@ button, input, textarea, select { font: inherit; }
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: currentColor;
+  background: currentcolor;
 }
 
 .nexus-landing-queue {

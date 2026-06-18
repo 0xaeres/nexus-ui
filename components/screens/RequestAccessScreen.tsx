@@ -10,6 +10,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { H1, Muted, Small } from '@/components/ui/typography'
 import { ApiError, requestAccess } from '@/lib/api'
 
+function requestAccessErrorMessage(e: unknown) {
+  if (e instanceof ApiError) {
+    return e.status === 429 ? 'Too many requests. Please wait and try again.' : 'Request failed. Please try again.'
+  }
+  return 'Request failed. Please try again.'
+}
+
 export function RequestAccessScreen() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -20,6 +27,7 @@ export function RequestAccessScreen() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (busy) return
     setBusy(true)
     setError(null)
     setMessage(null)
@@ -30,7 +38,7 @@ export function RequestAccessScreen() {
       setName('')
       setReason('')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Request failed')
+      setError(requestAccessErrorMessage(e))
     } finally {
       setBusy(false)
     }
@@ -71,14 +79,14 @@ export function RequestAccessScreen() {
                 onChange={(e) => setReason(e.target.value)}
               />
             </label>
-            {message && <p className="text-sm text-success">{message}</p>}
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {message && <Small className="text-success">{message}</Small>}
+            {error && <Small className="text-danger">{error}</Small>}
             <Button type="submit" disabled={busy} className="gap-2">
               <Send className="h-4 w-4" />
               {busy ? 'Sending...' : 'Send request'}
             </Button>
-            <Link href="/login" className="text-sm text-fg-muted hover:text-fg">
-              Back to sign in
+            <Link href="/login" className="hover:text-fg">
+              <Small>Back to sign in</Small>
             </Link>
           </form>
         </CardContent>

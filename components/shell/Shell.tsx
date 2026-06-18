@@ -73,7 +73,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
       } catch {
         // Backend unreachable — keep placeholder state so screens can render
         // their own error UIs. The TopBar product switcher shows no options.
-        router.replace('/landing')
       } finally {
         if (!cancelled) setLoading(false)
       }
