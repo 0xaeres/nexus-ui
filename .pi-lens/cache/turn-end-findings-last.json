@@ -1,4 +1,0 @@
-{
-  "signature": "components/screens/CouncilSession.tsx::Unresolved from this turn — components/screens/CouncilSession.tsx:\n🔴 STOP — 2 issue(s) must be fixed:\n  L136: Empty catch block silently swallows errors\n  L146: Empty catch block silently swallows errors",
-  "sessionId": "lens-mpja1pw0-693a87ec"
-}

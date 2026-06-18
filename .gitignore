@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tool caches & local artifacts (agent/IDE runtime state)
+.pi-lens/
+.od-skills/
+.fallow/
+*.artifact.json
