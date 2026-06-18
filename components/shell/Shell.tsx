@@ -7,6 +7,7 @@ import { SideNav } from './SideNav'
 import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { ToastProvider } from '@/components/ui/toast'
+import { NexusLogo } from '@/components/icons/NexusLogo'
 import { ProductContext, getPerms } from '@/lib/product-context'
 import { getMe, getSetupStatus, listProducts } from '@/lib/api'
 import type { Product, ProductRole, User } from '@/lib/types'
@@ -15,13 +16,12 @@ import type { Product, ProductRole, User } from '@/lib/types'
 // product-scoped and only fire when a current product is set.
 const PRODUCT_CHORDS: Record<string, string> = {
   o: '',           // overview (stage page)
-  i: 'ingest',
   a: 'ask',
+  i: 'ingest',
   c: 'council',
   r: 'review',
   k: 'skill',
   s: 'sources',
-  t: 'settings',
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -34,7 +34,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname() ?? '/'
-  const publicAuthPath = pathname === '/login' || pathname === '/request-access'
+  const publicAuthPath = pathname === '/landing' || pathname === '/login' || pathname === '/request-access'
   const pendingG = useRef(false)
   const pendingGTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -53,7 +53,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         ])
         if (cancelled) return
         if (me.user.id === 'dev-admin') {
-          router.replace('/login')
+          router.replace('/landing')
           return
         }
         setUser(me.user)
@@ -73,7 +73,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       } catch {
         // Backend unreachable — keep placeholder state so screens can render
         // their own error UIs. The TopBar product switcher shows no options.
-        router.replace('/login')
+        router.replace('/landing')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -178,13 +178,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [paletteOpen, helpOpen, currentProductId, router])
 
   if (publicAuthPath) {
-    return <div className="min-h-screen bg-bg text-fg">{children}</div>
+    return <div className="nexus-scrollbar-visible h-screen overflow-auto bg-bg text-fg">{children}</div>
   }
 
   if (loading || !user) {
     return (
       <div className="grid h-screen place-items-center bg-bg text-fg">
-        <span className="font-mono text-sm text-fg-subtle">connecting</span>
+        <div className="flex flex-col items-center gap-4">
+          <NexusLogo markOnly priority size="md" className="animate-pulse-slow" />
+          <span className="font-mono text-sm text-fg-subtle">connecting</span>
+        </div>
       </div>
     )
   }

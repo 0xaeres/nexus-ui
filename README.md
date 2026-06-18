@@ -29,7 +29,7 @@ All product-scoped routes live under `/p/[product]/...`.
 | `/p/[product]/sources/[name]` | Source detail + live SSE sync log |
 | `/p/[product]/ingest` | Stage gate at the ingest phase |
 | `/p/[product]/council` | Session list + start dialog |
-| `/p/[product]/council/[id]` | Live 3-pane deliberation (Drafter / Critic / Reviser) |
+| `/p/[product]/council/[id]` | Live deliberation and draft pack preview |
 | `/p/[product]/review` | Proposal approve / reject / edit |
 | `/p/[product]/skill` | Stage gate at the terminal-skill phase |
 | `/p/[product]/skills` | Skill list + detail pane |

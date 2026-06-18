@@ -35,57 +35,86 @@ export function LoginScreen() {
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-4">
-      <Card variant="surface" className="w-full max-w-sm">
-        <CardHeader className="gap-4">
-          <NexusLogo size="md" priority />
-          <H1>Sign in</H1>
-          <Muted>Nexus deployment console</Muted>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <form onSubmit={submit} className="flex flex-col gap-3">
-            <label htmlFor="login-email" className="sr-only">Email</label>
-            <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="email"
-              disabled={busy}
-              required
-            />
-            <label htmlFor="login-password" className="sr-only">Password</label>
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="password"
-              disabled={busy}
-              required
-            />
-            {error && <Small className="text-danger">{error}</Small>}
-            <Button type="submit" disabled={busy || !email.trim() || !password}>
+    <main className="nexus-auth-shell grid min-h-screen place-items-center px-4">
+      <div className="w-full max-w-[400px] rounded-xl border border-border bg-[#09090c] p-8 shadow-2xl relative overflow-hidden">
+        {/* Sleek top border highlight */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border-strong to-transparent" />
+        
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="flex h-10 items-center justify-center">
+              <NexusLogo size="sm" priority className="opacity-95" />
+            </div>
+            <h1 className="text-xl font-semibold text-fg tracking-tight mt-3">Sign in to your console</h1>
+            <p className="text-sm text-fg-subtle">Enter your credentials to manage products</p>
+          </div>
+
+          <form onSubmit={submit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="login-email" className="text-xs font-medium text-fg-muted">
+                Email Address
+              </label>
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@company.com"
+                disabled={busy}
+                required
+                className="h-10 px-3.5 bg-[#030304] border-border-strong focus-visible:ring-accent"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="login-password" className="text-xs font-medium text-fg-muted">
+                Password
+              </label>
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                disabled={busy}
+                required
+                className="h-10 px-3.5 bg-[#030304] border-border-strong focus-visible:ring-accent"
+              />
+            </div>
+
+            {error && <div className="text-xs text-danger font-medium">{error}</div>}
+
+            <Button 
+              type="submit" 
+              disabled={busy || !email.trim() || !password}
+              className="w-full h-10 mt-2 bg-fg text-bg hover:bg-fg/90 transition-all font-medium rounded-md shadow-lg flex items-center justify-center gap-2 border border-transparent"
+            >
               {busy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Signing in
-                </span>
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-bg" />
+                  <span className="text-bg">Signing in...</span>
+                </>
               ) : (
-                <span className="inline-flex items-center gap-2">
-                  <LogIn className="h-4 w-4" />
-                  Sign in
-                </span>
+                <>
+                  <LogIn className="h-4 w-4 text-bg" />
+                  <span className="text-bg">Sign in</span>
+                </>
               )}
             </Button>
           </form>
-          <Link href="/request-access" className="text-sm text-fg-muted hover:text-fg">
-            Request access
-          </Link>
-        </CardContent>
-      </Card>
+
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-5 mt-2">
+            <Link href="/request-access" className="text-xs text-fg-subtle hover:text-fg hover:underline transition-all">
+              Request access
+            </Link>
+            <Link href="/landing" className="text-xs text-fg-subtle hover:text-fg hover:underline transition-all">
+              Product overview
+            </Link>
+          </div>
+        </div>
+      </div>
     </main>
   )
 }

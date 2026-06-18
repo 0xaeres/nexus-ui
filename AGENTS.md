@@ -54,8 +54,7 @@ Backend was deliberately slimmed down (see `../nexus/ENGINEERING.md §13`).
 The council is a bounded expert-pack graph:
 
 ```
-Planner → Expert fanout → Synthesizer → Repair → Judge
-      → optional targeted callback → Finalizer
+Planner → Expert fanout (Architect, Domain, Quality) → Synthesizer → Repair (≤3 attempts) → Eval → Finalizer
 ```
 
 The UI does not expose roster selection. It watches session events, lists all

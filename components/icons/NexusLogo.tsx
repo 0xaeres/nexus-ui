@@ -8,11 +8,12 @@ type NexusLogoProps = {
   markOnly?: boolean
   priority?: boolean
   size?: 'sm' | 'md'
+  tone?: 'dark' | 'light'
 }
 
 const SIZE = {
-  sm: { width: 92, height: 24 },
-  md: { width: 138, height: 36 },
+  sm: { width: 111, height: 24 },
+  md: { width: 166, height: 36 },
 }
 
 export function NexusLogo({
@@ -20,11 +21,12 @@ export function NexusLogo({
   markOnly = false,
   priority = false,
   size = 'sm',
+  tone = 'dark',
 }: NexusLogoProps) {
   if (markOnly) {
     return (
       <Image
-        src="/nexus-logo.svg"
+        src="/nexus-symbol-v2.svg"
         alt="Nexus"
         width={SIZE[size].height}
         height={SIZE[size].height}
@@ -36,7 +38,7 @@ export function NexusLogo({
 
   return (
     <Image
-      src="/nexus-wordmark.svg"
+      src={tone === 'light' ? '/nexus-logo-v2-light.svg' : '/nexus-logo-v2.svg'}
       alt="Nexus"
       width={SIZE[size].width}
       height={SIZE[size].height}

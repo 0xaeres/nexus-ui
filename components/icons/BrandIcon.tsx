@@ -1,14 +1,18 @@
-import { SiGithub } from '@icons-pack/react-simple-icons'
+import { SiGithub, SiJirasoftware, SiConfluence } from '@icons-pack/react-simple-icons'
 import type { ComponentType } from 'react'
 
 type IconProps = { size?: number; className?: string; color?: string; title?: string }
 
 const BRAND_ICONS: Record<string, ComponentType<IconProps>> = {
   github: SiGithub,
+  jira: SiJirasoftware,
+  confluence: SiConfluence,
 }
 
 const BRAND_COLORS: Record<string, string> = {
-  github: '#ECECEE',
+  github: 'var(--color-fg)',
+  jira: '#0052CC',
+  confluence: '#0052CC',
 }
 
 export function hasBrandIcon(id: string) {
