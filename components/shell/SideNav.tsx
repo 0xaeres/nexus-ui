@@ -62,10 +62,16 @@ export function SideNav() {
             active={pathname === `${base}/review`}
           />
           <NavLink
-            href={`${base}/skill`}
+            href={`${base}/skills`}
             icon={BookOpen}
             label="Skill"
             active={pathname === `${base}/skill` || pathname.startsWith(`${base}/skills`)}
+          />
+          <NavLink
+            href={`${base}/setup-client`}
+            icon={Settings}
+            label="Setup client"
+            active={pathname === `${base}/setup-client`}
           />
         </>
       )}

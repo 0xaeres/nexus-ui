@@ -22,6 +22,7 @@ const GROUPS: { label: string; items: { keys: string[]; desc: string }[] }[] = [
       { keys: ['g', 'r'], desc: 'Review' },
       { keys: ['g', 'k'], desc: 'Skill' },
       { keys: ['g', 's'], desc: 'Sources' },
+      { keys: ['g', 'm'], desc: 'Setup client' },
     ],
   },
   {

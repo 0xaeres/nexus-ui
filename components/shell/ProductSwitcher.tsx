@@ -1,5 +1,4 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, Plus } from 'lucide-react'
 import {
@@ -7,22 +6,11 @@ import {
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { useProduct } from '@/lib/product-context'
-import { listProducts } from '@/lib/api'
-import type { Product } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export function ProductSwitcher({ onProductChange }: { onProductChange: (id: string) => void }) {
-  const { currentProductId, currentProduct, perms } = useProduct()
+  const { currentProductId, currentProduct, perms, products } = useProduct()
   const router = useRouter()
-  const [products, setProducts] = useState<Product[]>([])
-
-  useEffect(() => {
-    let cancelled = false
-    listProducts()
-      .then(p => { if (!cancelled) setProducts(p) })
-      .catch(() => { if (!cancelled) setProducts([]) })
-    return () => { cancelled = true }
-  }, [])
 
   const handleSelect = (id: string) => {
     onProductChange(id)

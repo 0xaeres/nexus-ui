@@ -4,6 +4,7 @@
  */
 
 const DEFAULT_BASE = '/api/nexus'
+const REQUEST_TIMEOUT_MS = 10_000
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -14,6 +15,8 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith('http') ? path : `${DEFAULT_BASE}${path}`
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   const csrf = typeof document === 'undefined'
     ? ''
     : document.cookie
@@ -22,21 +25,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         ?.split('=')
         .slice(1)
         .join('=') ?? ''
-  const resp = await fetch(url, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrf ? { 'X-Nexus-CSRF': decodeURIComponent(csrf) } : {}),
-      ...(init?.headers ?? {}),
-    },
-    cache: 'no-store',
-  })
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => '')
-    throw new ApiError(resp.status, `${resp.status} ${url}: ${body.slice(0, 200)}`)
+  try {
+    const resp = await fetch(url, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrf ? { 'X-Nexus-CSRF': decodeURIComponent(csrf) } : {}),
+        ...(init?.headers ?? {}),
+      },
+      cache: 'no-store',
+      signal: init?.signal ?? controller.signal,
+    })
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '')
+      throw new ApiError(resp.status, `${resp.status} ${url}: ${body.slice(0, 200)}`)
+    }
+    return resp.json() as Promise<T>
+  } catch (e) {
+    if (e instanceof ApiError) throw e
+    const timedOut = controller.signal.aborted
+    throw new ApiError(0, `${timedOut ? 'timeout' : 'network error'} ${url}`)
+  } finally {
+    clearTimeout(timeout)
   }
-  return resp.json() as Promise<T>
 }
 
 export const api = {

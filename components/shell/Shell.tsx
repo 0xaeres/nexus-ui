@@ -1,15 +1,19 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TopBar } from './TopBar'
 import { SideNav } from './SideNav'
 import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { ToastProvider } from '@/components/ui/toast'
+import { H1, Muted } from '@/components/ui/typography'
 import { NexusLogo } from '@/components/icons/NexusLogo'
 import { ProductContext, getPerms } from '@/lib/product-context'
-import { getMe, getSetupStatus, listProducts } from '@/lib/api'
+import { ApiError, getMe, getSetupStatus, listProducts } from '@/lib/api'
 import type { Product, ProductRole, User } from '@/lib/types'
 
 // Vim-style "g then x" chords. `h` = home (org dashboard); the rest are
@@ -20,8 +24,9 @@ const PRODUCT_CHORDS: Record<string, string> = {
   i: 'ingest',
   c: 'council',
   r: 'review',
-  k: 'skill',
+  k: 'skills',
   s: 'sources',
+  m: 'setup-client',
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -32,19 +37,29 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [memberships, setMemberships] = useState<Record<string, ProductRole>>({})
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [backendError, setBackendError] = useState<string | null>(null)
+  const [bootAttempt, setBootAttempt] = useState(0)
   const router = useRouter()
   const pathname = usePathname() ?? '/'
   const publicAuthPath = pathname === '/landing' || pathname === '/login' || pathname === '/request-access'
   const pendingG = useRef(false)
   const pendingGTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const retryBootstrap = () => {
+    setLoading(true)
+    setBackendError(null)
+    setBootAttempt((n) => n + 1)
+  }
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       if (publicAuthPath) {
         setLoading(false)
+        setBackendError(null)
         return
       }
+      setLoading(true)
+      setBackendError(null)
       try {
         const [me, prods, setup] = await Promise.all([
           getMe(),
@@ -52,6 +67,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           getSetupStatus(),
         ])
         if (cancelled) return
+        setBackendError(null)
         if (me.user.id === 'dev-admin') {
           router.replace('/landing')
           return
@@ -67,12 +83,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
           router.replace('/setup')
           return
         }
-        if (prods.length && !prods.find(p => p.id === currentProductId)) {
-          setCurrentProductId(prods[0].id)
+        const productFromPath = pathname.match(/^\/p\/([^/]+)/)?.[1]
+        setCurrentProductId((prev) => {
+          if (productFromPath) return productFromPath
+          if (prev && prods.some((p) => p.id === prev)) return prev
+          return prods[0]?.id ?? ''
+        })
+      } catch (e) {
+        if (cancelled) return
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace('/landing')
+          return
         }
-      } catch {
-        // Backend unreachable — keep placeholder state so screens can render
-        // their own error UIs. The TopBar product switcher shows no options.
+        setUser(null)
+        setProducts([])
+        setMemberships({})
+        setBackendError(e instanceof Error ? e.message : 'Nexus backend is unavailable')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -81,7 +107,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicAuthPath, router])
+  }, [publicAuthPath, router, bootAttempt])
+
+  useEffect(() => {
+    if (!backendError || publicAuthPath) return
+    const retry = setTimeout(retryBootstrap, 5000)
+    return () => clearTimeout(retry)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendError, publicAuthPath])
 
   useEffect(() => {
     const match = pathname.match(/^\/p\/([^/]+)/)
@@ -180,7 +213,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return <div className="nexus-scrollbar-visible h-screen overflow-auto bg-bg text-fg">{children}</div>
   }
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="grid h-screen place-items-center bg-bg text-fg">
         <div className="flex flex-col items-center gap-4">
@@ -191,11 +224,40 @@ export function Shell({ children }: { children: React.ReactNode }) {
     )
   }
 
+  if (backendError || !user) {
+    return (
+      <div className="grid h-screen place-items-center bg-bg px-6 text-fg">
+        <div className="flex max-w-md flex-col items-center gap-5 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-danger/15 text-danger">
+            <AlertTriangle className="h-8 w-8" />
+          </div>
+          <Badge variant="danger" className="font-mono">backend unavailable</Badge>
+          <div className="flex flex-col gap-2">
+            <H1>Cannot reach Nexus</H1>
+            <Muted>
+              The UI is running, but the backend API is not reachable. This screen retries automatically.
+            </Muted>
+            {backendError && (
+              <code className="mt-1 rounded-md border border-border bg-surface-sunk px-2 py-1 font-mono text-xs text-fg-subtle">
+                {backendError}
+              </code>
+            )}
+          </div>
+          <Button type="button" variant="secondary" onClick={retryBootstrap}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry now
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider delayDuration={250}>
       <ProductContext.Provider value={{
         currentProductId,
         currentProduct,
+        products,
         currentUser: baseUser,
         perms,
         memberships,

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 
 const BACKEND = process.env.NEXUS_API_URL ?? 'http://localhost:8000'
 const FORWARDED_COOKIES = new Set(['nexus_session', 'nexus_csrf'])
+const PROXY_TIMEOUT_MS = 10_000
 
 function filterCookieHeader(value: string) {
   return value
@@ -37,15 +38,27 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   }
   if (hasBody) init.duplex = 'half'
 
-  const response = await fetch(target, init)
-  const outHeaders = new Headers(response.headers)
-  outHeaders.delete('content-encoding')
-  outHeaders.delete('content-length')
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: outHeaders,
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(target, { ...init, signal: controller.signal })
+    const outHeaders = new Headers(response.headers)
+    outHeaders.delete('content-encoding')
+    outHeaders.delete('content-length')
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: outHeaders,
+    })
+  } catch {
+    return Response.json(
+      { detail: 'Nexus backend is unavailable' },
+      { status: 503 },
+    )
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 export const GET = proxy

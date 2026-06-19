@@ -85,7 +85,7 @@ export function ReviewStage({ productId }: { productId: string }) {
       return pending[0]?.id ?? null
     })
     if (pending.length === 0) {
-      if (s.hasSkill || s.currentStage === 'skill') router.replace(`/p/${productId}/skill`)
+      if (s.hasSkill || s.currentStage === 'skill') router.replace(`/p/${productId}/skills`)
       else if (s.hasEmbeddings) router.replace(`/p/${productId}/council`)
       else router.replace(`/p/${productId}/ingest`)
     }
@@ -120,7 +120,7 @@ export function ReviewStage({ productId }: { productId: string }) {
       router.replace(
         result.skill_id
           ? `/p/${productId}/skills/${skillRouteId(result.skill_id)}`
-          : `/p/${productId}/skill`,
+          : `/p/${productId}/skills`,
       )
     } catch (e: unknown) {
       const message = e instanceof ApiError ? e.message : String(e)

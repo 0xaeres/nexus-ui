@@ -13,7 +13,6 @@ import {
 import {
   ArrowRight,
   AlertTriangle,
-  BookOpen,
   CheckCircle2,
   Database,
   Inbox,
@@ -120,7 +119,7 @@ function stageVisual(status: ProductStatus): StageVisual {
       label: 'Skill ready',
       badge: 'success',
       icon: CheckCircle2,
-      cta: 'View skill',
+      cta: 'View skills',
       href: (id) => `/p/${id}/skills`,
       primary: false,
       pending: 'No pending action',
@@ -656,10 +655,7 @@ function ProductCard({
           )}
           <div className="flex-1" />
           <Button asChild variant="secondary" size="sm">
-            <Link href={`/p/${product.id}/skills`}>
-              <BookOpen className="h-3.5 w-3.5" />
-              View skill
-            </Link>
+            <Link href={`/p/${product.id}`}>Open product</Link>
           </Button>
         </div>
       </Card>
@@ -732,12 +728,6 @@ function ProductCard({
           Sync
         </Button>
         <div className="flex-1" />
-        <Button asChild variant="secondary" size="sm">
-          <Link href={`/p/${product.id}/skills`}>
-            <BookOpen className="h-3.5 w-3.5" />
-            View skill
-          </Link>
-        </Button>
         <Button asChild variant={v.primary ? 'default' : 'secondary'} size="sm">
           <Link href={v.href(product.id)}>
             {v.cta}

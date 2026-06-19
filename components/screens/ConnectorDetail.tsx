@@ -6,14 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { StatusDot } from '@/components/ui/status-dot'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { PageHeader, PageBody, PageGrid } from '@/components/ui/page'
 import { H1, H3, Muted, SectionLabel, Code, Subtle } from '@/components/ui/typography'
 import { useToast } from '@/components/ui/toast'
-import { ApiError, getProductStatus, getSource, syncSource, sourceLogUrl } from '@/lib/api'
+import { IngestionProgress, type IngestStatus } from '@/components/sources/IngestionProgress'
+import { ApiError, getProductStatus, getSource, syncSource } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
-import { useEventStream } from '@/lib/hooks/useEventStream'
-import type { Source, SyncDelta } from '@/lib/types'
+import type { Source } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const STATE_VARIANT: Record<string, 'success' | 'accent' | 'warning' | 'danger'> = {
@@ -31,16 +30,9 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
   const [source, setSource] = useState<Source | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
-  const [logUrl, setLogUrl] = useState<string | null>(null)
+  const [watchingSync, setWatchingSync] = useState(false)
+  const [syncRun, setSyncRun] = useState(0)
   const [readyForCouncil, setReadyForCouncil] = useState(false)
-
-  const { events: logEvents, status: logStatus } = useEventStream(logUrl, { enabled: !!logUrl })
-
-  const streamDelta = logEvents
-    .filter(e => e.event === 'delta' && typeof e.data === 'object' && e.data)
-    .map(e => e.data as SyncDelta)
-    .pop()
-  const delta: SyncDelta | null = streamDelta ?? source?.lastDelta ?? null
 
   const refresh = useCallback(async () => {
     try {
@@ -60,10 +52,10 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
   const handleSync = useCallback(async () => {
     if (!source) return
     setSyncing(true)
-    setLogUrl(null)
     try {
-      await syncSource(activeProductId, source.name)
-      setLogUrl(sourceLogUrl(activeProductId, source.name))
+      await syncSource(activeProductId, source.id)
+      setWatchingSync(true)
+      setSyncRun((run) => run + 1)
       toast({ title: 'Sync started', description: `${source.name} is ingesting.`, variant: 'success' })
     } catch (e: unknown) {
       const message = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e)
@@ -74,9 +66,12 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
     }
   }, [activeProductId, source, toast])
 
-  useEffect(() => {
-    if (logStatus === 'closed') void refresh()
-  }, [logStatus, refresh])
+  const handleProgressStatus = useCallback((status: IngestStatus) => {
+    if (status === 'done' || status === 'error') {
+      setWatchingSync(false)
+      void refresh()
+    }
+  }, [refresh])
 
   if (error) {
     return (
@@ -120,6 +115,7 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
   }
 
   const badge = STATE_VARIANT[source.status] ?? 'accent'
+  const sourceRunning = watchingSync || source.status === 'syncing'
 
   return (
     <>
@@ -134,9 +130,9 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
         <Badge variant={badge}>{source.status}</Badge>
         <Badge variant="outline" className="font-mono">{source.type}</Badge>
         <div className="flex-1" />
-        <Button variant="outline" size="sm" disabled={syncing} onClick={handleSync}>
-          <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
-          {syncing ? 'Starting…' : 'Sync now'}
+        <Button variant="outline" size="sm" disabled={syncing || sourceRunning} onClick={handleSync}>
+          <RefreshCw className={cn('h-4 w-4', (syncing || sourceRunning) && 'animate-spin')} />
+          {syncing ? 'Starting…' : sourceRunning ? 'Syncing…' : 'Sync now'}
         </Button>
       </PageHeader>
 
@@ -180,19 +176,16 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
             <Card variant="surface">
               <CardHeader className="flex flex-row items-center gap-2">
                 <H3>Sync log</H3>
-                {logStatus === 'open' && (
+                {watchingSync && (
                   <StatusDot status="syncing" size={6} />
-                )}
-                {logStatus === 'closed' && logEvents.length > 0 && (
-                  <Badge variant="outline" className="font-mono text-xs">done</Badge>
                 )}
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                {delta && (
+                {source.lastDelta && (
                   <div className="grid grid-cols-3 gap-3">
-                    <DeltaTile label="added" value={delta.added} tone="success" />
-                    <DeltaTile label="updated" value={delta.updated} tone="accent" />
-                    <DeltaTile label="removed" value={delta.removed} tone="danger" />
+                    <DeltaTile label="added" value={source.lastDelta.added} tone="success" />
+                    <DeltaTile label="updated" value={source.lastDelta.updated} tone="accent" />
+                    <DeltaTile label="removed" value={source.lastDelta.removed} tone="danger" />
                   </div>
                 )}
                 {readyForCouncil && (
@@ -209,37 +202,14 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
                     </Button>
                   </div>
                 )}
-                {logEvents.length === 0 && !logUrl && (
-                  <Muted className="font-mono text-sm">
-                    Click <strong>Sync now</strong> to start an ingestion run and watch live progress.
-                  </Muted>
-                )}
-                {(logUrl || logEvents.length > 0) && (
-                  <ScrollArea className="h-56 rounded-md bg-bg-active p-3">
-                    <div className="flex flex-col gap-1 font-mono text-xs">
-                      {logEvents.map((e, i) => {
-                        const d = e.data as { level?: string; msg?: string; ts?: string } | string
-                        const level = typeof d === 'object' ? (d.level ?? 'info') : 'info'
-                        const msg = typeof d === 'object' ? (d.msg ?? e.raw) : e.raw
-                        const color =
-                          level === 'success' ? 'text-success' :
-                          level === 'done' ? 'text-fg-muted' :
-                          level === 'error' ? 'text-danger' : 'text-fg-muted'
-                        return (
-                          <div key={i} className={cn('flex gap-2', color)}>
-                            <span className="text-fg-subtle shrink-0">›</span>
-                            <span>{msg}</span>
-                          </div>
-                        )
-                      })}
-                      {logStatus === 'open' && (
-                        <div className="flex gap-2 text-fg-subtle animate-pulse">
-                          <span>›</span><span>Streaming…</span>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                )}
+                <IngestionProgress
+                  key={`${source.id}:${syncRun}`}
+                  productId={activeProductId}
+                  source={source}
+                  forceRunning={sourceRunning}
+                  idleUntilStarted
+                  onStatusChange={handleProgressStatus}
+                />
               </CardContent>
             </Card>
           </div>

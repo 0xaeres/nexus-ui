@@ -12,7 +12,7 @@ const ORDER: { key: ProductStage; label: string; icon: typeof Database; path: st
   { key: 'ingesting', label: 'Ingest', icon: Database, path: 'ingest' },
   { key: 'council', label: 'Council', icon: Users, path: 'council' },
   { key: 'review', label: 'Review', icon: ClipboardCheck, path: 'review' },
-  { key: 'skill', label: 'Skill', icon: BookOpen, path: 'skill' },
+  { key: 'skill', label: 'Skill', icon: BookOpen, path: 'skills' },
 ]
 
 export function StageShell({

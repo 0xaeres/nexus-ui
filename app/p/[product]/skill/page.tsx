@@ -1,4 +1,4 @@
-import { SkillStage } from '@/components/screens/SkillStage'
+import { redirect } from 'next/navigation'
 
 export default async function SkillPage({
   params,
@@ -6,5 +6,5 @@ export default async function SkillPage({
   params: Promise<{ product: string }>
 }) {
   const { product } = await params
-  return <SkillStage productId={product} />
+  redirect(`/p/${product}/skills`)
 }

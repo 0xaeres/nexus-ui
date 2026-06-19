@@ -78,9 +78,10 @@ multiple skills; pending proposals keep the product in Review until cleared.
   /council                       Session list + start dialog
   /council/[id]                  Live deliberation + draft pack preview
   /review                        ReviewStage — approve / reject / revise proposals
-  /skill                         Terminal skill-pack overview
-  /skills                        Tier-grouped skill list + detail pane
-  /skills/[id]                   Full skill detail
+  /skill                         Compatibility redirect to /skills
+  /skills                        Unified approved product skill view
+  /skills/[id]                   Compatibility redirect to /skills
+  /setup-client                  MCP client setup
 ```
 
 That's the full surface. `/p/[product]/ask` is source-grounded product Q&A,
@@ -256,6 +257,7 @@ palette or help dialog owns the keyboard.
 | `g r` | Review |
 | `g k` | Skill |
 | `g s` | Sources |
+| `g m` | Setup client |
 
 `g`-prefix is Vim-style with an 800ms window. All product-scoped
 shortcuts resolve against the current product (`/p/${currentProductId}/…`).
