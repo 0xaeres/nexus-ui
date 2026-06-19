@@ -46,23 +46,17 @@ const CONNECTOR_OPTIONS: Array<{
       { key: 'jql', label: 'jql (optional)', placeholder: 'project = MYPROJ ORDER BY updated DESC', optional: true },
     ],
   },
+]
+
+// Connectors that are planned but not active in this UI flow yet.
+// Shown as disabled tiles so users can see what's coming.
+const COMING_SOON: Array<{ id: string; name: string; desc: string }> = [
   {
     id: 'confluence',
     name: 'Confluence',
-    auth: 'token',
-    desc: 'Confluence Cloud spaces — indexes pages as searchable knowledge',
-    fields: [
-      { key: 'site_url', label: 'site url', placeholder: 'https://yourorg.atlassian.net' },
-      { key: 'email', placeholder: 'you@yourorg.com' },
-      { key: 'api_token', label: 'api token', placeholder: 'Atlassian API token', secret: true },
-      { key: 'space_keys', label: 'space keys (optional)', placeholder: 'DOCS, ENG  (blank = all spaces)', optional: true, multivalue: true },
-    ],
+    desc: 'Confluence Cloud spaces',
   },
 ]
-
-// Connectors that are planned but have no backend sync path yet.
-// Shown as disabled tiles so users can see what's coming.
-const COMING_SOON: Array<{ id: string; name: string; desc: string }> = []
 
 
 export function ConnectorNew({ productId }: { productId?: string }) {
