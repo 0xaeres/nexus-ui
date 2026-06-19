@@ -8,7 +8,11 @@ const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrai
 
 export const metadata: Metadata = {
   title: 'Nexus',
-  description: 'sovereign agentic harness',
+  description: 'Sovereign MCP-native context engine',
+  icons: {
+    icon: '/nexus-app-icon-v2.svg',
+    shortcut: '/nexus-app-icon-v2.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

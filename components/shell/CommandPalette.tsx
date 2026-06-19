@@ -4,13 +4,13 @@ import { useRouter } from 'next/navigation'
 import {
   Search,
   Compass,
+  MessageSquareText,
   Plug,
   Database,
   Users,
   ClipboardCheck,
   BookOpen,
   Plus,
-  MessageSquareText,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -35,8 +35,8 @@ function buildCommands(base: string | null): Cmd[] {
   ]
   if (base) {
     cmds.push(
-      { id: 'nav-ingest',  group: 'Navigate', label: 'Ingest',   href: `${base}/ingest`,   icon: Database,        shortcut: 'g i', chord: 'i' },
       { id: 'nav-ask',     group: 'Navigate', label: 'Ask',      href: `${base}/ask`,      icon: MessageSquareText, shortcut: 'g a', chord: 'a' },
+      { id: 'nav-ingest',  group: 'Navigate', label: 'Ingest',   href: `${base}/ingest`,   icon: Database,        shortcut: 'g i', chord: 'i' },
       { id: 'nav-council', group: 'Navigate', label: 'Council',  href: `${base}/council`,  icon: Users,           shortcut: 'g c', chord: 'c' },
       { id: 'nav-review',  group: 'Navigate', label: 'Review',   href: `${base}/review`,   icon: ClipboardCheck,  shortcut: 'g r', chord: 'r' },
       { id: 'nav-skill',   group: 'Navigate', label: 'Skill',    href: `${base}/skill`,    icon: BookOpen,        shortcut: 'g k', chord: 'k' },

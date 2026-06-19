@@ -1,7 +1,18 @@
 import { notFound } from 'next/navigation'
 import { ApiError, getProduct } from '@/lib/api'
+import type { Metadata } from 'next'
 
-export const dynamic = 'force-dynamic'
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ product: string }>
+}): Promise<Metadata> {
+  const { product } = await params
+  return {
+    title: `Nexus · ${product}`,
+    description: `Context engine dashboard and workspace for product "${product}"`,
+  }
+}
 
 export default async function ProductLayout({
   children,

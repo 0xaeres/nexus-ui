@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronLeft, Check, Loader2 } from 'lucide-react'
+import { ChevronLeft, Check, Loader2, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
@@ -15,14 +15,14 @@ import { ApiError, addSource } from '@/lib/api'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
 
-// Known MCP-style connector types we support out of the box. Custom is the
-// escape hatch for any other MCP server (command + args go in config).
+// Active connector types wired to the backend sync pipeline.
+// See nexus/api/routes/sources.py — currently: github, filesystem, jira.
 const CONNECTOR_OPTIONS: Array<{
   id: string
   name: string
   auth: 'oauth' | 'token' | 'command'
   desc: string
-  fields: Array<{ key: string; placeholder: string; secret?: boolean }>
+  fields: Array<{ key: string; label?: string; placeholder: string; secret?: boolean; optional?: boolean; multivalue?: boolean }>
 }> = [
   {
     id: 'github',
@@ -31,8 +31,30 @@ const CONNECTOR_OPTIONS: Array<{
     desc: 'Product code repositories',
     fields: [
       { key: 'token', placeholder: 'ghp_...', secret: true },
-      { key: 'repos', placeholder: 'https://github.com/myorg/repo, https://github.com/myorg/other' },
+      { key: 'repos', placeholder: 'https://github.com/myorg/repo, https://github.com/myorg/other', multivalue: true },
     ],
+  },
+  {
+    id: 'jira',
+    name: 'Jira',
+    auth: 'token',
+    desc: 'Jira Cloud issues via JQL — indexes tickets as searchable knowledge',
+    fields: [
+      { key: 'site_url', label: 'site url', placeholder: 'https://yourorg.atlassian.net' },
+      { key: 'email', placeholder: 'you@yourorg.com' },
+      { key: 'api_token', label: 'api token', placeholder: 'Atlassian API token', secret: true },
+      { key: 'jql', label: 'jql (optional)', placeholder: 'project = MYPROJ ORDER BY updated DESC', optional: true },
+    ],
+  },
+]
+
+// Connectors that are planned but not active in this UI flow yet.
+// Shown as disabled tiles so users can see what's coming.
+const COMING_SOON: Array<{ id: string; name: string; desc: string }> = [
+  {
+    id: 'confluence',
+    name: 'Confluence',
+    desc: 'Confluence Cloud spaces',
   },
 ]
 
@@ -75,12 +97,12 @@ export function ConnectorNew({ productId }: { productId?: string }) {
     setSubmitting(true)
     setError(null)
 
-    // Parse comma-separated string fields into arrays for the backend.
+    // Parse only explicitly multivalue fields into arrays; JQL can contain commas.
     const parsedConfig: Record<string, unknown> = {}
     for (const field of selected.fields) {
       const raw = (config[field.key] ?? '').trim()
       if (!raw) continue
-      if (raw.includes(',') || raw.includes('\n')) {
+      if (field.multivalue && (raw.includes(',') || raw.includes('\n'))) {
         parsedConfig[field.key] = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
       } else {
         parsedConfig[field.key] = raw
@@ -158,6 +180,29 @@ export function ConnectorNew({ productId }: { productId?: string }) {
             )
           })}
 
+          {COMING_SOON.map(c => (
+            <div key={c.id} className="col-span-12 md:col-span-6 lg:col-span-4">
+              <div
+                className={cn(
+                  'text-left w-full h-full cursor-not-allowed',
+                  'rounded-lg border p-4 flex flex-col gap-2',
+                  'border-border/50 bg-surface/50 opacity-60',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <BrandIcon id={c.id} className="h-4 w-4" />
+                  <span className="font-mono text-base font-medium text-fg">{c.name}</span>
+                  <div className="flex-1" />
+                  <Badge variant="outline" className="font-mono text-xs gap-1">
+                    <Lock className="h-2.5 w-2.5" />
+                    soon
+                  </Badge>
+                </div>
+                <Small className="text-fg-subtle">{c.desc}</Small>
+              </div>
+            </div>
+          ))}
+
           {/* Step 2: config */}
           {selected && (
             <>
@@ -182,7 +227,7 @@ export function ConnectorNew({ productId }: { productId?: string }) {
                       {selected.fields.map(field => (
                         <div key={field.key} className="flex flex-col gap-1.5">
                           <Subtle className="font-mono uppercase tracking-wider text-xs">
-                            {field.key}
+                            {field.label ?? field.key}
                           </Subtle>
                           <Input
                             type={field.secret ? 'password' : 'text'}
@@ -190,6 +235,7 @@ export function ConnectorNew({ productId }: { productId?: string }) {
                             onChange={e => setConfig(prev => ({ ...prev, [field.key]: e.target.value }))}
                             placeholder={field.placeholder}
                             autoComplete={field.secret ? 'new-password' : 'off'}
+                            required={!field.optional}
                           />
                         </div>
                       ))}

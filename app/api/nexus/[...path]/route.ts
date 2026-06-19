@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-const BACKEND = process.env.NEXUS_API_URL ?? process.env.NEXT_PUBLIC_NEXUS_API ?? 'http://localhost:8000'
+const BACKEND = process.env.NEXUS_API_URL ?? 'http://localhost:8000'
 const FORWARDED_COOKIES = new Set(['nexus_session', 'nexus_csrf'])
 
 function filterCookieHeader(value: string) {

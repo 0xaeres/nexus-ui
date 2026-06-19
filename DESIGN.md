@@ -70,6 +70,7 @@ multiple skills; pending proposals keep the product in Review until cleared.
 
 /p/[product]/
   /dashboard                     Pipeline cards + pending proposals + recent activity
+  /ask                           Source-grounded product Q&A
   /sources                       Source list
   /sources/new                   Add a source (GitHub or Local filesystem)
   /sources/[name]                Source detail + live SSE sync log
@@ -82,7 +83,8 @@ multiple skills; pending proposals keep the product in Review until cleared.
   /skills/[id]                   Full skill detail
 ```
 
-That's the full surface. **Don't add `/p/[product]/assistant`,
+That's the full surface. `/p/[product]/ask` is source-grounded product Q&A,
+not the deleted Assistant chat surface. **Don't add `/p/[product]/assistant`,
 `/p/[product]/activity`, `/p/[product]/proposals`,
 `/p/[product]/settings`, or `/settings/org` back.** Those layers were
 removed when the backend was slimmed — see
@@ -93,8 +95,7 @@ removed when the backend was slimmed — see
 The bounded expert-pack graph:
 
 ```
-Planner → Expert fanout → Synthesizer → Repair → Judge
-      → optional targeted callback → Finalizer
+Planner → Expert fanout (Architect, Domain, Quality) → Synthesizer → Repair (≤3 attempts) → Eval → Finalizer
 ```
 
 The CouncilLanding "start session" dialog asks only for a **topic**; there is
@@ -249,6 +250,7 @@ palette or help dialog owns the keyboard.
 | `Esc` | Close palette / help |
 | `g h` | Products (`/`) |
 | `g n` | New product (`/new`) |
+| `g a` | Ask (product-scoped) |
 | `g i` | Ingest (product-scoped) |
 | `g c` | Council |
 | `g r` | Review |
@@ -320,7 +322,8 @@ route.
 ## 10. Out of scope (do not build)
 
 - Cross-product views or rollups.
-- A separate Assistant chat surface.
+- A separate Assistant chat surface (`/p/[product]/assistant`). Keep
+  `/p/[product]/ask` as the source-grounded product Q&A workspace.
 - An Org Library / Adopted Standards section.
 - A cross-product composition graph on the skill detail page (`composes_with`
   is gone; `related` stays inside the product pack).

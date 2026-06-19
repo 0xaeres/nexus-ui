@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { Bell, LogOut, Search } from 'lucide-react'
+import { LogOut, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { NexusLogo } from '@/components/icons/NexusLogo'
 import { Separator } from '@/components/ui/separator'
@@ -20,11 +20,11 @@ export function TopBar({
     try {
       await logout()
     } finally {
-      window.location.href = '/login'
+      window.location.href = '/landing'
     }
   }
   return (
-    <div className="h-14 shrink-0 bg-surface-glass/80 backdrop-blur-md border-b border-border flex items-center px-5 gap-4">
+    <div className="h-14 shrink-0 bg-surface-glass/90 backdrop-blur-xl border-b border-border flex items-center px-5 gap-4">
       <Link href="/" className="flex items-center text-fg no-underline">
         <NexusLogo priority />
       </Link>
@@ -40,19 +40,12 @@ export function TopBar({
       <div className="flex-1" />
       <button
         onClick={onOpenPalette}
-        className="inline-flex items-center gap-2 px-3 py-1.5 min-w-[280px] bg-surface-glass/60 border border-white/[0.08] rounded-md text-fg-subtle text-sm hover:bg-surface-glass-raised/60 transition-colors backdrop-blur-sm"
+        className="inline-flex items-center gap-2 px-3 py-1.5 min-w-[280px] bg-surface/80 border border-border-strong rounded-md text-fg-subtle text-sm hover:border-accent/35 hover:bg-surface-raised hover:text-fg transition-all backdrop-blur-sm"
         aria-label="Search or run a command"
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Search or run a command…</span>
         <kbd className="text-xs font-mono px-1.5 py-0.5 bg-bg-active rounded border border-border-strong">⌘K</kbd>
-      </button>
-      <button
-        className="relative h-9 w-9 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-bg-hover transition-colors"
-        aria-label="Notifications"
-      >
-        <Bell className="h-[18px] w-[18px]" />
-        <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-accent" />
       </button>
       <button
         onClick={doLogout}

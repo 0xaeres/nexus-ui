@@ -24,6 +24,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { NexusLogo } from '@/components/icons/NexusLogo'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Dialog,
@@ -577,8 +578,8 @@ export function ProjectsDashboard() {
 function EmptyState() {
   return (
     <Card variant="surface" className="p-10 flex flex-col items-center text-center gap-4 max-w-2xl mx-auto">
-      <div className="h-16 w-16 rounded-full bg-bg-active text-accent flex items-center justify-center">
-        <Sparkles className="h-7 w-7" />
+      <div className="h-16 w-16 rounded-md bg-surface-raised border border-border-strong flex items-center justify-center shadow-card">
+        <NexusLogo markOnly size="md" />
       </div>
       <div className="flex flex-col gap-1">
         <H3>No products yet</H3>
@@ -671,7 +672,7 @@ function ProductCard({
   const spin = status.currentStage === 'ingesting' || (status.currentStage === 'council' && status.councilInProgress)
 
   return (
-    <Card variant="glassAction" className="flex min-h-[220px] flex-col gap-4 p-4">
+    <Card variant="action" className="flex min-h-[220px] flex-col gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <Link href={`/p/${product.id}`} className="flex flex-col gap-1 min-w-0 no-underline">
           <H3 className="truncate text-fg hover:text-accent transition-colors">{product.name}</H3>
@@ -781,7 +782,7 @@ function StatCard({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-md bg-bg-active px-2.5 py-2">
+    <div className="min-w-0 rounded-md border border-border bg-surface-sunk/60 px-2.5 py-2">
       <SectionLabel>{label}</SectionLabel>
       <Small className="block truncate font-mono text-fg-muted">{value}</Small>
     </div>
