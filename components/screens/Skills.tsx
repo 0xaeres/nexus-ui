@@ -108,7 +108,7 @@ function SkillPackSummary({
   return (
     <Card variant="glass">
       <CardContent className="p-5 flex items-start gap-4">
-        <div className="h-12 w-12 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
+        <div className="h-12 w-12 rounded-md border border-border bg-bg-active text-fg-muted flex items-center justify-center shrink-0">
           <CheckCircle2 className="h-6 w-6" />
         </div>
         <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -130,7 +130,7 @@ function SkillDetail({ skill, showCoverage }: { skill: Skill; showCoverage: bool
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-start gap-3">
-        <Hexagon className="h-6 w-6 shrink-0 mt-1 text-accent fill-accent" />
+        <Hexagon className="h-6 w-6 shrink-0 mt-1 text-fg-subtle" />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <Code>{skill.name}</Code>
