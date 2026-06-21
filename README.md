@@ -63,3 +63,14 @@ rules in [`DESIGN.md`](./DESIGN.md).
 ```bash
 npm run build           # production build (also type-checks)
 ```
+
+## Performance checks
+
+```bash
+npm run build
+npm run perf:budget
+npm run perf:lhci
+```
+
+See [`PERFORMANCE.md`](./PERFORMANCE.md) for Lighthouse CI, bundle analysis,
+and clean Chrome trace capture notes.

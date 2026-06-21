@@ -346,8 +346,13 @@ export interface GraphRAGCitation {
 
 export interface GraphRAGPath {
   seed_id: string
+  seed_name: string
   node_ids: string[]
   edge_ids: string[]
+  relationship_types: string[]
+  source_anchors: string[]
+  node_count: number
+  edge_count: number
   summary: string
   confidence: number
 }
@@ -362,6 +367,10 @@ export interface GraphRAGAnswer {
   confidence: number
   graph_available: boolean
   graph_used: boolean
+  graph_relationships_used: boolean
+  graph_entity_count: number
+  graph_relationship_count: number
+  graph_diagnostics: string[]
   reranked: boolean
   needs_clarification: boolean
   clarification_options: GraphContextEntity[]

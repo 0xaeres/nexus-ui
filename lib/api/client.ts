@@ -5,6 +5,11 @@
 
 const DEFAULT_BASE = '/api/nexus'
 const REQUEST_TIMEOUT_MS = 10_000
+const LONG_REQUEST_TIMEOUT_MS = 90_000
+
+function timeoutFor(path: string) {
+  return path.includes('/agent/messages') ? LONG_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+}
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -16,7 +21,7 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith('http') ? path : `${DEFAULT_BASE}${path}`
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutFor(path))
   const csrf = typeof document === 'undefined'
     ? ''
     : document.cookie

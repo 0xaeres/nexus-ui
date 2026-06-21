@@ -3,6 +3,13 @@ import { NextRequest } from 'next/server'
 const BACKEND = process.env.NEXUS_API_URL ?? 'http://localhost:8000'
 const FORWARDED_COOKIES = new Set(['nexus_session', 'nexus_csrf'])
 const PROXY_TIMEOUT_MS = 10_000
+const LONG_PROXY_TIMEOUT_MS = 90_000
+
+function timeoutFor(path: string[]) {
+  return path.at(-2) === 'agent' && path.at(-1) === 'messages'
+    ? LONG_PROXY_TIMEOUT_MS
+    : PROXY_TIMEOUT_MS
+}
 
 function filterCookieHeader(value: string) {
   return value
@@ -39,7 +46,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   if (hasBody) init.duplex = 'half'
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutFor(path))
 
   try {
     const response = await fetch(target, { ...init, signal: controller.signal })

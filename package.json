@@ -6,6 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "fallow": "fallow dead-code --fail-on-issues",
+    "perf:budget": "node scripts/check-route-budgets.mjs",
+    "perf:bundle": "next experimental-analyze --output",
+    "perf:lhci": "lhci autorun --config=./lighthouserc.js",
+    "perf:lighthouse": "lhci collect --config=./lighthouserc.js && lhci assert --config=./lighthouserc.js",
     "start": "next start"
   },
   "dependencies": {
@@ -17,8 +21,6 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "ag-grid-community": "^35.3.0",
-    "ag-grid-react": "^35.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
@@ -28,6 +30,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^20",
     "@types/react": "^19",
