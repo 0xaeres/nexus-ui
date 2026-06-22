@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/anvay-logo-v2-light.svg" alt="Anvay" width="280">
+</p>
+
 # Anvay UI
 
 Next.js 16 (App Router, TypeScript) web interface for
