@@ -8,19 +8,19 @@ differ from your training data. Read the relevant guide in
 
 ---
 
-# Nexus UI — agent & contributor context
+# Anvay UI — agent & contributor context
 
-Web UI for [Nexus](../nexus) — the sovereign, MCP-native context engine.
+Web UI for [Anvay](../anvay) — the sovereign, MCP-native context engine.
 
 **Before touching any screen, component, or route, read [`DESIGN.md`](./DESIGN.md).**
 Every screen is live-connected to the FastAPI backend — there is no mock data.
 
 ## Read first
 
-- [`DESIGN.md`](./DESIGN.md) — what Nexus is, the locked information
+- [`DESIGN.md`](./DESIGN.md) — what Anvay is, the locked information
   architecture, the design system rules.
 - [`README.md`](./README.md) — quick start.
-- [`../nexus/AGENTS.md`](../nexus/AGENTS.md) — backend invariants.
+- [`../anvay/AGENTS.md`](../anvay/AGENTS.md) — backend invariants.
 
 ## The two invariants — never break these
 
@@ -33,7 +33,7 @@ Every screen is live-connected to the FastAPI backend — there is no mock data.
 
 ## What the backend actually serves
 
-Backend was deliberately slimmed down (see `../nexus/ENGINEERING.md §13`).
+Backend was deliberately slimmed down (see `../anvay/ENGINEERING.md §13`).
 **Don't reintroduce UI surface for cut features:**
 
 - No Assistant chat (`/p/[product]/assistant` is gone).

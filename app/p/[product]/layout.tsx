@@ -9,7 +9,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { product } = await params
   return {
-    title: `Nexus · ${product}`,
+    title: `Anvay · ${product}`,
     description: `Context engine dashboard and workspace for product "${product}"`,
   }
 }

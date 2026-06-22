@@ -209,7 +209,7 @@ export function ProductAsk({ productId }: { productId: string }) {
                       void submit()
                     }
                   }}
-                  placeholder="Ask Nexus about architecture, ownership, source paths, or proposal context..."
+                  placeholder="Ask Anvay about architecture, ownership, source paths, or proposal context..."
                   rows={3}
                   className="min-h-[92px] resize-none bg-surface font-sans"
                   disabled={loading}
@@ -342,7 +342,7 @@ function ContextRail({ latest }: { latest: GraphRAGAnswer | null }) {
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
           <Muted>
-            Once Nexus answers, this rail shows the resolved entities, graph paths, and unknowns behind the response.
+            Once Anvay answers, this rail shows the resolved entities, graph paths, and unknowns behind the response.
           </Muted>
           <div className="grid gap-2">
             {['Resolved entities', 'Graph paths', 'Unknowns'].map((label) => (

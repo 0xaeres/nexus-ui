@@ -11,7 +11,7 @@ import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { ToastProvider } from '@/components/ui/toast'
 import { H1, Muted } from '@/components/ui/typography'
-import { NexusLogo } from '@/components/icons/NexusLogo'
+import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { ProductContext, getPerms } from '@/lib/product-context'
 import { ApiError, getMe, getSetupStatus, listProducts } from '@/lib/api'
 import type { Product, ProductRole, User } from '@/lib/types'
@@ -98,7 +98,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         setUser(null)
         setProducts([])
         setMemberships({})
-        setBackendError(e instanceof Error ? e.message : 'Nexus backend is unavailable')
+        setBackendError(e instanceof Error ? e.message : 'Anvay backend is unavailable')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -210,14 +210,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [paletteOpen, helpOpen, currentProductId, router])
 
   if (publicAuthPath) {
-    return <div className="nexus-scrollbar-visible h-screen overflow-auto bg-bg text-fg">{children}</div>
+    return <div className="anvay-scrollbar-visible h-screen overflow-auto bg-bg text-fg">{children}</div>
   }
 
   if (loading) {
     return (
       <div className="grid h-screen place-items-center bg-bg text-fg">
         <div className="flex flex-col items-center gap-4">
-          <NexusLogo markOnly priority size="md" className="animate-pulse-slow" />
+          <AnvayLogo markOnly priority size="md" className="animate-pulse-slow" />
           <span className="font-mono text-sm text-fg-subtle">connecting</span>
         </div>
       </div>
@@ -233,7 +233,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <Badge variant="danger" className="font-mono">backend unavailable</Badge>
           <div className="flex flex-col gap-2">
-            <H1>Cannot reach Nexus</H1>
+            <H1>Cannot reach Anvay</H1>
             <Muted>
               The UI is running, but the backend API is not reachable. This screen retries automatically.
             </Muted>

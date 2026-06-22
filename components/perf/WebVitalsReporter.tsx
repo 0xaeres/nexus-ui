@@ -15,7 +15,7 @@ type WebVitalPayload = {
 function csrfToken() {
   return document.cookie
     .split('; ')
-    .find((row) => row.startsWith('nexus_csrf='))
+    .find((row) => row.startsWith('anvay_csrf='))
     ?.split('=')
     .slice(1)
     .join('=')
@@ -45,21 +45,21 @@ export function WebVitalsReporter() {
     const csrf = csrfToken()
 
     if (csrf) {
-      void fetch('/api/nexus/metrics/web-vitals', {
+      void fetch('/api/anvay/metrics/web-vitals', {
         method: 'POST',
         body,
         keepalive: true,
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-Nexus-CSRF': decodeURIComponent(csrf),
+          'X-Anvay-CSRF': decodeURIComponent(csrf),
         },
       }).catch(() => undefined)
       return
     }
 
     navigator.sendBeacon?.(
-      '/api/nexus/metrics/web-vitals',
+      '/api/anvay/metrics/web-vitals',
       new Blob([body], { type: 'application/json' }),
     )
   })

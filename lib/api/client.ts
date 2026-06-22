@@ -1,9 +1,9 @@
 /**
- * Thin HTTP client for the Nexus FastAPI backend.
+ * Thin HTTP client for the Anvay FastAPI backend.
  * No env-flag fallback to mocks — backend is the source of truth.
  */
 
-const DEFAULT_BASE = '/api/nexus'
+const DEFAULT_BASE = '/api/anvay'
 const REQUEST_TIMEOUT_MS = 10_000
 const LONG_REQUEST_TIMEOUT_MS = 90_000
 
@@ -26,7 +26,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ? ''
     : document.cookie
         .split('; ')
-        .find((row) => row.startsWith('nexus_csrf='))
+        .find((row) => row.startsWith('anvay_csrf='))
         ?.split('=')
         .slice(1)
         .join('=') ?? ''
@@ -36,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(csrf ? { 'X-Nexus-CSRF': decodeURIComponent(csrf) } : {}),
+        ...(csrf ? { 'X-Anvay-CSRF': decodeURIComponent(csrf) } : {}),
         ...(init?.headers ?? {}),
       },
       cache: 'no-store',

@@ -210,7 +210,7 @@ function CouncilLive({
       <div className="flex items-center gap-2">
         {live && !ended ? (
           <Badge variant="violet" className="gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-current animate-[nexus-pulse_2.4s_ease-in-out_infinite]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-current animate-[anvay-pulse_2.4s_ease-in-out_infinite]" />
             Live
           </Badge>
         ) : ended ? (
@@ -250,7 +250,7 @@ function CouncilLive({
             )
           })}
           <div className="ml-auto flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2">
-            <span className="h-2 w-2 rounded-full animate-[nexus-pulse_1.4s_ease-in-out_infinite]" style={{ background: agentHue(visibleActiveAgent) }} />
+            <span className="h-2 w-2 rounded-full animate-[anvay-pulse_1.4s_ease-in-out_infinite]" style={{ background: agentHue(visibleActiveAgent) }} />
             <Small className="font-mono text-fg">Now: {currentAgentLabel}</Small>
           </div>
         </div>
@@ -279,7 +279,7 @@ function CouncilLive({
           </Muted>
         )}
         {messages.map((m, i) => (
-          <Card key={i} variant="glass" className="p-4 flex max-w-[880px] flex-col gap-2 animate-[nexus-msg-in_0.22s_ease-out]">
+          <Card key={i} variant="glass" className="p-4 flex max-w-[880px] flex-col gap-2 animate-[anvay-msg-in_0.22s_ease-out]">
             <div className="flex items-center gap-2">
               <span
                 className="h-1.5 w-1.5 rounded-full shrink-0"

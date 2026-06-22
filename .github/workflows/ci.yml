@@ -45,4 +45,4 @@ jobs:
       - name: Lighthouse CI
         run: npm run perf:lhci
         env:
-          NEXUS_API_URL: http://127.0.0.1:65535
+          ANVAY_API_URL: http://127.0.0.1:65535

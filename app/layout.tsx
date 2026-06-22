@@ -8,11 +8,11 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'Nexus',
+  title: 'Anvay',
   description: 'Sovereign MCP-native context engine',
   icons: {
-    icon: '/nexus-app-icon-v2.svg',
-    shortcut: '/nexus-app-icon-v2.svg',
+    icon: '/anvay-app-icon-v2.svg',
+    shortcut: '/anvay-app-icon-v2.svg',
   },
 }
 

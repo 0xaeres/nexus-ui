@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 
-const BACKEND = process.env.NEXUS_API_URL ?? 'http://localhost:8000'
-const FORWARDED_COOKIES = new Set(['nexus_session', 'nexus_csrf'])
+const BACKEND = process.env.ANVAY_API_URL ?? 'http://localhost:8000'
+const FORWARDED_COOKIES = new Set(['anvay_session', 'anvay_csrf'])
 const PROXY_TIMEOUT_MS = 10_000
 const LONG_PROXY_TIMEOUT_MS = 90_000
 
@@ -60,7 +60,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     })
   } catch {
     return Response.json(
-      { detail: 'Nexus backend is unavailable' },
+      { detail: 'Anvay backend is unavailable' },
       { status: 503 },
     )
   } finally {

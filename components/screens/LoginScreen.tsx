@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 import { Loader2, LogIn } from 'lucide-react'
-import { NexusLogo } from '@/components/icons/NexusLogo'
+import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { H2, Small } from '@/components/ui/typography'
@@ -41,7 +41,7 @@ export function LoginScreen() {
   }
 
   return (
-    <main className="nexus-auth-shell grid min-h-screen place-items-center px-4">
+    <main className="anvay-auth-shell grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-[400px] rounded-xl border border-border bg-surface-sunk p-8 shadow-2xl relative overflow-hidden">
         {/* Sleek top border highlight */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border-strong to-transparent" />
@@ -49,7 +49,7 @@ export function LoginScreen() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center text-center gap-2">
             <div className="flex h-10 items-center justify-center">
-              <NexusLogo size="sm" priority className="opacity-95" />
+              <AnvayLogo size="sm" priority className="opacity-95" />
             </div>
             <H2 className="mt-3">Sign in to your console</H2>
             <Small>Enter your credentials to manage products</Small>

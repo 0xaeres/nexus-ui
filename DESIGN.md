@@ -1,4 +1,4 @@
-# Nexus UI — Design Context
+# Anvay UI — Design Context
 
 > **Stop. Read this before writing any UI code.**
 >
@@ -7,14 +7,14 @@
 > a glow card to a regular section, or a screen outside the locked IA,
 > push back.
 
-## 1. What Nexus is (one paragraph)
+## 1. What Anvay is (one paragraph)
 
-Nexus indexes a product's code + docs, runs a bounded expert LLM council
+Anvay indexes a product's code + docs, runs a bounded expert LLM council
 to draft a curated product skill pack, and serves approved skills via MCP
 to any AI coding client (Claude, Cursor, Continue, …). The UI is where
 humans drive sources, watch council runs, and approve / edit / reject
 proposals one at a time. See
-[`../nexus/README.md`](../nexus/README.md) for the backend overview.
+[`../anvay/README.md`](../anvay/README.md) for the backend overview.
 
 ## 2. What this repo is
 
@@ -89,7 +89,7 @@ not the deleted Assistant chat surface. **Don't add `/p/[product]/assistant`,
 `/p/[product]/activity`, `/p/[product]/proposals`,
 `/p/[product]/settings`, or `/settings/org` back.** Those layers were
 removed when the backend was slimmed — see
-[`../nexus/ENGINEERING.md §13`](../nexus/ENGINEERING.md).
+[`../anvay/ENGINEERING.md §13`](../anvay/ENGINEERING.md).
 
 ## 5. Council (UI shape)
 

@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast'
 import { Code, H2, H3, Muted, SectionLabel, Small } from '@/components/ui/typography'
 import { cn } from '@/lib/utils'
 
-const MCP_URL_PLACEHOLDER = 'https://<your-nexus-mcp-server>/mcp'
+const MCP_URL_PLACEHOLDER = 'https://<your-anvay-mcp-server>/mcp'
 
 type Client = {
   id: string
@@ -28,7 +28,7 @@ const CLIENTS: Client[] = [
     id: 'claude-code',
     name: 'Claude Code',
     note: 'Best path: add remote HTTP server with Claude MCP command.',
-    buildAddPrompt: ({ serverName }) => `## Add Nexus MCP to Claude Code
+    buildAddPrompt: ({ serverName }) => `## Add Anvay MCP to Claude Code
 
 Add a remote HTTP MCP server named \`${serverName}\`.
 
@@ -36,14 +36,14 @@ Add a remote HTTP MCP server named \`${serverName}\`.
 claude mcp add --transport http ${serverName} ${MCP_URL_PLACEHOLDER}
 \`\`\`
 
-If Nexus MCP requires auth, ask me for the token, then add the required \`Authorization\` header.
+If Anvay MCP requires auth, ask me for the token, then add the required \`Authorization\` header.
 After adding it, run \`/mcp\` and confirm the server is listed.`,
   },
   {
     id: 'cursor',
     name: 'Cursor',
     note: 'Uses mcp.json with top-level mcpServers and remote url.',
-    buildAddPrompt: ({ serverName }) => `## Add Nexus MCP to Cursor
+    buildAddPrompt: ({ serverName }) => `## Add Anvay MCP to Cursor
 
 Open Cursor MCP settings, then add this server to either project config \`.cursor/mcp.json\` or global config \`~/.cursor/mcp.json\`.
 
@@ -57,14 +57,14 @@ Open Cursor MCP settings, then add this server to either project config \`.curso
 }
 \`\`\`
 
-If Nexus MCP requires auth, ask me for the token, then add it under \`headers\`.
+If Anvay MCP requires auth, ask me for the token, then add it under \`headers\`.
 Reload Cursor after saving.`,
   },
   {
     id: 'codex',
     name: 'Codex',
     note: 'Uses config.toml with [mcp_servers.<name>] and url.',
-    buildAddPrompt: ({ serverName }) => `## Add Nexus MCP to Codex
+    buildAddPrompt: ({ serverName }) => `## Add Anvay MCP to Codex
 
 Open Codex MCP settings or edit \`~/.codex/config.toml\`. Add this remote HTTP MCP server:
 
@@ -73,14 +73,14 @@ Open Codex MCP settings or edit \`~/.codex/config.toml\`. Add this remote HTTP M
 url = "${MCP_URL_PLACEHOLDER}"
 \`\`\`
 
-If Nexus MCP requires auth, ask me for the token, then use \`bearer_token_env_var\`, \`http_headers\`, or \`env_http_headers\`.
+If Anvay MCP requires auth, ask me for the token, then use \`bearer_token_env_var\`, \`http_headers\`, or \`env_http_headers\`.
 Restart the Codex session after saving.`,
   },
   {
     id: 'antigravity',
     name: 'Antigravity',
     note: 'Uses mcp_config.json and remote serverUrl, not url.',
-    buildAddPrompt: ({ serverName }) => `## Add Nexus MCP to Antigravity
+    buildAddPrompt: ({ serverName }) => `## Add Anvay MCP to Antigravity
 
 Open Agent panel -> Manage MCP Servers -> View raw config. Add this to \`mcp_config.json\`.
 
@@ -94,14 +94,14 @@ Open Agent panel -> Manage MCP Servers -> View raw config. Add this to \`mcp_con
 }
 \`\`\`
 
-If Nexus MCP requires auth, ask me for the token, then add the required \`headers\`.
+If Anvay MCP requires auth, ask me for the token, then add the required \`headers\`.
 Save, then refresh MCP servers in Antigravity.`,
   },
   {
     id: 'copilot',
     name: 'VS Code Copilot',
     note: 'Uses mcp.json with top-level servers, not mcpServers.',
-    buildAddPrompt: ({ serverName }) => `## Add Nexus MCP to VS Code Copilot
+    buildAddPrompt: ({ serverName }) => `## Add Anvay MCP to VS Code Copilot
 
 Run \`MCP: Add Server\` or \`MCP: Open User Configuration\`. For workspace setup, edit \`.vscode/mcp.json\`.
 
@@ -116,7 +116,7 @@ Run \`MCP: Add Server\` or \`MCP: Open User Configuration\`. For workspace setup
 }
 \`\`\`
 
-If Nexus MCP requires auth, ask me for the token, then add the required headers or input variables.
+If Anvay MCP requires auth, ask me for the token, then add the required headers or input variables.
 Start or restart the MCP server and approve the trust prompt if VS Code asks.`,
   },
 ]
@@ -131,7 +131,7 @@ export function McpSetupCard({
   const toast = useToast()
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const selectedClient = CLIENTS.find((client) => client.id === selectedClientId) ?? null
-  const serverName = useMemo(() => `nexus-${productId}`, [productId])
+  const serverName = useMemo(() => `anvay-${productId}`, [productId])
 
   const promptInput = useMemo(
     () => ({ productId, productName, serverName }),
@@ -197,7 +197,7 @@ export function McpSetupCard({
             <PromptStep
               index="1"
               icon={<Plug className="h-4 w-4" />}
-              title="Prompt to add Nexus MCP"
+              title="Prompt to add Anvay MCP"
               prompt={addPrompt}
               onCopy={() => copy(`${selectedClient.name} add prompt`, addPrompt)}
             />
@@ -258,7 +258,7 @@ function buildCheckPrompt({
 }: PromptInput & {
   client: Client
 }) {
-  return `## Verify Nexus MCP in ${client.name}
+  return `## Verify Anvay MCP in ${client.name}
 
 Use MCP server \`${serverName}\`.
 Call \`find_skills\` with:
@@ -274,7 +274,7 @@ Call \`find_skills\` with:
 If the tool responds, reply exactly:
 
 \`\`\`text
-You are connected to Nexus, product name: ${productName}
+You are connected to Anvay, product name: ${productName}
 \`\`\`
 
 If it fails, show the MCP connection error and mention product id \`${productId}\`.`

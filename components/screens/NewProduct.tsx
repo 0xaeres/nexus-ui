@@ -97,7 +97,7 @@ export function NewProduct() {
           <div className="col-span-12 md:col-span-8 lg:col-span-6 md:col-start-3 lg:col-start-4">
             <Card variant="surface">
               <CardHeader className="gap-2">
-                <H3>Tell Nexus what to ingest</H3>
+                <H3>Tell Anvay what to ingest</H3>
                 <Muted>
                   Point us at the product repositories. We&rsquo;ll clone, chunk,
                   and embed them, then the LLM Council drafts your first skill for review.

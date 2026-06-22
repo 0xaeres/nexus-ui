@@ -526,7 +526,7 @@ function DiffViewer({
           <Small className="font-mono text-success">+{added}</Small>
           <Small className="font-mono text-danger">-{removed}</Small>
         </div>
-        <div className="nexus-scrollbar-visible max-h-[70vh] min-h-[420px] overflow-y-auto">
+        <div className="anvay-scrollbar-visible max-h-[70vh] min-h-[420px] overflow-y-auto">
           {rows.map((row) => {
             if (row.type === 'collapse') {
               return (

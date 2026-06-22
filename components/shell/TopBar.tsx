@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { LogOut, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { NexusLogo } from '@/components/icons/NexusLogo'
+import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { Separator } from '@/components/ui/separator'
 import { StatusDot } from '@/components/ui/status-dot'
 import { ProductSwitcher } from './ProductSwitcher'
@@ -26,7 +26,7 @@ export function TopBar({
   return (
     <div className="h-14 shrink-0 bg-surface-glass/90 backdrop-blur-xl border-b border-border flex items-center px-5 gap-4">
       <Link href="/" className="flex items-center text-fg no-underline">
-        <NexusLogo priority />
+        <AnvayLogo priority />
       </Link>
       <Separator orientation="vertical" className="h-5" />
       <ProductSwitcher onProductChange={onProductChange} />

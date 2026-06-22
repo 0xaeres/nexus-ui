@@ -16,7 +16,7 @@ import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
 
 // Active connector types wired to the backend sync pipeline.
-// See nexus/api/routes/sources.py — currently: github, filesystem, jira.
+// See anvay/api/routes/sources.py — currently: github, filesystem, jira.
 const CONNECTOR_OPTIONS: Array<{
   id: string
   name: string

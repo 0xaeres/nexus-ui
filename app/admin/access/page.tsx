@@ -2,7 +2,7 @@ import { AdminAccessScreen } from '@/components/screens/AdminAccessScreen'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Access Requests · Nexus',
+  title: 'Access Requests · Anvay',
   description: 'Manage users and approve or reject access requests for the sovereign context engine.',
 }
 

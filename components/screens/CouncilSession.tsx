@@ -431,7 +431,7 @@ function DraftSection({ section }: { section: ProposalSection }) {
 
 function DeliberationMsg({ msg }: { msg: DeliberationMessage }) {
   return (
-    <div className="relative pl-5 animate-[nexus-msg-in_0.22s_ease-out]">
+    <div className="relative pl-5 animate-[anvay-msg-in_0.22s_ease-out]">
       <span
         className="absolute left-1 top-2 bottom-2 w-0.5 rounded-full"
         style={{ background: agentHue(msg.agent) }}

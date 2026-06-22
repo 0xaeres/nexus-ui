@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { NexusLogo } from '@/components/icons/NexusLogo'
+import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Dialog,
@@ -493,12 +493,12 @@ function EmptyState() {
   return (
     <Card variant="surface" className="p-10 flex flex-col items-center text-center gap-4 max-w-2xl mx-auto">
       <div className="h-16 w-16 rounded-md bg-surface-raised border border-border-strong flex items-center justify-center shadow-card">
-        <NexusLogo markOnly size="md" />
+        <AnvayLogo markOnly size="md" />
       </div>
       <div className="flex flex-col gap-1">
         <H3>No products yet</H3>
         <Muted>
-          Connect a repository, let Nexus ingest it, and the LLM Council will draft your first
+          Connect a repository, let Anvay ingest it, and the LLM Council will draft your first
           curated skill. You take it from there.
         </Muted>
       </div>

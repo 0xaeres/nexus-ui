@@ -1,7 +1,7 @@
-# Nexus UI
+# Anvay UI
 
 Next.js 16 (App Router, TypeScript) web interface for
-[Nexus](../nexus) — the MCP-native context engine.
+[Anvay](../anvay) — the MCP-native context engine.
 
 ## Quick start
 
@@ -11,8 +11,8 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-Requires the Nexus backend running at `http://localhost:8000`. See
-[`../nexus/README.md`](../nexus/README.md) for backend setup.
+Requires the Anvay backend running at `http://localhost:8000`. See
+[`../anvay/README.md`](../anvay/README.md) for backend setup.
 
 ## Routes
 

@@ -4,8 +4,8 @@ module.exports = {
       url: [
         'http://localhost:3005/landing',
         'http://localhost:3005/login',
-        'http://localhost:3005/p/nexus/dashboard',
-        'http://localhost:3005/p/nexus/setup-client',
+        'http://localhost:3005/p/anvay/dashboard',
+        'http://localhost:3005/p/anvay/setup-client',
       ],
       numberOfRuns: 3,
       startServerCommand: 'npm run start -- --port 3005',
