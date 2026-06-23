@@ -41,7 +41,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [bootAttempt, setBootAttempt] = useState(0)
   const router = useRouter()
   const pathname = usePathname() ?? '/'
-  const publicAuthPath = pathname === '/landing' || pathname === '/login' || pathname === '/request-access'
   const pendingG = useRef(false)
   const pendingGTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryBootstrap = () => {
@@ -53,11 +52,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      if (publicAuthPath) {
-        setLoading(false)
-        setBackendError(null)
-        return
-      }
       setLoading(true)
       setBackendError(null)
       try {
@@ -107,14 +101,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicAuthPath, router, bootAttempt])
+  }, [bootAttempt])
 
   useEffect(() => {
-    if (!backendError || publicAuthPath) return
+    if (!backendError) return
     const retry = setTimeout(retryBootstrap, 5000)
     return () => clearTimeout(retry)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backendError, publicAuthPath])
+  }, [backendError])
 
   useEffect(() => {
     const match = pathname.match(/^\/p\/([^/]+)/)
@@ -208,10 +202,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
       if (pendingGTimer.current) clearTimeout(pendingGTimer.current)
     }
   }, [paletteOpen, helpOpen, currentProductId, router])
-
-  if (publicAuthPath) {
-    return <div className="anvay-scrollbar-visible h-screen overflow-auto bg-bg text-fg">{children}</div>
-  }
 
   if (loading) {
     return (

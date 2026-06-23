@@ -88,6 +88,9 @@ export function RequestAccessScreen() {
             <Link href="/login" className="hover:text-fg">
               <Small>Back to sign in</Small>
             </Link>
+            <Link href="/docs" className="hover:text-fg">
+              <Small>Read the docs</Small>
+            </Link>
           </form>
         </CardContent>
       </Card>

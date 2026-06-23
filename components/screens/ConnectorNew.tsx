@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronLeft, Check, Loader2, Lock } from 'lucide-react'
+import { ChevronLeft, Check, Folder, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
@@ -16,7 +16,7 @@ import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
 
 // Active connector types wired to the backend sync pipeline.
-// See anvay/api/routes/sources.py — currently: github, filesystem, jira.
+// See anvay/api/routes/sources.py — currently: github, filesystem, jira, confluence.
 const CONNECTOR_OPTIONS: Array<{
   id: string
   name: string
@@ -35,6 +35,15 @@ const CONNECTOR_OPTIONS: Array<{
     ],
   },
   {
+    id: 'filesystem',
+    name: 'Filesystem',
+    auth: 'command',
+    desc: 'Local files available to the backend host',
+    fields: [
+      { key: 'root', placeholder: '/absolute/path/to/repo-or-docs' },
+    ],
+  },
+  {
     id: 'jira',
     name: 'Jira',
     auth: 'token',
@@ -46,15 +55,17 @@ const CONNECTOR_OPTIONS: Array<{
       { key: 'jql', label: 'jql (optional)', placeholder: 'project = MYPROJ ORDER BY updated DESC', optional: true },
     ],
   },
-]
-
-// Connectors that are planned but not active in this UI flow yet.
-// Shown as disabled tiles so users can see what's coming.
-const COMING_SOON: Array<{ id: string; name: string; desc: string }> = [
   {
     id: 'confluence',
     name: 'Confluence',
+    auth: 'token',
     desc: 'Confluence Cloud spaces',
+    fields: [
+      { key: 'site_url', label: 'site url', placeholder: 'https://yourorg.atlassian.net' },
+      { key: 'email', placeholder: 'you@yourorg.com' },
+      { key: 'api_token', label: 'api token', placeholder: 'Atlassian API token', secret: true },
+      { key: 'space_keys', label: 'space keys (optional)', placeholder: 'ENG, API', optional: true, multivalue: true },
+    ],
   },
 ]
 
@@ -169,7 +180,7 @@ export function ConnectorNew({ productId }: { productId?: string }) {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <BrandIcon id={c.id} className="h-4 w-4" />
+                    {c.id === 'filesystem' ? <Folder className="h-4 w-4 text-accent" /> : <BrandIcon id={c.id} className="h-4 w-4" />}
                     <span className="font-mono text-base font-medium text-fg">{c.name}</span>
                     <div className="flex-1" />
                     <Badge variant="outline" className="font-mono text-xs">{c.auth}</Badge>
@@ -179,29 +190,6 @@ export function ConnectorNew({ productId }: { productId?: string }) {
               </div>
             )
           })}
-
-          {COMING_SOON.map(c => (
-            <div key={c.id} className="col-span-12 md:col-span-6 lg:col-span-4">
-              <div
-                className={cn(
-                  'text-left w-full h-full cursor-not-allowed',
-                  'rounded-lg border p-4 flex flex-col gap-2',
-                  'border-border/50 bg-surface/50 opacity-60',
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <BrandIcon id={c.id} className="h-4 w-4" />
-                  <span className="font-mono text-base font-medium text-fg">{c.name}</span>
-                  <div className="flex-1" />
-                  <Badge variant="outline" className="font-mono text-xs gap-1">
-                    <Lock className="h-2.5 w-2.5" />
-                    soon
-                  </Badge>
-                </div>
-                <Small className="text-fg-subtle">{c.desc}</Small>
-              </div>
-            </div>
-          ))}
 
           {/* Step 2: config */}
           {selected && (

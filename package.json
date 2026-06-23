@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "cms:build": "tinacms build --noTelemetry",
+    "cms:dev": "tinacms dev --noTelemetry -c \"next dev\"",
+    "docs:seed-tina": "node scripts/seed-tina-docs.mjs",
     "fallow": "fallow dead-code --fail-on-issues",
     "perf:budget": "node scripts/check-route-budgets.mjs",
     "perf:bundle": "next experimental-analyze --output",
@@ -23,7 +26,9 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fuse.js": "^7.4.2",
     "lucide-react": "^1.16.0",
+    "mermaid": "^11.15.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -32,11 +37,13 @@
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
     "@tailwindcss/postcss": "^4.3.0",
+    "@tinacms/cli": "^2.5.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "fallow": "^2.89.0",
     "tailwindcss": "^4.3.0",
+    "tinacms": "^3.9.3",
     "typescript": "^5"
   }
 }

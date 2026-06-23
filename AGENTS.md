@@ -63,9 +63,8 @@ generated proposal IDs, and routes SMEs to product-scoped review.
 ## Product onboarding
 
 `/new` creates product metadata and a required GitHub source. It collects a
-product service-account PAT plus one or more GitHub repo URLs. Do not add
-Confluence/Jira fields to onboarding until their source sync paths exist; they
-belong in Sources later.
+product service-account PAT plus one or more GitHub repo URLs. Jira,
+Confluence, and filesystem sources belong in Sources later, not onboarding.
 
 ## Design system (locked)
 

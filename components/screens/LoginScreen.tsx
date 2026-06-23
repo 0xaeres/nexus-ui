@@ -115,6 +115,9 @@ export function LoginScreen() {
             <Link href="/request-access" className="hover:underline">
               <Small className="hover:text-fg transition-all">Request access</Small>
             </Link>
+            <Link href="/docs" className="hover:underline">
+              <Small className="hover:text-fg transition-all">Docs</Small>
+            </Link>
             <Link href="/landing" className="hover:underline">
               <Small className="hover:text-fg transition-all">Product overview</Small>
             </Link>

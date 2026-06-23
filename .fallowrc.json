@@ -2,8 +2,11 @@
   "entry": ["lighthouserc.js"],
   "ignorePatterns": [
     "components/screens/SkillDetailPage.tsx",
-    "components/screens/SkillStage.tsx"
+    "components/screens/SkillStage.tsx",
+    "tina/config.ts",
+    "tina/__generated__/**"
   ],
+  "ignoreDependencies": ["tinacms"],
   "ignoreExports": [
     {
       "file": "lib/api/index.ts",

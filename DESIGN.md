@@ -72,7 +72,7 @@ multiple skills; pending proposals keep the product in Review until cleared.
   /dashboard                     Pipeline cards + pending proposals + recent activity
   /ask                           Source-grounded product Q&A
   /sources                       Source list
-  /sources/new                   Add a source (GitHub or Local filesystem)
+  /sources/new                   Add a source (GitHub, filesystem, Jira, or Confluence)
   /sources/[name]                Source detail + live SSE sync log
   /ingest                        Stage gate at the ingest phase
   /council                       Session list + start dialog
@@ -197,15 +197,15 @@ grep -rn 'text-\[1[01]px\]\|<h1\|<h2\|<h3' components/screens components/shell a
 
 ### 6.7 Connector scope
 
-The shipped connectors are **GitHub** and **Local filesystem**. The
-ConnectorNew picker has exactly two options. Do not re-add Jira,
-Confluence, Slack, Linear, etc. without a product decision and a
-matching backend connector.
+The UI follows the backend connector truth. The currently wired source sync
+types are **GitHub**, **filesystem / local filesystem**, **Jira**, and
+**Confluence**. Do not document or expose connector types beyond the backend
+sync pipeline.
 
 Product onboarding (`/new`) is intentionally narrower than Sources: it creates
 the product plus a required GitHub source using a product service-account PAT
-and one or more GitHub repo URLs. Confluence/Jira are configured later from
-Sources once their sync paths exist; they are not onboarding fields in v1.
+and one or more GitHub repo URLs. Jira, Confluence, and filesystem sources are
+configured later from Sources; they are not onboarding fields in v1.
 
 ### 6.8 Ingestion progress UX
 

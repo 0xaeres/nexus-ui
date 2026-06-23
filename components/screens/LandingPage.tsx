@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 const TABS = {
-  sync: 'Connect codebases and documents. Anvay automatically ingests and parses files, symbols, APIs, and metadata into a unified knowledge graph.',
-  query: 'Humans and AI agents ask complex product questions, receiving context-aware answers backed by explicit source-level citations.',
-  govern: 'Expert AI agents draft structured guidance. Engineering leaders review, edit, and approve them to govern coding rules.',
+  sync: 'Ingest product context. Anvay keeps the knowledge base current.',
+  query: 'Ask product questions. Get answers with source citations.',
+  govern: 'Let experts draft. Humans edit, approve, or reject.',
 } as const
 
 type TabId = keyof typeof TABS
@@ -28,6 +28,7 @@ export function LandingPage() {
           <nav className="anvay-landing-nav-links" aria-label="Primary">
             <a href="#why">Why Anvay</a>
             <a href="#how">How it works</a>
+            <Link href="/docs">Docs</Link>
             <a href="#access">Request access</a>
           </nav>
           <div className="anvay-landing-nav-actions">
@@ -40,12 +41,12 @@ export function LandingPage() {
       <div className="anvay-landing-container anvay-landing-hero">
         <div className="anvay-landing-hero-grid">
           <div>
-            <div className="anvay-landing-eyebrow">Live Product Intelligence</div>
+            <div className="anvay-landing-eyebrow">Context your agents can trust</div>
             <div className="anvay-landing-heading-1" role="heading" aria-level={1}>
-              Deep product context. For humans and AI agents.
+              Your product, understood.
             </div>
             <p className="anvay-landing-lead">
-              Anvay builds a live, queryable knowledge graph of your entire codebase, documentation, and system design. Get instant, context-aware answers with verified evidence—delivered seamlessly to engineers and AI coding agents.
+              Anvay turns product context into a living knowledge base for developers and AI agents.
             </p>
             <div className="anvay-landing-hero-actions">
               <Link className="anvay-landing-btn anvay-landing-btn-primary" href="/request-access">Request access</Link>
@@ -61,21 +62,21 @@ export function LandingPage() {
         <div className="anvay-landing-container">
           <div className="anvay-landing-section-head">
             <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
-              Product intelligence you can trust.
+              Stop coding from stale context.
             </div>
             <p>
-              A unified knowledge graph bridging the gap between code, docs, and AI.
+              Current sources. Grounded answers. Human control.
             </p>
           </div>
           <div className="anvay-landing-cards">
-            <InfoCard label="Retrieve" title="Search with absolute precision." foot="dense · BM25 · grep · rerank">
-              Hybrid search combines vectors, sparse retrieval, and exact grep to surface the exact ground truth in milliseconds.
+            <InfoCard label="Find" title="Get the right evidence." foot="dense · BM25 · grep · rerank">
+              Hybrid retrieval ranks product knowledge, then cites the source.
             </InfoCard>
-            <InfoCard label="Reason" title="Traverse code relationships." foot="graph · repo map · citations">
-              A rich knowledge graph maps files, symbols, routes, API endpoints, docs, and ownership for context-aware reasoning.
+            <InfoCard label="Ask" title="Understand the product." foot="code · docs · repo map">
+              Ask about architecture, behavior, or ownership—without repo spelunking.
             </InfoCard>
-            <InfoCard label="Govern" title="Govern with verified memory." foot="approve · edit · reject">
-              Align AI agents with durable, human-approved guidelines drafted directly from live codebase evidence.
+            <InfoCard label="Align" title="Give agents approved context." foot="edit · approve · reject">
+              Expert agents draft guidance. Humans decide what becomes a skill.
             </InfoCard>
           </div>
         </div>
@@ -84,12 +85,12 @@ export function LandingPage() {
       <section id="how" className="anvay-landing-section">
         <div className="anvay-landing-container anvay-landing-workflow-section">
           <div>
-            <div className="anvay-landing-eyebrow">Universal Context Engine</div>
+            <div className="anvay-landing-eyebrow">From source to skill</div>
             <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
-              Sync. Search. Ask. Align.
+              Connect. Ask. Approve.
             </div>
             <p className="anvay-landing-lead">
-              A single product-scoped boundary, delivering deep intelligence to developers and AI models.
+              One product boundary. No context leaks.
             </p>
             <div className="anvay-landing-tabs" role="tablist" aria-label="Workflow preview">
               {(Object.keys(TABS) as TabId[]).map((tabId) => (
@@ -113,14 +114,14 @@ export function LandingPage() {
             <div className="anvay-landing-trace-head">
               <div className="anvay-landing-label">Context run</div>
               <div className="anvay-landing-heading-3" role="heading" aria-level={3}>
-                Resolving context before generating answers
+                Evidence first. Answer second.
               </div>
             </div>
             <div className="anvay-landing-trace-list">
-              <TraceRow time="00:11" agent="Query plan" phase="Determines query scope and relational shape" badge="plan" tone="green" />
-              <TraceRow time="00:24" agent="Evidence" phase="Retrieves vector, sparse, grep, and repo map hits" badge="search" tone="violet" />
-              <TraceRow time="00:37" agent="Graph" phase="Traverses codebase graph and maps dependencies" badge="trace" tone="warn" />
-              <TraceRow time="00:51" agent="Intelligence" phase="Delivers cited answers and verified guidance" badge="cited" tone="green" />
+              <TraceRow time="00:11" agent="Plan" phase="Scope the product question" badge="plan" tone="green" />
+              <TraceRow time="00:24" agent="Retrieve" phase="Rank sources and exact matches" badge="search" tone="violet" />
+              <TraceRow time="00:37" agent="Trace" phase="Resolve symbols and dependencies" badge="map" tone="warn" />
+              <TraceRow time="00:51" agent="Answer" phase="Return claims with citations" badge="cited" tone="green" />
             </div>
           </aside>
         </div>
@@ -130,19 +131,19 @@ export function LandingPage() {
         <div className="anvay-landing-container">
           <div className="anvay-landing-section-head">
             <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
-              Empower developers and AI agents alike.
+              Context, where work happens.
             </div>
             <p>
-              Access deep, cited product context directly through our intuitive web UI, or serve it to your AI coding agents via a standard Model Context Protocol (MCP) server.
+              Use Anvay on the web or serve product knowledge to any MCP client.
             </p>
           </div>
           <div className="anvay-landing-delivery-grid">
             <div className="anvay-landing-deliver-card">
               <span className="anvay-landing-pill anvay-landing-pill-spaced">MCP & API Access</span>
               <div className="anvay-landing-heading-3" role="heading" aria-level={3}>
-                Query the codebase graph directly from your IDE.
+                Product context, inside your IDE.
               </div>
-              <p>AI agents call tools like `query_code_context`, `ask_product_graph`, and custom approved skill search to pull verified evidence right into their prompt.</p>
+              <p>Developers and agents retrieve source evidence and approved skills in their workflow.</p>
             </div>
             <pre className="anvay-landing-code" aria-label="Context tools example"><code><span className="anvay-landing-code-accent">context</span> payments
 channels: vector + BM25 + grep + graph
@@ -152,14 +153,15 @@ tools: evidence_search_corpus · ask_product_graph</code></pre>
           </div>
           <div id="access" className="anvay-landing-cta-box">
             <div>
-              <div className="anvay-landing-eyebrow">Enterprise Ready</div>
+              <div className="anvay-landing-eyebrow">Start with one product</div>
               <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
-                Connect your codebase. Activate product intelligence.
+                Give every agent the right context.
               </div>
-              <p>Bring your repositories, documentation, and engineering guidelines. Stop relying on stale wikis and start getting context-aware answers today.</p>
+              <p>Connect your sources. Build shared product knowledge.</p>
             </div>
             <div className="anvay-landing-hero-actions">
               <Link className="anvay-landing-btn anvay-landing-btn-primary" href="/request-access">Request access</Link>
+              <Link className="anvay-landing-btn anvay-landing-btn-secondary" href="/docs">Docs</Link>
               <Link className="anvay-landing-btn anvay-landing-btn-secondary" href="/login">Sign in</Link>
             </div>
           </div>
@@ -195,8 +197,8 @@ function ProductFrame() {
           <div className="anvay-landing-panel">
             <div className="anvay-landing-row">
               <div>
-                <div className="anvay-landing-label">EvidenceGraphRAG</div>
-                <div className="text-xs text-fg-muted mt-0.5">Relational Context Analysis</div>
+                <div className="anvay-landing-label">Grounded answer</div>
+                <div className="text-xs text-fg-muted mt-0.5">Product context with citations</div>
               </div>
               <span className="anvay-landing-status">Cited answer</span>
             </div>
