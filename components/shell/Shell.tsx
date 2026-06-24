@@ -38,6 +38,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [backendError, setBackendError] = useState<string | null>(null)
+  const [redirecting, setRedirecting] = useState(false)
   const [bootAttempt, setBootAttempt] = useState(0)
   const router = useRouter()
   const pathname = usePathname() ?? '/'
@@ -46,6 +47,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const retryBootstrap = () => {
     setLoading(true)
     setBackendError(null)
+    setRedirecting(false)
     setBootAttempt((n) => n + 1)
   }
 
@@ -54,6 +56,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     ;(async () => {
       setLoading(true)
       setBackendError(null)
+      setRedirecting(false)
       try {
         const [me, prods, setup] = await Promise.all([
           getMe(),
@@ -63,6 +66,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         setBackendError(null)
         if (me.user.id === 'dev-admin') {
+          setRedirecting(true)
           router.replace('/landing')
           return
         }
@@ -70,10 +74,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
         setMemberships(me.memberships ?? {})
         setProducts(prods)
         if (me.user.status && me.user.status !== 'approved') {
+          setRedirecting(true)
           router.replace('/request-access')
           return
         }
         if (!setup.configured && pathname !== '/setup') {
+          setRedirecting(true)
           router.replace('/setup')
           return
         }
@@ -86,6 +92,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       } catch (e) {
         if (cancelled) return
         if (e instanceof ApiError && e.status === 401) {
+          setRedirecting(true)
           router.replace('/landing')
           return
         }
@@ -203,18 +210,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [paletteOpen, helpOpen, currentProductId, router])
 
-  if (loading) {
+  if (loading || redirecting) {
     return (
       <div className="grid h-screen place-items-center bg-bg text-fg">
         <div className="flex flex-col items-center gap-4">
           <AnvayLogo markOnly priority size="md" className="animate-pulse-slow" />
-          <span className="font-mono text-sm text-fg-subtle">connecting</span>
+          <span className="font-mono text-sm text-fg-subtle">{redirecting ? 'redirecting' : 'connecting'}</span>
         </div>
       </div>
     )
   }
 
-  if (backendError || !user) {
+  if (backendError || (!user && !redirecting)) {
     return (
       <div className="grid h-screen place-items-center bg-bg px-6 text-fg">
         <div className="flex max-w-md flex-col items-center gap-5 text-center">

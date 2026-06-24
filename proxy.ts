@@ -17,9 +17,10 @@ async function hasValidSession(request: NextRequest) {
       },
       signal: AbortSignal.timeout(SESSION_CHECK_TIMEOUT_MS),
     })
-    return response.ok
+    if (response.status === 401 || response.status === 403) return false
+    return true
   } catch {
-    return false
+    return true
   }
 }
 

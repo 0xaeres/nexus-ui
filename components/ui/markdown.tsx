@@ -59,7 +59,7 @@ function parseBlocks(markdown: string): Block[] {
     if (
       line.includes('|') &&
       i + 1 < lines.length &&
-      /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])
+      /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(lines[i + 1])
     ) {
       const headers = splitTableRow(line)
       const rows: string[][] = []
@@ -316,8 +316,9 @@ export function MarkdownContent({
         }
         if (block.type === 'heading') {
           const baseId = slugifyHeading(block.content)
-          const count = headingCounts.get(baseId) ?? 0
-          headingCounts.set(baseId, count + 1)
+          const indexesHeading = block.depth === 2 || block.depth === 3
+          const count = indexesHeading ? headingCounts.get(baseId) ?? 0 : 0
+          if (indexesHeading) headingCounts.set(baseId, count + 1)
           const id = count ? `${baseId}-${count + 1}` : baseId
           return block.depth <= 2 ? (
             <H2 key={key} id={id} className={cn('scroll-mt-20 border-l-2 border-accent pl-3', compact && 'text-base')}>{parseInline(block.content, key)}</H2>

@@ -23,6 +23,10 @@ type SearchResult = SearchEntry & {
   textRanges: Array<[number, number]>
 }
 
+function searchResultKey(entry: Pick<SearchEntry, 'slug' | 'sectionId'>) {
+  return `${entry.slug}#${entry.sectionId}`
+}
+
 function searchEntries(groups: DocNavGroup[]) {
   return groups.flatMap((group) =>
     group.items.flatMap((item) => {
@@ -203,7 +207,7 @@ export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
     const combined = new Map<string, SearchResult>()
 
     for (const { entry } of exact) {
-      combined.set(entry.slug, {
+      combined.set(searchResultKey(entry), {
         ...entry,
         titleRanges: exactRange(entry.title, needle),
         sectionRanges: exactRange(entry.section, needle),
@@ -212,10 +216,10 @@ export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
     }
 
     for (const result of fuzzy) {
-      if (combined.has(result.item.slug)) continue
+      if (combined.has(searchResultKey(result.item))) continue
       const matchRanges = (key: string) =>
         (result.matches?.find((match) => match.key === key)?.indices ?? []) as Array<[number, number]>
-      combined.set(result.item.slug, {
+      combined.set(searchResultKey(result.item), {
         ...result.item,
         titleRanges: matchRanges('title'),
         sectionRanges: matchRanges('section'),
@@ -241,6 +245,10 @@ export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
         <input
           ref={searchRef}
           value={query}
+          role="combobox"
+          aria-expanded={query.length > 0 && results.length > 0}
+          aria-controls="docs-search-listbox"
+          aria-activedescendant={query && results.length ? `docs-search-opt-${activeResult}` : undefined}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown' && results.length) {
@@ -271,6 +279,7 @@ export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
 
         {query ? (
           <div
+            id="docs-search-listbox"
             className="absolute left-0 right-0 top-12 z-40 max-h-[min(32rem,70vh)] overflow-auto rounded-md border border-border-strong bg-surface-raised p-1 shadow-2xl lg:right-auto lg:w-[36rem]"
             role="listbox"
             aria-label="Documentation search results"
@@ -286,6 +295,7 @@ export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
               return (
                 <button
                   key={`${result.slug}-${result.sectionId}-${index}`}
+                  id={`docs-search-opt-${index}`}
                   type="button"
                   role="option"
                   aria-selected={index === activeResult}

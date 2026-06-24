@@ -2,6 +2,7 @@ import type { DocNavGroup, DocNavItem, DocPage, DocsResult } from './types'
 
 const TINA_API_VERSION = 'v1'
 const DEFAULT_REVALIDATE_SECONDS = 60
+const TINA_FETCH_TIMEOUT_MS = 5_000
 
 type TinaDocNode = {
   title?: string | null
@@ -129,6 +130,8 @@ export async function getDocs(): Promise<DocsResult> {
   }
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), TINA_FETCH_TIMEOUT_MS)
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -136,8 +139,9 @@ export async function getDocs(): Promise<DocsResult> {
         'X-API-KEY': token,
       },
       body: JSON.stringify({ query: DOCS_QUERY, variables: {} }),
+      signal: controller.signal,
       next: { revalidate: DEFAULT_REVALIDATE_SECONDS },
-    })
+    }).finally(() => clearTimeout(timeout))
 
     if (!response.ok) {
       return { ok: false, message: `Tina Cloud returned ${response.status}. Documentation is unavailable.` }

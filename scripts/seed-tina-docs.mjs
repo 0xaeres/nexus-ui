@@ -18,7 +18,7 @@ if (!files.length) {
 const slugs = new Set()
 for (const file of files) {
   const source = await readFile(path.join(docsRoot, file), 'utf8')
-  const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n/)
+  const frontmatter = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
   if (!frontmatter) throw new Error(`${file}: missing frontmatter`)
 
   for (const field of requiredFields) {
@@ -29,6 +29,7 @@ for (const file of files) {
 
   const slug = frontmatter[1].match(/^slug:\s*["']?([^"'\n]+)["']?$/m)?.[1]?.trim()
   if (!slug) throw new Error(`${file}: invalid slug`)
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error(`${file}: invalid slug ${slug}`)
   if (slugs.has(slug)) throw new Error(`${file}: duplicate slug ${slug}`)
   slugs.add(slug)
 

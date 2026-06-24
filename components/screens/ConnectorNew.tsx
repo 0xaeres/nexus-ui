@@ -22,7 +22,7 @@ const CONNECTOR_OPTIONS: Array<{
   name: string
   auth: 'oauth' | 'token' | 'command'
   desc: string
-  fields: Array<{ key: string; label?: string; placeholder: string; secret?: boolean; optional?: boolean; multivalue?: boolean }>
+  fields: Array<{ key: string; label?: string; placeholder: string; pattern?: string; secret?: boolean; optional?: boolean; multivalue?: boolean }>
 }> = [
   {
     id: 'github',
@@ -40,7 +40,7 @@ const CONNECTOR_OPTIONS: Array<{
     auth: 'command',
     desc: 'Local files available to the backend host',
     fields: [
-      { key: 'root', placeholder: '/absolute/path/to/repo-or-docs' },
+      { key: 'root', placeholder: '/absolute/path/to/repo-or-docs', pattern: '(?:/.*|[A-Za-z]:[\\\\/].*)' },
     ],
   },
   {
@@ -107,6 +107,15 @@ export function ConnectorNew({ productId }: { productId?: string }) {
     if (!selected || !name.trim()) return
     setSubmitting(true)
     setError(null)
+
+    for (const field of selected.fields) {
+      const raw = (config[field.key] ?? '').trim()
+      if (field.pattern && raw && !new RegExp(`^${field.pattern}$`).test(raw)) {
+        setError(`${field.label ?? field.key} must be an absolute path.`)
+        setSubmitting(false)
+        return
+      }
+    }
 
     // Parse only explicitly multivalue fields into arrays; JQL can contain commas.
     const parsedConfig: Record<string, unknown> = {}
@@ -222,6 +231,7 @@ export function ConnectorNew({ productId }: { productId?: string }) {
                             value={config[field.key] ?? ''}
                             onChange={e => setConfig(prev => ({ ...prev, [field.key]: e.target.value }))}
                             placeholder={field.placeholder}
+                            pattern={field.pattern}
                             autoComplete={field.secret ? 'new-password' : 'off'}
                             required={!field.optional}
                           />

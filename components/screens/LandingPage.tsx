@@ -42,9 +42,9 @@ export function LandingPage() {
         <div className="anvay-landing-hero-grid">
           <div>
             <div className="anvay-landing-eyebrow">Context your agents can trust</div>
-            <div className="anvay-landing-heading-1" role="heading" aria-level={1}>
+            <h1 className="anvay-landing-heading-1">
               Your product, understood.
-            </div>
+            </h1>
             <p className="anvay-landing-lead">
               Anvay turns product context into a living knowledge base for developers and AI agents.
             </p>
@@ -61,9 +61,9 @@ export function LandingPage() {
       <section id="why" className="anvay-landing-section anvay-landing-spotlight">
         <div className="anvay-landing-container">
           <div className="anvay-landing-section-head">
-            <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
+            <h2 className="anvay-landing-heading-2">
               Stop coding from stale context.
-            </div>
+            </h2>
             <p>
               Current sources. Grounded answers. Human control.
             </p>
@@ -86,9 +86,9 @@ export function LandingPage() {
         <div className="anvay-landing-container anvay-landing-workflow-section">
           <div>
             <div className="anvay-landing-eyebrow">From source to skill</div>
-            <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
+            <h2 className="anvay-landing-heading-2">
               Connect. Ask. Approve.
-            </div>
+            </h2>
             <p className="anvay-landing-lead">
               One product boundary. No context leaks.
             </p>
@@ -113,9 +113,9 @@ export function LandingPage() {
           <aside className="anvay-landing-trace" aria-label="Context workflow trace">
             <div className="anvay-landing-trace-head">
               <div className="anvay-landing-label">Context run</div>
-              <div className="anvay-landing-heading-3" role="heading" aria-level={3}>
+              <h3 className="anvay-landing-heading-3">
                 Evidence first. Answer second.
-              </div>
+              </h3>
             </div>
             <div className="anvay-landing-trace-list">
               <TraceRow time="00:11" agent="Plan" phase="Scope the product question" badge="plan" tone="green" />
@@ -130,9 +130,9 @@ export function LandingPage() {
       <section id="delivery" className="anvay-landing-section">
         <div className="anvay-landing-container">
           <div className="anvay-landing-section-head">
-            <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
+            <h2 className="anvay-landing-heading-2">
               Context, where work happens.
-            </div>
+            </h2>
             <p>
               Use Anvay on the web or serve product knowledge to any MCP client.
             </p>
@@ -140,9 +140,9 @@ export function LandingPage() {
           <div className="anvay-landing-delivery-grid">
             <div className="anvay-landing-deliver-card">
               <span className="anvay-landing-pill anvay-landing-pill-spaced">MCP & API Access</span>
-              <div className="anvay-landing-heading-3" role="heading" aria-level={3}>
+              <h3 className="anvay-landing-heading-3">
                 Product context, inside your IDE.
-              </div>
+              </h3>
               <p>Developers and agents retrieve source evidence and approved skills in their workflow.</p>
             </div>
             <pre className="anvay-landing-code" aria-label="Context tools example"><code><span className="anvay-landing-code-accent">context</span> payments
@@ -154,9 +154,9 @@ tools: evidence_search_corpus · ask_product_graph</code></pre>
           <div id="access" className="anvay-landing-cta-box">
             <div>
               <div className="anvay-landing-eyebrow">Start with one product</div>
-              <div className="anvay-landing-heading-2" role="heading" aria-level={2}>
+              <h2 className="anvay-landing-heading-2">
                 Give every agent the right context.
-              </div>
+              </h2>
               <p>Connect your sources. Build shared product knowledge.</p>
             </div>
             <div className="anvay-landing-hero-actions">
@@ -239,9 +239,9 @@ function InfoCard({ label, title, foot, children }: { label: string; title: stri
     <article className="anvay-landing-card">
       <div>
         <span className="anvay-landing-card-kicker">{label}</span>
-        <div className="anvay-landing-heading-3" role="heading" aria-level={3}>
+        <h3 className="anvay-landing-heading-3">
           {title}
-        </div>
+        </h3>
         <p>{children}</p>
       </div>
       <span className="anvay-landing-card-foot">{foot}</span>
