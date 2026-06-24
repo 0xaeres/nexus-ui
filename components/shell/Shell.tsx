@@ -125,6 +125,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [currentProductId, pathname])
 
+  // Clear redirecting once client-side nav to /setup completes — the boot
+  // effect only reruns on bootAttempt, so redirecting would otherwise stay
+  // true and permanently block children via the gate at line 213.
+  useEffect(() => {
+    if (pathname === '/setup') {
+      setRedirecting(false)
+    }
+  }, [pathname])
+
   const baseUser: User =
     user ?? {
       id: 'unknown',
