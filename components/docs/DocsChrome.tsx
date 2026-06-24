@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react'
 import { AnvayLogo } from '@/components/icons/AnvayLogo'
-import { DocsNav } from '@/components/docs/DocsNav'
+import { DocsNav, DocsSearch } from '@/components/docs/DocsNav'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MarkdownContent } from '@/components/ui/markdown'
@@ -31,17 +31,21 @@ export function DocsUnavailable({ message }: { message: string }) {
   )
 }
 
-function DocsTopBar() {
+function DocsTopBar({ groups }: { groups?: DocNavGroup[] }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-bg/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-14 w-full max-w-[1440px] flex-wrap items-center gap-3 px-4 py-2 sm:flex-nowrap sm:gap-4 sm:px-6 lg:px-8">
         <Link href="/landing" className="flex items-center gap-2 text-base font-semibold text-fg">
           <AnvayLogo markOnly size="sm" priority />
           <span>Anvay</span>
         </Link>
         <Badge variant="accent" className="font-mono">docs</Badge>
-        <div className="flex-1" />
-        <nav className="flex items-center gap-3 text-sm text-fg-muted" aria-label="Public">
+        {groups ? (
+          <div className="order-3 mx-auto w-full sm:order-none sm:max-w-xl sm:px-6">
+            <DocsSearch groups={groups} />
+          </div>
+        ) : <div className="flex-1" />}
+        <nav className="ml-auto flex shrink-0 items-center gap-3 text-sm text-fg-muted" aria-label="Public">
           <Link href="/landing" className="hover:text-fg">Overview</Link>
           <Link href="/login" className="hover:text-fg">Sign in</Link>
         </nav>
@@ -64,7 +68,7 @@ export function DocsChrome({
   const { previous, next } = adjacentPages(pages, page)
   return (
     <main className="min-h-screen bg-bg text-fg">
-      <DocsTopBar />
+      <DocsTopBar groups={groups} />
       <div className="mx-auto grid w-full max-w-[1520px] grid-cols-1 gap-0 lg:grid-cols-[300px_minmax(0,1fr)_240px]">
         <aside className="border-b border-border bg-surface-sunk/40 px-4 py-4 lg:sticky lg:top-14 lg:h-[calc(100vh-56px)] lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 lg:py-7">
           <DocsNav groups={groups} activeSlug={page.slug} />

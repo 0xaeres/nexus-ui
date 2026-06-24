@@ -135,13 +135,7 @@ function HighlightedText({
   return nodes
 }
 
-export function DocsNav({
-  groups,
-  activeSlug,
-}: {
-  groups: DocNavGroup[]
-  activeSlug: string
-}) {
+export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
   const [query, setQuery] = useState('')
   const [activeResult, setActiveResult] = useState(0)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -149,7 +143,9 @@ export function DocsNav({
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
-      const commandSearch = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k'
+      const commandSearch =
+        (event.metaKey || event.ctrlKey) &&
+        (event.code === 'KeyK' || event.key.toLowerCase() === 'k')
       if (commandSearch) {
         event.preventDefault()
         searchRef.current?.focus()
@@ -169,8 +165,8 @@ export function DocsNav({
         searchRef.current?.select()
       }
     }
-    window.addEventListener('keydown', focusSearch)
-    return () => window.removeEventListener('keydown', focusSearch)
+    document.addEventListener('keydown', focusSearch, true)
+    return () => document.removeEventListener('keydown', focusSearch, true)
   }, [])
 
   const entries = useMemo(() => searchEntries(groups), [groups])
@@ -239,8 +235,7 @@ export function DocsNav({
   }
 
   return (
-    <nav className="flex flex-col gap-5" aria-label="Documentation">
-      <div className="relative">
+    <div className="relative w-full">
         <label className="relative block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
         <input
@@ -264,6 +259,7 @@ export function DocsNav({
             }
           }}
           placeholder="Search docs"
+          aria-keyshortcuts="Meta+K Control+K /"
           className="h-10 w-full rounded-md border border-border-strong bg-surface pl-9 pr-20 text-base text-fg shadow-card outline-none placeholder:text-fg-subtle focus-visible:border-accent"
           type="search"
         />
@@ -325,9 +321,19 @@ export function DocsNav({
             )}
           </div>
         ) : null}
-      </div>
+    </div>
+  )
+}
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-5 lg:flex lg:flex-col">
+export function DocsNav({
+  groups,
+  activeSlug,
+}: {
+  groups: DocNavGroup[]
+  activeSlug: string
+}) {
+  return (
+    <nav className="grid grid-cols-2 gap-x-4 gap-y-5 lg:flex lg:flex-col" aria-label="Documentation">
         {groups.map((group) => (
           <div key={group.label} className="flex flex-col gap-2">
             <div className="px-2 font-mono text-xs font-medium uppercase text-accent">
@@ -348,18 +354,12 @@ export function DocsNav({
                     )}
                   >
                     <span className="block font-medium">{item.title}</span>
-                    {query ? (
-                      <span className="mt-0.5 block text-xs leading-relaxed text-fg-subtle">
-                        {item.description}
-                      </span>
-                    ) : null}
                   </Link>
                 )
               })}
             </div>
           </div>
         ))}
-      </div>
     </nav>
   )
 }
