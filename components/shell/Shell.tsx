@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -99,7 +99,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
         setUser(null)
         setProducts([])
         setMemberships({})
-        setBackendError(e instanceof Error ? e.message : 'Anvay backend is unavailable')
+        console.error('[Shell] bootstrap error', e)
+        setBackendError('Anvay backend is unavailable')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -144,6 +145,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const currentProduct = products.find(p => p.id === currentProductId)
   const currentProductRole = memberships[currentProductId] ?? null
   const perms = getPerms(baseUser.role, currentProductRole)
+  const contextValue = useMemo(
+    () => ({ currentProductId, currentProduct, products, currentUser: baseUser, perms, memberships, loading }),
+    // baseUser and perms are derived from user/memberships/currentProductId — use source state, not derived values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentProductId, currentProduct, products, user, memberships, loading],
+  )
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -260,15 +267,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={250}>
-      <ProductContext.Provider value={{
-        currentProductId,
-        currentProduct,
-        products,
-        currentUser: baseUser,
-        perms,
-        memberships,
-        loading,
-      }}>
+      <ProductContext.Provider value={contextValue}>
       <ToastProvider>
         <div className="flex flex-col h-screen overflow-hidden">
           <TopBar

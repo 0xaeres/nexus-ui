@@ -141,8 +141,12 @@ export function McpSetupCard({
   const checkPrompt = selectedClient ? buildCheckPrompt({ client: selectedClient, ...promptInput }) : ''
 
   const copy = async (label: string, text: string) => {
-    await navigator.clipboard.writeText(text)
-    toast({ title: `${label} copied`, variant: 'success' })
+    try {
+      await navigator.clipboard.writeText(text)
+      toast({ title: `${label} copied`, variant: 'success' })
+    } catch {
+      toast({ title: 'Copy failed', variant: 'danger' })
+    }
   }
 
   return (
@@ -232,8 +236,8 @@ function PromptStep({
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionLabel className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full border border-accent/40 bg-accent/10 font-mono text-xs text-accent">
-            {index}
+          <span className="flex h-6 w-6 items-center justify-center rounded-full border border-accent/40 bg-accent/10 text-accent">
+            <Small className="font-mono text-current">{index}</Small>
           </span>
           {icon}
           {title}

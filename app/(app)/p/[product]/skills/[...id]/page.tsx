@@ -1,10 +1,11 @@
-import { redirect } from 'next/navigation'
+import { SkillDetailPage } from '@/components/screens/SkillDetailPage'
 
 export default async function SkillDetailRoute({
   params,
 }: {
   params: Promise<{ product: string; id: string[] }>
 }) {
-  const { product } = await params
-  redirect(`/p/${product}/skills`)
+  const { id } = await params
+  const skillId = id.map(decodeURIComponent).join('/')
+  return <SkillDetailPage skillId={skillId} />
 }

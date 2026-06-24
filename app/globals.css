@@ -1,9 +1,5 @@
 @import 'tailwindcss';
 
-@source "/Users/aeres/Desktop/projects/anvay-ui/components/**/*.tsx";
-@source "/Users/aeres/Desktop/projects/anvay-ui/lib/**/*.ts";
-@source "/Users/aeres/Desktop/projects/anvay-ui/app/**/*.tsx";
-
 /* ─── Tailwind v4 theme bridge ─────────────────────────────────────────── */
 /* Exposes the Anvay design tokens as Tailwind utilities (bg-bg, text-fg, …) */
 @theme inline {

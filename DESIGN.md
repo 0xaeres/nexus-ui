@@ -80,7 +80,7 @@ multiple skills; pending proposals keep the product in Review until cleared.
   /review                        ReviewStage — approve / reject / revise proposals
   /skill                         Compatibility redirect to /skills
   /skills                        Unified approved product skill view
-  /skills/[id]                   Compatibility redirect to /skills
+  /skills/[...id]                Skill detail page (id segments decoded and joined)
   /setup-client                  MCP client setup
 ```
 
