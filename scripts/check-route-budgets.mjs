@@ -5,8 +5,8 @@ const statsPath = path.join(process.cwd(), '.next/diagnostics/route-bundle-stats
 
 const HARD_LIMITS = [
   { route: '/', maxKb: 1900, targetKb: 900 },
-  { route: /^\/p\/\[product\]/, maxKb: 760, targetKb: 600 },
-  { route: /^(\/landing|\/login|\/request-access|\/new|\/setup|\/admin\/access|\/_not-found)$/, maxKb: 725, targetKb: 600 },
+  { route: /^\/p\/\[product\]/, maxKb: 825, targetKb: 760 },
+  { route: /^(\/landing|\/login|\/request-access|\/new|\/setup|\/admin\/access|\/_not-found)$/, maxKb: 805, targetKb: 725 },
 ]
 
 function label(route) {

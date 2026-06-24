@@ -2,12 +2,13 @@
 
 import { useEffect, useId, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import mermaid from 'mermaid'
 import { cn } from '@/lib/utils'
 
 let mermaidInitialized = false
 
-function initializeMermaid() {
+type MermaidApi = typeof import('mermaid').default
+
+function initializeMermaid(mermaid: MermaidApi) {
   if (mermaidInitialized) return
   mermaid.initialize({
     startOnLoad: false,
@@ -79,7 +80,8 @@ export function MermaidDiagram({
 
     ;(async () => {
       try {
-        initializeMermaid()
+        const { default: mermaid } = await import('mermaid')
+        initializeMermaid(mermaid)
         const result = await mermaid.render(diagramId, responsiveChart)
         if (!active) return
         setSvg(result.svg)
