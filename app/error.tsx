@@ -8,7 +8,7 @@ import { H1, Muted } from '@/components/ui/typography'
 
 export default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error('[nexus] route error', error)
+    console.error('[anvay] route error', error)
   }, [error])
 
   return (

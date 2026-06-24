@@ -10,6 +10,7 @@ import {
   Users,
   ClipboardCheck,
   BookOpen,
+  Settings,
   Plus,
   type LucideIcon,
 } from 'lucide-react'
@@ -39,8 +40,9 @@ function buildCommands(base: string | null): Cmd[] {
       { id: 'nav-ingest',  group: 'Navigate', label: 'Ingest',   href: `${base}/ingest`,   icon: Database,        shortcut: 'g i', chord: 'i' },
       { id: 'nav-council', group: 'Navigate', label: 'Council',  href: `${base}/council`,  icon: Users,           shortcut: 'g c', chord: 'c' },
       { id: 'nav-review',  group: 'Navigate', label: 'Review',   href: `${base}/review`,   icon: ClipboardCheck,  shortcut: 'g r', chord: 'r' },
-      { id: 'nav-skill',   group: 'Navigate', label: 'Skill',    href: `${base}/skill`,    icon: BookOpen,        shortcut: 'g k', chord: 'k' },
+      { id: 'nav-skill',   group: 'Navigate', label: 'Skill',    href: `${base}/skills`,   icon: BookOpen,        shortcut: 'g k', chord: 'k' },
       { id: 'nav-sources', group: 'Navigate', label: 'Sources',  href: `${base}/sources`,  icon: Plug,            shortcut: 'g s', chord: 's' },
+      { id: 'nav-setup-client', group: 'Navigate', label: 'Setup client', href: `${base}/setup-client`, icon: Settings, shortcut: 'g m', chord: 'm' },
       { id: 'act-source',  group: 'Quick actions', label: 'Add source', href: `${base}/sources/new`, icon: Plus },
     )
   }

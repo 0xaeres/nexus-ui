@@ -1,0 +1,11 @@
+fragment DocParts on Doc {
+  __typename
+  title
+  description
+  slug
+  group
+  order
+  sourceLabel
+  editUrl
+  body
+}

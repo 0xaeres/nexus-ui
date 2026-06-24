@@ -1,15 +1,15 @@
 import { cn } from '@/lib/utils'
 
-export function H1({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h1 className={cn('text-2xl font-semibold tracking-tight text-fg leading-tight m-0', className)}>{children}</h1>
+export function H1({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return <h1 className={cn('text-2xl font-semibold tracking-tight text-fg leading-tight m-0', className)} {...props}>{children}</h1>
 }
 
-export function H2({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h2 className={cn('text-xl font-semibold tracking-tight text-fg m-0', className)}>{children}</h2>
+export function H2({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return <h2 className={cn('text-xl font-semibold tracking-tight text-fg m-0', className)} {...props}>{children}</h2>
 }
 
-export function H3({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={cn('text-base font-semibold text-fg m-0', className)}>{children}</h3>
+export function H3({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return <h3 className={cn('text-base font-semibold text-fg m-0', className)} {...props}>{children}</h3>
 }
 
 export function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {

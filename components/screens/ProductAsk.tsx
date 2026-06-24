@@ -209,7 +209,7 @@ export function ProductAsk({ productId }: { productId: string }) {
                       void submit()
                     }
                   }}
-                  placeholder="Ask Nexus about architecture, ownership, source paths, or proposal context..."
+                  placeholder="Ask Anvay about architecture, ownership, source paths, or proposal context..."
                   rows={3}
                   className="min-h-[92px] resize-none bg-surface font-sans"
                   disabled={loading}
@@ -285,12 +285,15 @@ function AnswerMeta({
     <div className="space-y-3 border-t border-border pt-3">
       <div className="flex flex-wrap gap-2">
         <Badge variant={answer.graph_used ? 'success' : 'outline'}>
-          {answer.graph_used ? 'graph' : 'retrieval'}
+          {answer.graph_used ? 'Graph entities used' : 'Retrieval only'}
         </Badge>
+        {answer.graph_relationships_used && (
+          <Badge variant="success">Graph relationships used</Badge>
+        )}
         <Badge variant="outline" className="font-mono">
-          {Math.round(answer.confidence * 100)}%
+          Answer confidence {Math.round(answer.confidence * 100)}%
         </Badge>
-        {answer.reranked && <Badge variant="outline">reranked</Badge>}
+        {answer.reranked && <Badge variant="outline">Evidence reranked</Badge>}
       </div>
       {answer.needs_clarification && answer.clarification_options.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -339,7 +342,7 @@ function ContextRail({ latest }: { latest: GraphRAGAnswer | null }) {
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
           <Muted>
-            Once Nexus answers, this rail shows the resolved entities, graph paths, and unknowns behind the response.
+            Once Anvay answers, this rail shows the resolved entities, graph paths, and unknowns behind the response.
           </Muted>
           <div className="grid gap-2">
             {['Resolved entities', 'Graph paths', 'Unknowns'].map((label) => (
@@ -383,13 +386,18 @@ function ContextRail({ latest }: { latest: GraphRAGAnswer | null }) {
         <CardContent className="space-y-3 pt-0">
           <div className="space-y-2">
             {latest.graph_paths.length === 0 ? (
-              <Small className="block text-fg-subtle">No paths returned.</Small>
+              <Small className="block text-fg-subtle">No graph relationships returned.</Small>
             ) : latest.graph_paths.slice(0, 6).map((path) => (
               <div key={`${path.seed_id}-${path.edge_ids.join('-')}`} className="rounded-md border border-border bg-bg px-3 py-2">
-                <Small className="block text-fg">{path.summary}</Small>
+                <Small className="block text-fg">{path.seed_name || path.seed_id}</Small>
                 <Small className="block font-mono text-fg-subtle">
-                  {path.edge_ids.length} edges · {Math.round(path.confidence * 100)}%
+                  {path.node_count} nodes · {path.edge_count} relationships · {path.relationship_types.join(', ') || 'related'} · {Math.round(path.confidence * 100)}%
                 </Small>
+                {path.source_anchors.length > 0 && (
+                  <Small className="block truncate font-mono text-fg-subtle">
+                    {path.source_anchors.slice(0, 3).join(' · ')}
+                  </Small>
+                )}
               </div>
             ))}
           </div>

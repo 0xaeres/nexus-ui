@@ -21,7 +21,7 @@ export function StatusDot({ status, size = 7, className }: { status: Status | st
   const pulse = PULSE_STATES.has(status)
   return (
     <span
-      className={cn('inline-block rounded-full', color, pulse && 'animate-[nexus-pulse_2.4s_ease-in-out_infinite]', className)}
+      className={cn('inline-block rounded-full', color, pulse && 'animate-[anvay-pulse_2.4s_ease-in-out_infinite]', className)}
       style={{ width: size, height: size }}
     />
   )

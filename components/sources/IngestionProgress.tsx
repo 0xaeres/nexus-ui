@@ -24,16 +24,24 @@ interface Props {
   productId: string
   source: Source
   forceRunning?: boolean
+  idleUntilStarted?: boolean
   onStatusChange?: (status: IngestStatus) => void
 }
 
-export function IngestionProgress({ productId, source, forceRunning = false, onStatusChange }: Props) {
+export function IngestionProgress({
+  productId,
+  source,
+  forceRunning = false,
+  idleUntilStarted = false,
+  onStatusChange,
+}: Props) {
   const initial: IngestStatus = useMemo(() => {
-    if (forceRunning) return 'running'
-    if (source.lastSync && source.resourceCount > 0) return 'done'
+    if (forceRunning || source.status === 'syncing') return 'running'
     if (source.status === 'error') return 'error'
+    if (source.lastSync && source.resourceCount > 0) return 'done'
+    if (idleUntilStarted) return 'idle'
     return 'running'
-  }, [forceRunning, source.lastSync, source.resourceCount, source.status])
+  }, [forceRunning, idleUntilStarted, source.lastSync, source.resourceCount, source.status])
 
   const [status, setStatus] = useState<IngestStatus>(initial)
   const [lines, setLines] = useState<LogLine[]>([])
@@ -50,7 +58,7 @@ export function IngestionProgress({ productId, source, forceRunning = false, onS
   }, [status, onStatusChange])
 
   useEffect(() => {
-    if (status === 'done' || status === 'error') return
+    if (status === 'done' || status === 'error' || status === 'idle') return
     const es = new EventSource(sourceLogUrl(productId, source.id), { withCredentials: true })
     let done = false
 

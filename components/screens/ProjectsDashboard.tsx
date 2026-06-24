@@ -1,19 +1,11 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AgGridReact } from 'ag-grid-react'
-import {
-  AllCommunityModule,
-  ModuleRegistry,
-  themeQuartz,
-  type ColDef,
-  type ICellRendererParams,
-} from 'ag-grid-community'
 import {
   ArrowRight,
   AlertTriangle,
-  BookOpen,
   CheckCircle2,
   Database,
   Inbox,
@@ -24,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { NexusLogo } from '@/components/icons/NexusLogo'
+import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Dialog,
@@ -51,8 +43,6 @@ import {
 import { useProduct } from '@/lib/product-context'
 import type { Product, ProductStage, ProductStatus, SkillProposal } from '@/lib/types'
 import { cn } from '@/lib/utils'
-
-ModuleRegistry.registerModules([AllCommunityModule])
 
 type CardState = ProductStatus | { error: string } | null
 
@@ -86,41 +76,13 @@ interface PendingActionRow {
 
 const STAGES: ProductStage[] = ['ingesting', 'council', 'review', 'skill']
 
-const gridTheme = themeQuartz.withParams({
-  accentColor: 'var(--color-accent)',
-  backgroundColor: 'var(--color-surface)',
-  borderColor: 'var(--color-border)',
-  borderRadius: 8,
-  browserColorScheme: 'dark',
-  cellFontFamily: 'var(--font-sans)',
-  cellFontSize: 14,
-  cellTextColor: 'var(--color-fg)',
-  chromeBackgroundColor: 'var(--color-surface-sunk)',
-  dataBackgroundColor: 'var(--color-surface)',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 14,
-  foregroundColor: 'var(--color-fg)',
-  headerBackgroundColor: 'var(--color-surface-sunk)',
-  headerFontFamily: 'var(--font-mono)',
-  headerFontSize: 12,
-  headerFontWeight: 600,
-  headerTextColor: 'var(--color-fg-subtle)',
-  oddRowBackgroundColor: 'var(--color-surface)',
-  rowBorder: { color: 'var(--color-border)' },
-  rowHoverColor: 'var(--color-bg-hover)',
-  selectedRowBackgroundColor: 'var(--color-bg-selected)',
-  wrapperBackgroundColor: 'var(--color-surface)',
-  wrapperBorder: { color: 'var(--color-border)' },
-  wrapperBorderRadius: 8,
-})
-
 function stageVisual(status: ProductStatus): StageVisual {
   if (status.currentStage === 'skill') {
     return {
       label: 'Skill ready',
       badge: 'success',
       icon: CheckCircle2,
-      cta: 'View skill',
+      cta: 'View skills',
       href: (id) => `/p/${id}/skills`,
       primary: false,
       pending: 'No pending action',
@@ -361,38 +323,6 @@ export function ProjectsDashboard() {
     })
   }, [products, proposalByProduct, statuses])
 
-  const columnDefs = useMemo<ColDef<PendingActionRow>[]>(() => [
-    {
-      field: 'product',
-      headerName: 'Product',
-      flex: 1.2,
-      minWidth: 180,
-      cellRenderer: ProductCell,
-    },
-    { field: 'owner', headerName: 'Owner', flex: 0.8, minWidth: 140 },
-    {
-      field: 'status',
-      headerName: 'Status',
-      flex: 1,
-      minWidth: 150,
-      cellRenderer: StatusCell,
-    },
-    { field: 'pending', headerName: 'Pending item', flex: 1.4, minWidth: 220 },
-    {
-      field: 'confidence',
-      headerName: 'Confidence',
-      width: 130,
-      valueFormatter: ({ value }) => typeof value === 'number' ? `${Math.round(value * 100)}%` : '—',
-    },
-    {
-      headerName: 'Action',
-      width: 150,
-      sortable: false,
-      filter: false,
-      cellRenderer: ActionCell,
-    },
-  ], [])
-
   return (
     <>
       <PageHeader>
@@ -470,23 +400,7 @@ export function ProjectsDashboard() {
                         <Small className="font-mono text-fg-subtle">No pending product actions</Small>
                       </div>
                     ) : (
-                      <div className="h-[320px]">
-                        <AgGridReact<PendingActionRow>
-                          theme={gridTheme}
-                          rowData={pendingRows}
-                          columnDefs={columnDefs}
-                          defaultColDef={{
-                            filter: false,
-                            resizable: true,
-                            sortable: true,
-                          }}
-                          domLayout="normal"
-                          getRowId={({ data }) => data.id}
-                          headerHeight={40}
-                          rowHeight={48}
-                          suppressCellFocus
-                        />
-                      </div>
+                      <PendingActionsTable rows={pendingRows} />
                     )}
                   </CardContent>
                 </Card>
@@ -579,12 +493,12 @@ function EmptyState() {
   return (
     <Card variant="surface" className="p-10 flex flex-col items-center text-center gap-4 max-w-2xl mx-auto">
       <div className="h-16 w-16 rounded-md bg-surface-raised border border-border-strong flex items-center justify-center shadow-card">
-        <NexusLogo markOnly size="md" />
+        <AnvayLogo markOnly size="md" />
       </div>
       <div className="flex flex-col gap-1">
         <H3>No products yet</H3>
         <Muted>
-          Connect a repository, let Nexus ingest it, and the LLM Council will draft your first
+          Connect a repository, let Anvay ingest it, and the LLM Council will draft your first
           curated skill. You take it from there.
         </Muted>
       </div>
@@ -656,10 +570,7 @@ function ProductCard({
           )}
           <div className="flex-1" />
           <Button asChild variant="secondary" size="sm">
-            <Link href={`/p/${product.id}/skills`}>
-              <BookOpen className="h-3.5 w-3.5" />
-              View skill
-            </Link>
+            <Link href={`/p/${product.id}`}>Open product</Link>
           </Button>
         </div>
       </Card>
@@ -732,12 +643,6 @@ function ProductCard({
           Sync
         </Button>
         <div className="flex-1" />
-        <Button asChild variant="secondary" size="sm">
-          <Link href={`/p/${product.id}/skills`}>
-            <BookOpen className="h-3.5 w-3.5" />
-            View skill
-          </Link>
-        </Button>
         <Button asChild variant={v.primary ? 'default' : 'secondary'} size="sm">
           <Link href={v.href(product.id)}>
             {v.cta}
@@ -808,28 +713,71 @@ function StageProgress({ stage }: { stage: ProductStage }) {
   )
 }
 
-function ProductCell(params: ICellRendererParams<PendingActionRow>) {
-  if (!params.data) return null
+function PendingActionsTable({ rows }: { rows: PendingActionRow[] }) {
   return (
-    <Link href={`/p/${params.data.productId}`} className="font-medium text-fg no-underline hover:text-accent">
-      {params.data.product}
-    </Link>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] border-collapse">
+        <thead className="border-b border-border bg-surface-sunk">
+          <tr>
+            <PendingHeader>Product</PendingHeader>
+            <PendingHeader>Owner</PendingHeader>
+            <PendingHeader>Status</PendingHeader>
+            <PendingHeader>Pending item</PendingHeader>
+            <PendingHeader>Confidence</PendingHeader>
+            <PendingHeader className="text-right">Action</PendingHeader>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id} className="border-b border-border last:border-b-0 hover:bg-bg-hover">
+              <td className="px-4 py-3">
+                <Link
+                  href={`/p/${row.productId}`}
+                  className="font-medium text-fg no-underline hover:text-accent"
+                >
+                  {row.product}
+                </Link>
+              </td>
+              <td className="px-4 py-3">
+                <Small className="font-mono text-fg-muted">{row.owner}</Small>
+              </td>
+              <td className="px-4 py-3">
+                <Badge variant={row.badge}>{row.status}</Badge>
+              </td>
+              <td className="px-4 py-3">
+                <Small className="text-fg-muted">{row.pending}</Small>
+              </td>
+              <td className="px-4 py-3">
+                <Small className="font-mono text-fg-muted">
+                  {typeof row.confidence === 'number' ? `${Math.round(row.confidence * 100)}%` : '-'}
+                </Small>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <Button asChild size="sm" variant={row.primary ? 'default' : 'secondary'} className="h-7">
+                  <Link href={row.href}>
+                    {row.action}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
-function StatusCell(params: ICellRendererParams<PendingActionRow>) {
-  if (!params.data) return null
-  return <Badge variant={params.data.badge}>{params.data.status}</Badge>
-}
-
-function ActionCell(params: ICellRendererParams<PendingActionRow>) {
-  if (!params.data) return null
+function PendingHeader({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <Button asChild size="sm" variant={params.data.primary ? 'default' : 'secondary'} className="h-7">
-      <Link href={params.data.href}>
-        {params.data.action}
-        <ArrowRight className="h-3.5 w-3.5" />
-      </Link>
-    </Button>
+    <th className={cn('px-4 py-3 text-left font-mono text-xs font-semibold uppercase text-fg-subtle', className)}>
+      {children}
+    </th>
   )
 }

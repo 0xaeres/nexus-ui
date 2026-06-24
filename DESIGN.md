@@ -1,4 +1,4 @@
-# Nexus UI — Design Context
+# Anvay UI — Design Context
 
 > **Stop. Read this before writing any UI code.**
 >
@@ -7,14 +7,14 @@
 > a glow card to a regular section, or a screen outside the locked IA,
 > push back.
 
-## 1. What Nexus is (one paragraph)
+## 1. What Anvay is (one paragraph)
 
-Nexus indexes a product's code + docs, runs a bounded expert LLM council
+Anvay indexes a product's code + docs, runs a bounded expert LLM council
 to draft a curated product skill pack, and serves approved skills via MCP
 to any AI coding client (Claude, Cursor, Continue, …). The UI is where
 humans drive sources, watch council runs, and approve / edit / reject
 proposals one at a time. See
-[`../nexus/README.md`](../nexus/README.md) for the backend overview.
+[`../anvay/README.md`](../anvay/README.md) for the backend overview.
 
 ## 2. What this repo is
 
@@ -72,15 +72,16 @@ multiple skills; pending proposals keep the product in Review until cleared.
   /dashboard                     Pipeline cards + pending proposals + recent activity
   /ask                           Source-grounded product Q&A
   /sources                       Source list
-  /sources/new                   Add a source (GitHub or Local filesystem)
+  /sources/new                   Add a source (GitHub, filesystem, Jira, or Confluence)
   /sources/[name]                Source detail + live SSE sync log
   /ingest                        Stage gate at the ingest phase
   /council                       Session list + start dialog
   /council/[id]                  Live deliberation + draft pack preview
   /review                        ReviewStage — approve / reject / revise proposals
-  /skill                         Terminal skill-pack overview
-  /skills                        Tier-grouped skill list + detail pane
-  /skills/[id]                   Full skill detail
+  /skill                         Compatibility redirect to /skills
+  /skills                        Unified approved product skill view
+  /skills/[...id]                Skill detail page (id segments decoded and joined)
+  /setup-client                  MCP client setup
 ```
 
 That's the full surface. `/p/[product]/ask` is source-grounded product Q&A,
@@ -88,7 +89,7 @@ not the deleted Assistant chat surface. **Don't add `/p/[product]/assistant`,
 `/p/[product]/activity`, `/p/[product]/proposals`,
 `/p/[product]/settings`, or `/settings/org` back.** Those layers were
 removed when the backend was slimmed — see
-[`../nexus/ENGINEERING.md §13`](../nexus/ENGINEERING.md).
+[`../anvay/ENGINEERING.md §13`](../anvay/ENGINEERING.md).
 
 ## 5. Council (UI shape)
 
@@ -196,15 +197,15 @@ grep -rn 'text-\[1[01]px\]\|<h1\|<h2\|<h3' components/screens components/shell a
 
 ### 6.7 Connector scope
 
-The shipped connectors are **GitHub** and **Local filesystem**. The
-ConnectorNew picker has exactly two options. Do not re-add Jira,
-Confluence, Slack, Linear, etc. without a product decision and a
-matching backend connector.
+The UI follows the backend connector truth. The currently wired source sync
+types are **GitHub**, **filesystem / local filesystem**, **Jira**, and
+**Confluence**. Do not document or expose connector types beyond the backend
+sync pipeline.
 
 Product onboarding (`/new`) is intentionally narrower than Sources: it creates
 the product plus a required GitHub source using a product service-account PAT
-and one or more GitHub repo URLs. Confluence/Jira are configured later from
-Sources once their sync paths exist; they are not onboarding fields in v1.
+and one or more GitHub repo URLs. Jira, Confluence, and filesystem sources are
+configured later from Sources; they are not onboarding fields in v1.
 
 ### 6.8 Ingestion progress UX
 
@@ -256,6 +257,7 @@ palette or help dialog owns the keyboard.
 | `g r` | Review |
 | `g k` | Skill |
 | `g s` | Sources |
+| `g m` | Setup client |
 
 `g`-prefix is Vim-style with an 800ms window. All product-scoped
 shortcuts resolve against the current product (`/p/${currentProductId}/…`).

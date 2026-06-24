@@ -1,0 +1,30 @@
+{
+  "entry": ["lighthouserc.js"],
+  "ignorePatterns": [
+    "components/screens/SkillDetailPage.tsx",
+    "components/screens/SkillStage.tsx",
+    "tina/config.ts",
+    "tina/__generated__/**"
+  ],
+  "ignoreDependencies": ["tinacms"],
+  "ignoreExports": [
+    {
+      "file": "lib/api/index.ts",
+      "exports": [
+        "getSkill",
+        "listSkillCorrections",
+        "listSkillRejections",
+        "listSkillCouncilHistory",
+        "getSkillQuality"
+      ]
+    },
+    {
+      "file": "components/screens/skill-facts.tsx",
+      "exports": ["confColor", "SkillPackMetadataCard"]
+    },
+    {
+      "file": "lib/types.ts",
+      "exports": ["EVIDENCE_CHUNKS_PER_SESSION_CAP"]
+    }
+  ]
+}

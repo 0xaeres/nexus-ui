@@ -1,15 +1,22 @@
 {
-  "name": "nexus-ui",
+  "name": "anvay-ui",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "cms:build": "tinacms build --noTelemetry",
+    "cms:dev": "tinacms dev --noTelemetry -c \"next dev\"",
+    "docs:seed-tina": "node scripts/seed-tina-docs.mjs",
     "fallow": "fallow dead-code --fail-on-issues",
+    "perf:budget": "node scripts/check-route-budgets.mjs",
+    "perf:bundle": "next experimental-analyze --output",
+    "perf:lhci": "lhci autorun --config=./lighthouserc.js",
+    "perf:lighthouse": "lhci collect --config=./lighthouserc.js && lhci assert --config=./lighthouserc.js",
     "start": "next start"
   },
   "dependencies": {
-    "@icons-pack/react-simple-icons": "^13.13.0",
+    "@icons-pack/react-simple-icons": "^13.11.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-progress": "^1.1.8",
@@ -17,23 +24,26 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "ag-grid-community": "^35.3.0",
-    "ag-grid-react": "^35.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fuse.js": "^7.4.2",
     "lucide-react": "^1.16.0",
+    "mermaid": "^11.15.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@tailwindcss/postcss": "^4.3.0",
+    "@tinacms/cli": "^2.5.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "fallow": "^2.89.0",
     "tailwindcss": "^4.3.0",
+    "tinacms": "^3.9.3",
     "typescript": "^5"
   }
 }

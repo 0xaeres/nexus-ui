@@ -60,8 +60,8 @@ const FLOW: Array<{
     title: 'Skill',
     caption: 'Approved product skill is ready to view and serve through MCP.',
     icon: BookOpen,
-    href: (base) => `${base}/skill`,
-    cta: 'View skill',
+    href: (base) => `${base}/skills`,
+    cta: 'View skills',
   },
 ]
 
@@ -224,8 +224,8 @@ export function Dashboard() {
                   </Button>
                 ) : (
                   <Button asChild variant="secondary">
-                    <Link href={`${base}/skill`}>
-                      View skill
+                    <Link href={`${base}/skills`}>
+                      View skills
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>

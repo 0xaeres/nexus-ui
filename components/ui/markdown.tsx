@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { MermaidDiagram } from '@/components/docs/MermaidDiagram'
 import { Body, Code, H2, H3 } from '@/components/ui/typography'
+import { slugifyHeading } from '@/lib/docs/markdown'
 import { cn } from '@/lib/utils'
 
 type Block =
@@ -8,7 +10,18 @@ type Block =
   | { type: 'heading'; depth: number; content: string }
   | { type: 'list'; ordered: boolean; items: string[] }
   | { type: 'quote'; content: string }
+  | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'rule' }
   | { type: 'paragraph'; content: string }
+
+function splitTableRow(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim())
+}
 
 function parseBlocks(markdown: string): Block[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n')
@@ -19,6 +32,12 @@ function parseBlocks(markdown: string): Block[] {
     const line = lines[i]
 
     if (!line.trim()) {
+      i += 1
+      continue
+    }
+
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      blocks.push({ type: 'rule' })
       i += 1
       continue
     }
@@ -34,6 +53,22 @@ function parseBlocks(markdown: string): Block[] {
       }
       if (i < lines.length) i += 1
       blocks.push({ type: 'code', lang, content: code.join('\n') })
+      continue
+    }
+
+    if (
+      line.includes('|') &&
+      i + 1 < lines.length &&
+      /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(lines[i + 1])
+    ) {
+      const headers = splitTableRow(line)
+      const rows: string[][] = []
+      i += 2
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
+        rows.push(splitTableRow(lines[i]))
+        i += 1
+      }
+      blocks.push({ type: 'table', headers, rows })
       continue
     }
 
@@ -267,20 +302,63 @@ export function MarkdownContent({
   compact?: boolean
 }) {
   const blocks = parseBlocks(children)
+  const headingCounts = new Map<string, number>()
 
   return (
     <div className={cn('flex flex-col gap-3 text-fg', compact && 'gap-2', className)}>
       {blocks.map((block, index) => {
         const key = `md-${index}`
         if (block.type === 'code') {
+          if (block.lang.toLowerCase() === 'mermaid') {
+            return <MermaidDiagram key={key} chart={block.content} />
+          }
           return <CodeBlock key={key} content={block.content} lang={block.lang} compact={compact} />
         }
         if (block.type === 'heading') {
+          const baseId = slugifyHeading(block.content)
+          const indexesHeading = block.depth === 2 || block.depth === 3
+          const count = indexesHeading ? headingCounts.get(baseId) ?? 0 : 0
+          if (indexesHeading) headingCounts.set(baseId, count + 1)
+          const id = count ? `${baseId}-${count + 1}` : baseId
           return block.depth <= 2 ? (
-            <H2 key={key} className={compact ? 'text-base' : undefined}>{parseInline(block.content, key)}</H2>
+            <H2 key={key} id={id} className={cn('scroll-mt-20 border-l-2 border-accent pl-3', compact && 'text-base')}>{parseInline(block.content, key)}</H2>
           ) : (
-            <H3 key={key}>{parseInline(block.content, key)}</H3>
+            <H3 key={key} id={id} className="scroll-mt-20">{parseInline(block.content, key)}</H3>
           )
+        }
+        if (block.type === 'table') {
+          return (
+            <div key={key} className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full border-collapse text-left text-base">
+                <thead className="bg-accent-soft">
+                  <tr>
+                    {block.headers.map((header, headerIndex) => (
+                      <th
+                        key={`${key}-head-${headerIndex}`}
+                        className="border-b border-border px-4 py-3 font-medium text-fg"
+                      >
+                        {parseInline(header, `${key}-head-${headerIndex}`)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr key={`${key}-row-${rowIndex}`} className="border-b border-border last:border-b-0">
+                      {block.headers.map((_, cellIndex) => (
+                        <td key={`${key}-cell-${rowIndex}-${cellIndex}`} className="px-4 py-3 text-fg-muted">
+                          {parseInline(row[cellIndex] ?? '', `${key}-cell-${rowIndex}-${cellIndex}`)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+        if (block.type === 'rule') {
+          return <div key={key} className="h-px bg-border" />
         }
         if (block.type === 'list') {
           const List = block.ordered ? 'ol' : 'ul'
@@ -288,7 +366,7 @@ export function MarkdownContent({
             <List
               key={key}
               className={cn(
-                'm-0 flex flex-col gap-1 pl-5 text-sm leading-relaxed text-fg-muted',
+                'm-0 flex flex-col gap-2 pl-6 text-base leading-relaxed text-fg-muted',
                 block.ordered ? 'list-decimal' : 'list-disc',
               )}
             >
@@ -300,13 +378,13 @@ export function MarkdownContent({
         }
         if (block.type === 'quote') {
           return (
-            <blockquote key={key} className="m-0 border-l-2 border-accent/60 pl-3 text-sm leading-relaxed text-fg-muted">
+            <blockquote key={key} className="m-0 rounded-r-md border-l-2 border-accent bg-accent-soft px-4 py-3 text-base leading-relaxed text-fg-muted">
               {parseInline(block.content, key)}
             </blockquote>
           )
         }
         return (
-          <Body key={key} className={cn('text-sm text-fg-muted', compact && 'text-xs')}>
+          <Body key={key} className={cn('text-base leading-loose text-fg-muted', compact && 'text-sm')}>
             {parseInline(block.content, key)}
           </Body>
         )

@@ -8,13 +8,13 @@ const cardVariants = cva('rounded-lg text-fg overflow-hidden ring-1 ring-inset r
       // Default flat surface — used for tables, panels, content groupings
       surface: 'bg-surface/95 border border-border shadow-card',
       // Subtle inner-glow stat card — ONLY for metrics
-      stat: 'bg-surface/95 border border-border relative before:absolute before:inset-0 before:pointer-events-none before:bg-[radial-gradient(circle_at_top_left,var(--tw-card-glow,var(--color-accent-soft)),transparent_58%)] shadow-card',
+      stat: 'bg-surface/95 border border-border relative before:absolute before:inset-0 before:pointer-events-none before:bg-[radial-gradient(circle_at_top_left,var(--tw-card-glow,var(--color-accent-soft)),transparent_46%)] shadow-card',
       // Slightly raised, solid bg — used for connector cards & clickable action tiles
       action: 'bg-surface-raised border border-border-strong shadow-card hover:border-accent/45 hover:bg-bg-active hover:shadow-card-raised transition-all duration-200',
       // Glassmorphism — frosted translucent with subtle glow
-      glass: 'bg-surface-glass backdrop-blur-xl border border-border-strong shadow-card-raised relative before:absolute before:inset-0 before:pointer-events-none before:bg-[radial-gradient(circle_at_top_left,var(--tw-card-glow,var(--color-accent-soft)),transparent_55%)]',
+      glass: 'bg-surface-glass backdrop-blur-xl border border-border-strong shadow-card-raised relative before:absolute before:inset-0 before:pointer-events-none before:bg-[radial-gradient(circle_at_top_left,var(--tw-card-glow,var(--color-accent-soft)),transparent_42%)]',
       // Hover lift glass — premium interactive cards
-      glassAction: 'bg-surface-glass backdrop-blur-xl border border-border-strong shadow-card hover:shadow-card-raised hover:-translate-y-0.5 hover:bg-surface-glass-raised transition-all duration-200 relative before:absolute before:inset-0 before:pointer-events-none before:bg-[radial-gradient(circle_at_top_left,var(--tw-card-glow,var(--color-accent-soft)),transparent_55%)]',
+      glassAction: 'bg-surface-glass backdrop-blur-xl border border-border-strong shadow-card hover:shadow-card-raised hover:-translate-y-0.5 hover:bg-surface-glass-raised transition-all duration-200 relative before:absolute before:inset-0 before:pointer-events-none before:bg-[radial-gradient(circle_at_top_left,var(--tw-card-glow,var(--color-accent-soft)),transparent_42%)]',
       // No bg/border — pure grouping
       ghost: 'ring-0',
     },

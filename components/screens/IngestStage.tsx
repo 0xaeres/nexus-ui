@@ -37,8 +37,8 @@ export function IngestStage({ productId }: { productId: string }) {
         setProduct(p)
         setStatus(s)
         setSources(srcs)
-        if (s.currentStage === 'skill') router.replace(`/p/${productId}/skill`)
-        else if (s.currentStage === 'review') router.replace(`/p/${productId}/review`)
+        if (!stayOnProgress && s.currentStage === 'skill') router.replace(`/p/${productId}/skills`)
+        else if (!stayOnProgress && s.currentStage === 'review') router.replace(`/p/${productId}/review`)
         else if (!stayOnProgress && (s.currentStage === 'council' || s.hasEmbeddings)) {
           router.replace(`/p/${productId}/council`)
         }

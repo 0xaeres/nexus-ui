@@ -19,7 +19,7 @@ type Mode = 'pick' | 'create' | 'existing' | 'done'
 /**
  * First-run wizard: configures the org-wide skills_repo.
  * Two paths — create a new GitHub repo for the org, or attach to an existing one.
- * On success Nexus verifies it can clone the repo, stores the URL, and routes
+ * On success Anvay verifies it can clone the repo, stores the URL, and routes
  * to the product dashboard. Skill files are written later after approval.
  */
 export function Setup() {
@@ -31,7 +31,7 @@ export function Setup() {
 
   // create-mode fields
   const [org, setOrg] = useState('')
-  const [repoName, setRepoName] = useState('nexus-skills')
+  const [repoName, setRepoName] = useState('anvay-skills')
 
   // existing-mode fields
   const [existingUrl, setExistingUrl] = useState('')
@@ -42,7 +42,7 @@ export function Setup() {
     try {
       const r = await setupSkillsRepoCreate({
         github_org: org.trim() || undefined,
-        repo_name: repoName.trim() || 'nexus-skills',
+        repo_name: repoName.trim() || 'anvay-skills',
       })
       setResult(r)
       setMode('done')
@@ -78,7 +78,7 @@ export function Setup() {
           <div className="col-span-12 md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
             <Muted>
               One Git repo per org holds approved product skills under their own
-              directory. Nexus starts empty and writes skills only after review.
+              directory. Anvay starts empty and writes skills only after review.
             </Muted>
           </div>
 
@@ -101,8 +101,8 @@ export function Setup() {
                     <div className="space-y-1.5">
                       <H3>Create a new repo</H3>
                       <Muted className="block">
-                        Nexus creates the org-wide skills repo and verifies clone access.
-                        Requires <code>NEXUS_SKILLS_REPO_TOKEN</code> in env.
+                        Anvay creates the org-wide skills repo and verifies clone access.
+                        Requires <code>ANVAY_SKILLS_REPO_TOKEN</code> in env.
                       </Muted>
                     </div>
                   </CardContent>
@@ -119,7 +119,7 @@ export function Setup() {
                     <div className="space-y-1.5">
                       <H3>Use an existing repo</H3>
                       <Muted className="block">
-                        Point Nexus at a repo you already have. Nexus verifies clone access
+                        Point Anvay at a repo you already have. Anvay verifies clone access
                         and leaves existing contents untouched.
                       </Muted>
                     </div>
@@ -179,7 +179,7 @@ function CreateForm(props: {
     <Card variant="surface">
       <CardHeader>
         <H3>Create a skills repository</H3>
-        <Muted>Nexus will create a private GitHub repo and verify clone access.</Muted>
+        <Muted>Anvay will create a private GitHub repo and verify clone access.</Muted>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <Field label="GitHub org (optional)">
@@ -198,7 +198,7 @@ function CreateForm(props: {
           <Input
             value={props.repoName}
             onChange={(e) => props.setRepoName(e.target.value)}
-            placeholder="nexus-skills"
+            placeholder="anvay-skills"
             disabled={props.busy}
           />
         </Field>
@@ -234,18 +234,18 @@ function ExistingForm(props: {
     <Card variant="surface">
       <CardHeader>
         <H3>Attach an existing repository</H3>
-        <Muted>Nexus verifies clone access and leaves existing files untouched.</Muted>
+        <Muted>Anvay verifies clone access and leaves existing files untouched.</Muted>
       </CardHeader>
       <CardContent>
         <Field label="Repo URL">
           <Input
             value={props.url}
             onChange={(e) => props.setUrl(e.target.value)}
-            placeholder="https://github.com/myorg/nexus-skills.git"
+            placeholder="https://github.com/myorg/anvay-skills.git"
             disabled={props.busy}
           />
           <Small className="block text-fg-subtle">
-            HTTPS recommended — Nexus uses <code>NEXUS_SKILLS_REPO_TOKEN</code> for
+            HTTPS recommended — Anvay uses <code>ANVAY_SKILLS_REPO_TOKEN</code> for
             skills-repo auth. Product source tokens are configured later.
           </Small>
         </Field>

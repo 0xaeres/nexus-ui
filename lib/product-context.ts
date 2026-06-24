@@ -7,6 +7,7 @@ export type ProductPerms = Permissions
 type ProductContextValue = {
   currentProductId: ProductId
   currentProduct: Product | undefined
+  products: Product[]
   currentUser: User
   perms: ProductPerms
   memberships: Record<ProductId, ProductRole>
@@ -37,6 +38,7 @@ const PLACEHOLDER_USER: User = {
 export const ProductContext = createContext<ProductContextValue>({
   currentProductId: '',
   currentProduct: undefined,
+  products: [],
   currentUser: PLACEHOLDER_USER,
   perms: getPerms('viewer'),
   memberships: {},
