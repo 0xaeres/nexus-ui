@@ -78,6 +78,10 @@ export function IngestStage({ productId }: { productId: string }) {
       if (live === 'done') return true
       if (live) return false
       if (stayOnProgress) return false
+      // No live SSE status yet (e.g. just after a page refresh). Trust the
+      // backend: a source still syncing is not done, even if lastSync /
+      // resourceCount carry stale values from a previous run.
+      if (s.status === 'syncing') return false
       return !!s.lastSync && s.resourceCount > 0
     })
 

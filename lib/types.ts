@@ -7,9 +7,6 @@ export type ProductRole = 'owner' | 'editor' | 'viewer'
 
 export type AgentRole =
   | 'planner'
-  | 'architect'
-  | 'domain_expert'
-  | 'quality_expert'
   | 'synthesizer'
   | 'repair'
   | 'skill-eval'
@@ -303,6 +300,7 @@ export type ProductStage = 'none' | 'ingesting' | 'council' | 'review' | 'skill'
 
 export interface ProductStatus {
   hasEmbeddings: boolean
+  isSyncing: boolean
   hasSkill: boolean
   councilInProgress: boolean
   currentSessionId: string | null
@@ -380,12 +378,10 @@ export interface GraphRAGAnswer {
 // Per-session cap on evidence chunks fed to the council's prompt.
 export const EVIDENCE_CHUNKS_PER_SESSION_CAP = 20
 
-// Fallback display roster for council events that still use legacy role names.
+// Display roster for council events. Skill generation is one synthesis call
+// grounded in deterministic KB artifacts — no expert fanout.
 export const COUNCIL_ROSTER: AgentRole[] = [
   'planner',
-  'architect',
-  'domain_expert',
-  'quality_expert',
   'synthesizer',
   'repair',
   'skill-eval',
@@ -394,9 +390,6 @@ export const COUNCIL_ROSTER: AgentRole[] = [
 
 export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {
   planner: 'Planner',
-  architect: 'Architect',
-  domain_expert: 'Domain expert',
-  quality_expert: 'Quality expert',
   synthesizer: 'Synthesizer',
   repair: 'Repair',
   'skill-eval': 'Skill eval',
@@ -405,9 +398,6 @@ export const COUNCIL_AGENT_LABELS: Record<AgentRole, string> = {
 
 export const COUNCIL_AGENT_HUES: Record<AgentRole, string> = {
   planner: '#40D389',
-  architect: '#E8B86B',
-  domain_expert: '#FF9159',
-  quality_expert: '#F26D6D',
   synthesizer: '#3FB6A8',
   repair: '#8AB4FF',
   'skill-eval': '#D7A72F',

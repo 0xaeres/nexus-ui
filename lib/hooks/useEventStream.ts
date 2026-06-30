@@ -118,6 +118,10 @@ export function useEventStream(
       'error',
       'session_end',
       'delta',
+      // eval job stream (/evals/jobs/{job_id}/stream)
+      'product_start',
+      'product_done',
+      'job_done',
     ]
     KNOWN_EVENTS.forEach((name) => {
       source.addEventListener(name, (e) => handle(e as MessageEvent, name))

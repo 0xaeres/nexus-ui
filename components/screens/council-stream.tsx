@@ -26,11 +26,16 @@ type TokenBuffer = {
   length: number
 }
 
+// Map backend ChatClient stream roles to UI lanes. Skill generation streams
+// only the synthesizer (+ repair/eval when they make a call); legacy aliases
+// kept for older sessions.
 const TOKEN_AGENT: Record<string, AgentRole> = {
+  synthesizer: 'synthesizer',
   drafter: 'synthesizer',
-  critic: 'domain_expert',
-  experts: 'domain_expert',
+  repair: 'repair',
   reviser: 'repair',
+  evaluator: 'skill-eval',
+  critic: 'skill-eval',
 }
 
 type CouncilNotice = {

@@ -42,7 +42,7 @@ const FLOW: Array<{
   {
     stage: 'council',
     title: 'Council',
-    caption: 'Run the expert council to draft the product skill proposal.',
+    caption: 'Run the council to draft the product skill proposal from your knowledge base.',
     icon: Sparkles,
     href: (base) => `${base}/council`,
     cta: 'Run Council',

@@ -24,6 +24,12 @@ import type {
   SyncDelta,
   User,
 } from '../types'
+import type {
+  EvalJobRef,
+  EvalJobStatus,
+  EvalRunArtifact,
+  ProductEvalInfo,
+} from '../evals'
 import { api, ApiError } from './client'
 
 export { ApiError }
@@ -175,6 +181,31 @@ export const getSession = (sessionId: string) =>
 export const sessionStreamUrl = (sessionId: string) =>
   `${api.baseUrl}/council/sessions/${sessionId}/stream`
 
+// ---- evals (multi-product dashboard) -------------------------------------
+
+export const startEvalRun = (body: {
+  products: string[]
+  modes?: string[]
+  limit?: number | null
+  top_k?: number
+  ingest?: boolean
+}) => api.post<EvalJobRef>('/evals/runs', body)
+
+export const listEvalRuns = () =>
+  api.get<{ runs: EvalRunArtifact[] }>('/evals/runs').then((r) => r.runs)
+
+export const getEvalRun = (runId: string) =>
+  api.get<EvalRunArtifact>(`/evals/runs/${encodeURIComponent(runId)}`)
+
+export const getEvalJob = (jobId: string) =>
+  api.get<EvalJobStatus>(`/evals/jobs/${encodeURIComponent(jobId)}`)
+
+export const getEvalCorpus = () =>
+  api.get<{ products: ProductEvalInfo[] }>('/evals/corpus').then((r) => r.products)
+
+export const evalJobStreamUrl = (jobId: string) =>
+  `${api.baseUrl}/evals/jobs/${encodeURIComponent(jobId)}/stream`
+
 // ---- proposals -----------------------------------------------------------
 
 export interface ListProposalsOptions {
@@ -215,35 +246,3 @@ export const reviseProposal = (
     `/proposals/${id}/revise`,
     body,
   )
-
-// ---- setup (first-run skills_repo bootstrap) -----------------------------
-
-interface SetupStatus {
-  configured: boolean
-  skills_repo_url: string | null
-  source: 'config' | 'runtime' | null
-}
-
-export const getSetupStatus = () => api.get<SetupStatus>('/setup/status')
-
-export interface SetupSkillsRepoResult {
-  skills_repo_url: string
-  files_seeded: number
-  commit_sha: string | null
-  created_repo: boolean
-}
-
-export const setupSkillsRepoCreate = (body: {
-  github_org?: string
-  repo_name?: string
-}) =>
-  api.post<SetupSkillsRepoResult>('/setup/skills-repo', {
-    mode: 'create',
-    ...body,
-  })
-
-export const setupSkillsRepoExisting = (existing_repo_url: string) =>
-  api.post<SetupSkillsRepoResult>('/setup/skills-repo', {
-    mode: 'existing',
-    existing_repo_url,
-  })

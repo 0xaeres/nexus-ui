@@ -13,7 +13,7 @@ import { ToastProvider } from '@/components/ui/toast'
 import { H1, Muted } from '@/components/ui/typography'
 import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { ProductContext, getPerms } from '@/lib/product-context'
-import { ApiError, getMe, getSetupStatus, listProducts } from '@/lib/api'
+import { ApiError, getMe, listProducts } from '@/lib/api'
 import type { Product, ProductRole, User } from '@/lib/types'
 
 // Vim-style "g then x" chords. `h` = home (org dashboard); the rest are
@@ -58,10 +58,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       setBackendError(null)
       setRedirecting(false)
       try {
-        const [me, prods, setup] = await Promise.all([
+        const [me, prods] = await Promise.all([
           getMe(),
           listProducts(),
-          getSetupStatus(),
         ])
         if (cancelled) return
         setBackendError(null)
@@ -76,11 +75,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
         if (me.user.status && me.user.status !== 'approved') {
           setRedirecting(true)
           router.replace('/request-access')
-          return
-        }
-        if (!setup.configured && pathname !== '/setup') {
-          setRedirecting(true)
-          router.replace('/setup')
           return
         }
         const productFromPath = pathname.match(/^\/p\/([^/]+)/)?.[1]
@@ -125,15 +119,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
       setCurrentProductId(productFromPath)
     }
   }, [currentProductId, pathname])
-
-  // Clear redirecting once client-side nav to /setup completes — the boot
-  // effect only reruns on bootAttempt, so redirecting would otherwise stay
-  // true and permanently block children via the gate at line 213.
-  useEffect(() => {
-    if (pathname === '/setup') {
-      setRedirecting(false)
-    }
-  }, [pathname])
 
   const baseUser: User =
     user ?? {
