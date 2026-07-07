@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import {
   ANSWER_METRICS,
+  METRIC_LABELS,
   RETRIEVAL_METRICS,
   modeHue,
   type ProductResult,
@@ -21,13 +22,14 @@ const METRICS = [...RETRIEVAL_METRICS, ...ANSWER_METRICS]
 
 /**
  * Grouped bars per metric, one bar per evidence mode — the A/B view. Bars side
- * by side per metric make the rewrite-vs-auto delta obvious at a glance.
+ * by side per metric make the cross-mode delta obvious at a glance.
  */
 export function MetricGroupedBarChart({ product }: { product: ProductResult }) {
   const modes = product.modes.map((m) => m.mode)
+  const singleMode = modes.length === 1
 
   const data = METRICS.map((metric) => {
-    const row: Record<string, number | string> = { metric: metric.replace(/_at_k$/, '@k') }
+    const row: Record<string, number | string> = { metric: METRIC_LABELS[metric] }
     for (const m of product.modes) {
       const v = m[metric] as number | null
       row[m.mode] = v ?? 0
@@ -38,7 +40,7 @@ export function MetricGroupedBarChart({ product }: { product: ProductResult }) {
   if (data.length === 0) return <EmptyChart label="No metrics yet" />
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
+    <ResponsiveContainer width="100%" height={280}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
         <XAxis
@@ -59,18 +61,28 @@ export function MetricGroupedBarChart({ product }: { product: ProductResult }) {
           }}
           formatter={(v) => Number(v).toFixed(3)}
         />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
+        {!singleMode && <Legend wrapperStyle={{ fontSize: 11 }} />}
         {modes.map((mode, mi) => (
-          <Bar key={mode} dataKey={mode} fill={modeHue(mi)} radius={[2, 2, 0, 0]} />
+          <Bar
+            key={mode}
+            dataKey={mode}
+            name={singleMode ? 'Score' : displayModeName(mode)}
+            fill={modeHue(mi)}
+            radius={[2, 2, 0, 0]}
+          />
         ))}
       </BarChart>
     </ResponsiveContainer>
   )
 }
 
+function displayModeName(mode: string): string {
+  return mode === 'auto' ? 'Shipping retrieval' : mode
+}
+
 function EmptyChart({ label }: { label: string }) {
   return (
-    <div className="flex h-[240px] items-center justify-center text-xs text-fg-muted">
+    <div className="flex h-[280px] items-center justify-center text-xs text-fg-muted">
       {label}
     </div>
   )

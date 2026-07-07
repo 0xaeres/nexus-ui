@@ -3,8 +3,8 @@
  *
  * Mirrors the Pydantic shapes in `anvay/api/routes/evals.py` /
  * `evals/harness.py`. One run scores every product over every evidence `mode`
- * (e.g. `auto` vs `rewrite`) through the shipping `retrieve_evidence` path, so
- * the dashboard is product × mode, not the old three-suite split.
+ * through the shipping `retrieve_evidence` path, so the dashboard is
+ * product × mode.
  */
 
 export const RETRIEVAL_METRICS = ['recall_at_k', 'mrr', 'ndcg_at_k'] as const
@@ -17,6 +17,26 @@ export const ANSWER_METRICS = [
 export type MetricKey =
   | (typeof RETRIEVAL_METRICS)[number]
   | (typeof ANSWER_METRICS)[number]
+
+export const METRIC_LABELS: Record<MetricKey, string> = {
+  recall_at_k: 'Evidence recall',
+  mrr: 'First-hit rank',
+  ndcg_at_k: 'Ranking quality',
+  faithfulness: 'Faithfulness',
+  answer_correctness: 'Answer correctness',
+  context_precision: 'Context precision',
+  context_recall: 'Context recall',
+}
+
+export const METRIC_DESCRIPTIONS: Record<MetricKey, string> = {
+  recall_at_k: 'How often the expected source evidence is present in the retrieved context.',
+  mrr: 'How early the first relevant evidence appears; higher means less digging for the model.',
+  ndcg_at_k: 'Whether the best evidence is ranked near the top, not just included somewhere.',
+  faithfulness: 'Whether the generated answer stays grounded in the retrieved evidence.',
+  answer_correctness: 'Whether the answer resolves the eval question correctly.',
+  context_precision: 'How much of the retrieved context is useful instead of distractor material.',
+  context_recall: 'Whether the retrieved context contains enough evidence to answer completely.',
+}
 
 export interface ModeMetrics {
   mode: string
@@ -44,7 +64,7 @@ export interface ProductResult {
 export interface Thresholds {
   recall_at_k: number
   ndcg_at_k: number
-  faithfulness: number
+  mrr: number
   answer_correctness: number
   context_recall: number
 }
@@ -155,4 +175,8 @@ export function crossProductMean(
 
 export function formatMetric(value: number | null): string {
   return value == null ? '—' : value.toFixed(3)
+}
+
+export function formatPercent(value: number | null): string {
+  return value == null ? '—' : `${Math.round(value * 100)}%`
 }
