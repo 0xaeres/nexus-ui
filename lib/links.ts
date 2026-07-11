@@ -7,7 +7,7 @@
  * "clone / deploy / GitHub" reference pointed here so the public naming can
  * change in one place.
  */
-export const GITHUB_ORG = 'https://github.com/0xaeres'
+const GITHUB_ORG = 'https://github.com/0xaeres'
 
 export const REPOS = {
   backend: `${GITHUB_ORG}/anvay-core`,

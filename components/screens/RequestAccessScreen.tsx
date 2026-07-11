@@ -92,9 +92,9 @@ export function RequestAccessScreen() {
             <Link href="/login" className="hover:text-fg">
               <Small>Back to sign in</Small>
             </Link>
-            <a href={QUICKSTART_URL} className="hover:text-fg">
+            <Link href={QUICKSTART_URL} className="hover:text-fg">
               <Small>No instance yet? Deploy your own</Small>
-            </a>
+            </Link>
           </form>
         </CardContent>
       </Card>

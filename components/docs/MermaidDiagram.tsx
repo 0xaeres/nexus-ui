@@ -67,6 +67,7 @@ export function MermaidDiagram({
   const [error, setError] = useState('')
   const [isNarrow, setIsNarrow] = useState(false)
   const [zoomed, setZoomed] = useState(false)
+  const handleClose = useCallback(() => setZoomed(false), [])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -147,7 +148,7 @@ export function MermaidDiagram({
           </div>
         )}
       </figure>
-      {zoomed ? <DiagramLightbox svg={svg} onClose={() => setZoomed(false)} /> : null}
+      {zoomed ? <DiagramLightbox svg={svg} onClose={handleClose} /> : null}
     </>
   )
 }
@@ -157,6 +158,7 @@ function DiagramLightbox({ svg, onClose }: { svg: string; onClose: () => void })
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value))
   const zoomIn = useCallback(() => setScale((s) => clampScale(s + SCALE_STEP)), [])
@@ -167,11 +169,32 @@ function DiagramLightbox({ svg, onClose }: { svg: string; onClose: () => void })
   }, [])
 
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const container = containerRef.current
+    const focusable = container?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    focusable?.[0]?.focus()
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-      else if (e.key === '+' || e.key === '=') zoomIn()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key === '+' || e.key === '=') zoomIn()
       else if (e.key === '-') zoomOut()
       else if (e.key === '0') reset()
+      else if (e.key === 'Tab' && focusable && focusable.length > 0) {
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
@@ -179,6 +202,7 @@ function DiagramLightbox({ svg, onClose }: { svg: string; onClose: () => void })
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      previouslyFocused?.focus()
     }
   }, [onClose, zoomIn, zoomOut, reset])
 
@@ -201,6 +225,7 @@ function DiagramLightbox({ svg, onClose }: { svg: string; onClose: () => void })
 
   return (
     <div
+      ref={containerRef}
       role="dialog"
       aria-modal="true"
       aria-label="Diagram viewer"

@@ -126,9 +126,9 @@ export function LoginScreen() {
 
           <p className="text-center text-fg-subtle text-xs leading-relaxed">
             No instance yet? Anvay is open source and self-hosted.{' '}
-            <a href={QUICKSTART_URL} className="underline underline-offset-2 hover:text-fg">
+            <Link href={QUICKSTART_URL} className="underline underline-offset-2 hover:text-fg">
               Deploy your own
-            </a>
+            </Link>
             .
           </p>
         </div>

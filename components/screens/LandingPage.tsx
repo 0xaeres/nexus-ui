@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { LandingMotion, LandingNav, ScrollTopButton } from './LandingChrome'
-import { REPOS } from '@/lib/links'
+import { QUICKSTART_URL, REPOS } from '@/lib/links'
 
 const SOURCES = ['GitHub', 'Jira', 'Confluence', 'Filesystem', 'Remote MCP'] as const
 const AGENTS = ['Claude Code', 'Codex', 'Cursor', 'Continue'] as const
@@ -67,7 +67,7 @@ export function LandingPage() {
             leaves your infrastructure.
           </p>
           <div className="anvay-landing-hero-actions">
-            <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href="/docs/quickstart">
+            <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href={QUICKSTART_URL}>
               Deploy Anvay
             </Link>
             <a
@@ -248,7 +248,7 @@ export function LandingPage() {
             <h2 className="anvay-landing-heading-2">Give every agent the right context.</h2>
             <p>Self-host in minutes. Connect your sources. Build the brain. Start with one product.</p>
             <div className="anvay-landing-hero-actions anvay-landing-cta-actions">
-              <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href="/docs/quickstart">Deploy Anvay</Link>
+              <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href={QUICKSTART_URL}>Deploy Anvay</Link>
               <Link className="anvay-landing-btn anvay-landing-btn-secondary anvay-landing-btn-lg" href="/docs">Read the docs</Link>
             </div>
           </div>
