@@ -113,11 +113,6 @@ function normalizeDocs(payload: TinaDocsResponse): DocPage[] {
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
 }
 
-export function docsEditUrl(page?: DocPage | null) {
-  if (page?.editUrl) return page.editUrl
-  return process.env.NEXT_PUBLIC_TINA_ADMIN_URL || '/admin/index.html'
-}
-
 export async function getDocs(): Promise<DocsResult> {
   const { token } = tinaConfig()
   const url = tinaUrl()

@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, BookOpen, ExternalLink } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react'
 import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { DocsNav, DocsSearch } from '@/components/docs/DocsNav'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MarkdownContent } from '@/components/ui/markdown'
 import { H1, H2, Muted, SectionLabel } from '@/components/ui/typography'
-import { docsEditUrl } from '@/lib/docs/tina'
+import { REPOS } from '@/lib/links'
 import type { DocHeading, DocNavGroup, DocPage } from '@/lib/docs/types'
 
 function adjacentPages(pages: DocPage[], active: DocPage) {
@@ -48,6 +48,7 @@ function DocsTopBar({ groups }: { groups?: DocNavGroup[] }) {
         ) : <div className="flex-1" />}
         <nav className="ml-auto flex shrink-0 items-center gap-3 text-sm text-fg-muted" aria-label="Public">
           <Link href="/landing" className="hover:text-fg">Overview</Link>
+          <a href={REPOS.backend} target="_blank" rel="noreferrer" className="hover:text-fg">GitHub</a>
           <Link href="/login" className="hover:text-fg">Sign in</Link>
         </nav>
       </div>
@@ -67,7 +68,6 @@ export function DocsChrome({
   headings: DocHeading[]
 }) {
   const { previous, next } = adjacentPages(pages, page)
-  const editUrl = docsEditUrl(page)
   return (
     <main className="min-h-screen bg-bg text-fg">
       <DocsTopBar groups={groups} />
@@ -81,12 +81,6 @@ export function DocsChrome({
             <div className="mb-10 flex flex-col gap-4 border-b border-border pb-9">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="accent" className="font-mono">{page.group}</Badge>
-                <Button asChild variant="ghost" size="sm" className="ml-auto">
-                  <a href={editUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                    Edit
-                  </a>
-                </Button>
               </div>
               <H1>{page.title}</H1>
               {page.description ? <Muted className="max-w-3xl text-base leading-relaxed">{page.description}</Muted> : null}

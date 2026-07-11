@@ -296,6 +296,19 @@ html:has(.anvay-landing) {
   gap: 10px;
 }
 
+.anvay-landing-nav-signin {
+  font-size: 14px;
+  color: var(--color-fg-subtle);
+  padding: 7px 11px;
+  border-radius: 999px;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.anvay-landing-nav-signin:hover {
+  color: var(--color-fg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* ── Buttons ── */
 .anvay-landing-btn {
   min-height: 40px;
@@ -495,6 +508,24 @@ html:has(.anvay-landing) {
   gap: 12px;
   margin-top: 36px;
   justify-content: center;
+}
+
+.anvay-landing-hero-note {
+  margin-top: 18px;
+  color: var(--color-fg-subtle);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.anvay-landing-hero-note a {
+  color: var(--color-fg-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 160ms ease;
+}
+
+.anvay-landing-hero-note a:hover {
+  color: var(--color-fg);
 }
 
 .anvay-landing-agent-strip {

@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import { REPOS } from '@/lib/links'
 
 const SECTIONS = [
   { id: 'problem', label: 'Why Anvay' },
@@ -78,11 +79,19 @@ export function LandingNav() {
           <Link href="/docs">Docs</Link>
         </nav>
         <div className="anvay-landing-nav-actions">
-          <Link className="anvay-landing-btn anvay-landing-btn-secondary" href="/login">
+          <Link className="anvay-landing-nav-signin" href="/login">
             Sign in
           </Link>
-          <Link className="anvay-landing-btn anvay-landing-btn-primary" href="/request-access">
-            Request access
+          <a
+            className="anvay-landing-btn anvay-landing-btn-secondary"
+            href={REPOS.backend}
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+          <Link className="anvay-landing-btn anvay-landing-btn-primary" href="/docs/quickstart">
+            Get started
           </Link>
         </div>
       </div>
