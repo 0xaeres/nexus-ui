@@ -93,7 +93,7 @@ export function SkillDetailPage({ skillId }: { skillId: string }) {
     setRerunBusy(true); setRerunError(null)
     try {
       const { session_id } = await createSession(currentProductId, {
-        topic: `${skill.name} — manual re-run`,
+        topic: `${skill.name}: manual re-run`,
         skill_id: skill.id,
       })
       router.push(`${base}/council/${session_id}`)

@@ -143,10 +143,10 @@ export function ConnectorDetail({ productId, name }: { productId?: string; name:
             <Stat label="Resources" value={source.resourceCount.toLocaleString()} />
           </div>
           <div className="col-span-6 md:col-span-4 lg:col-span-3">
-            <Stat label="Last sync" value={source.lastSync ? source.lastSync.slice(0, 19) : '—'} mono />
+            <Stat label="Last sync" value={source.lastSync ? source.lastSync.slice(0, 19) : 'N/A'} mono />
           </div>
           <div className="col-span-6 md:col-span-4 lg:col-span-3">
-            <Stat label="Next sync" value={source.nextSync ? source.nextSync.slice(0, 19) : '—'} mono />
+            <Stat label="Next sync" value={source.nextSync ? source.nextSync.slice(0, 19) : 'N/A'} mono />
           </div>
           <div className="col-span-6 md:col-span-4 lg:col-span-3">
             <Stat label="Status" value={source.status} mono>

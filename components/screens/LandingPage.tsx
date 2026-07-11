@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { LandingMotion, LandingNav, ScrollTopButton } from './LandingChrome'
 
 const SOURCES = ['GitHub', 'Jira', 'Confluence', 'Filesystem', 'Remote MCP'] as const
 const AGENTS = ['Claude Code', 'Codex', 'Cursor', 'Continue'] as const
@@ -8,7 +9,7 @@ const STEPS = [
   {
     num: '01',
     title: 'Connect your sources',
-    body: 'Repos, tickets, docs, tribal knowledge. A live watch daemon keeps the brain current — delta-safe, never stale.',
+    body: 'Repos, tickets, docs, tribal knowledge. A live watch daemon keeps the brain current, delta-safe, never stale.',
   },
   {
     num: '02',
@@ -18,12 +19,12 @@ const STEPS = [
   {
     num: '03',
     title: 'Humans approve',
-    body: 'Nothing ships until a human says so. Review, edit, approve — your brain is curated, not hallucinated.',
+    body: 'Nothing ships until a human says so. Review, edit, approve: your brain is curated, not hallucinated.',
   },
   {
     num: '04',
     title: 'Every agent consumes',
-    body: 'Approved skills and grounded evidence served over MCP to Claude, Codex, Cursor, Continue — the same brain everywhere.',
+    body: 'Approved skills and grounded evidence served over MCP to Claude, Codex, Cursor, Continue, the same brain everywhere.',
   },
 ] as const
 
@@ -37,26 +38,8 @@ const EVAL_STATS = [
 export function LandingPage() {
   return (
     <main id="top" className="anvay-landing">
-      <header className="anvay-landing-nav">
-        <div className="anvay-landing-container anvay-landing-nav-inner">
-          <a className="anvay-landing-brand" href="#top" aria-label="Anvay home">
-            <span className="anvay-landing-mark" aria-hidden="true">
-              <Image src="/anvay-symbol-v4.svg" alt="" width={24} height={24} priority />
-            </span>
-            <span>Anvay</span>
-          </a>
-          <nav className="anvay-landing-nav-links" aria-label="Primary">
-            <a href="#problem">Why Anvay</a>
-            <a href="#how">How it works</a>
-            <a href="#quality">Quality</a>
-            <Link href="/docs">Docs</Link>
-          </nav>
-          <div className="anvay-landing-nav-actions">
-            <Link className="anvay-landing-btn anvay-landing-btn-secondary" href="/login">Sign in</Link>
-            <Link className="anvay-landing-btn anvay-landing-btn-primary" href="/request-access">Request access</Link>
-          </div>
-        </div>
-      </header>
+      <LandingNav />
+      <LandingMotion />
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="anvay-landing-hero">
@@ -78,7 +61,7 @@ export function LandingPage() {
           </h1>
           <p className="anvay-landing-lead">
             Anvay fuses your repos, tickets, docs, and hard-won tribal knowledge into one
-            continuously-synced, <em>cited</em> intelligence layer — then serves it to every
+            continuously-synced, <em>cited</em> intelligence layer, then serves it to every
             AI coding agent you use.
           </p>
           <div className="anvay-landing-hero-actions">
@@ -111,16 +94,15 @@ export function LandingPage() {
             Every product carries a brain that lives nowhere.
           </h2>
           <p className="anvay-landing-prose">
-            It&apos;s split across the codebase, the Jira board, the wiki nobody updated, and the
-            three senior engineers who answer the same questions in Slack every week. Your AI
-            agents — the ones you now trust to write real changes — dive in
-            with <strong>none</strong>{' '}of that context. They don&apos;t know
-            your conventions, your blast radius, or why that
-            &ldquo;obvious&rdquo; refactor will page someone at 3am.
+            Split across the codebase, the Jira board, and the senior engineer who answers the
+            same Slack question every week. Your AI agents get <strong>none</strong>{' '}
+            of it, so
+            they don&apos;t know your conventions or why that &ldquo;obvious&rdquo; refactor
+            pages someone at 3am.
           </p>
           <p className="anvay-landing-prose anvay-landing-prose-strong">
             Not a search box. Not another wiki. A retrieval engine that reasons over everything
-            your product knows — and grounds every answer in real source lines.
+            your product knows, grounded in real source lines.
           </p>
         </div>
       </section>
@@ -169,8 +151,8 @@ export function LandingPage() {
               <div className="anvay-landing-tile-kicker">knowledge graph</div>
               <h3 className="anvay-landing-heading-3">&ldquo;What breaks if I change this?&rdquo;</h3>
               <p>
-                Tree-sitter extraction plus a bounded, validated LLM fact layer — CALLS,
-                IMPLEMENTS, DEPENDS_ON — answers multi-hop impact questions across symbols,
+                Tree-sitter extraction plus a bounded, validated LLM fact layer (CALLS,
+                IMPLEMENTS, DEPENDS_ON) answers multi-hop impact questions across symbols,
                 files, and services.
               </p>
             </article>
@@ -187,7 +169,7 @@ export function LandingPage() {
             <article className="anvay-landing-tile anvay-landing-tile-2 anvay-reveal">
               <div className="anvay-landing-tile-kicker">eval-gated</div>
               <h3 className="anvay-landing-heading-3">Quality you can prove.</h3>
-              <p>Recall, MRR, nDCG, faithfulness — hard floors that fail CI. &ldquo;Better&rdquo; is a number, not a vibe.</p>
+              <p>Recall, MRR, nDCG, faithfulness: hard floors that fail CI. &ldquo;Better&rdquo; is a number, not a vibe.</p>
             </article>
             <article className="anvay-landing-tile anvay-landing-tile-6 anvay-landing-tile-banner anvay-reveal">
               <div>
@@ -196,7 +178,7 @@ export function LandingPage() {
               </div>
               <p>
                 Every chunk, proposal, session, skill, and query is scoped by product. There is no
-                cross-product read path — crossing the boundary is a bug, not a feature.
+                cross-product read path. Crossing the boundary is a bug, not a feature.
               </p>
             </article>
           </div>
@@ -205,8 +187,13 @@ export function LandingPage() {
 
       {/* ── Eval stats ───────────────────────────────────────── */}
       <section id="quality" className="anvay-landing-section anvay-landing-stats-section">
-        <div className="anvay-landing-container anvay-reveal">
-          <div className="anvay-landing-stats">
+        <div className="anvay-landing-container">
+          <div className="anvay-landing-section-head anvay-landing-section-head-center anvay-reveal">
+            <div className="anvay-landing-eyebrow">Eval-gated</div>
+            <h2 className="anvay-landing-heading-2">Quality is a number, not a vibe.</h2>
+            <p>Latest full eval run: Zod and Guava corpora, 15 grounded questions each.</p>
+          </div>
+          <div className="anvay-landing-stats anvay-reveal">
             {EVAL_STATS.map((s) => (
               <div key={s.label} className="anvay-landing-stat">
                 <strong>{s.value}</strong>
@@ -214,9 +201,8 @@ export function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="anvay-landing-stats-note">
-            Latest full run across Zod and Guava (15 grounded questions each). Shipping retrieval,
-            measured end to end.
+          <p className="anvay-landing-stats-note anvay-reveal">
+            Shipping retrieval, measured end to end · hard floors fail CI
           </p>
         </div>
       </section>
@@ -230,7 +216,7 @@ export function LandingPage() {
             <p className="anvay-landing-prose">
               Approved skills are ordinary Agent Skills served over MCP. Point any client at the
               server and it retrieves cited evidence, traces the product graph, and loads
-              human-approved guidance — the same way your team does.
+              human-approved guidance, the same way your team does.
             </p>
           </div>
           <pre className="anvay-landing-code anvay-reveal" aria-label="MCP tools"><code>{`$ anvay-mcp-server --product payments
@@ -256,6 +242,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <ScrollTopButton />
 
       <footer className="anvay-landing-footer">
         <div className="anvay-landing-container anvay-landing-footer-inner">

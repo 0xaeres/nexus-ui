@@ -232,7 +232,7 @@ export function EvalsScreen() {
         {merged.length === 0 || !thresholds ? (
           <Card variant="surface">
             <CardContent className="py-6 text-sm text-fg-muted">
-              No runs yet — run all products to populate the dashboard.
+              No runs yet. Run all products to populate the dashboard.
             </CardContent>
           </Card>
         ) : (
@@ -439,8 +439,8 @@ function ProductDetail({
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-border pt-3">
         <DiagStat label="graph hits" value={formatPercent(primary?.graph_hit_rate ?? null)} />
-        <DiagStat label="candidates" value={primary ? primary.avg_candidates.toFixed(0) : '—'} />
-        <DiagStat label="latency" value={primary ? formatLatency(primary.avg_latency_ms) : '—'} />
+        <DiagStat label="candidates" value={primary ? primary.avg_candidates.toFixed(0) : 'N/A'} />
+        <DiagStat label="latency" value={primary ? formatLatency(primary.avg_latency_ms) : 'N/A'} />
       </div>
 
       {misses.length > 0 && (

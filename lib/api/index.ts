@@ -24,12 +24,7 @@ import type {
   SyncDelta,
   User,
 } from '../types'
-import type {
-  EvalJobRef,
-  EvalJobStatus,
-  EvalRunArtifact,
-  ProductEvalInfo,
-} from '../evals'
+import type { EvalJobRef, EvalRunArtifact, ProductEvalInfo } from '../evals'
 import { api, ApiError } from './client'
 
 export { ApiError }
@@ -193,12 +188,6 @@ export const startEvalRun = (body: {
 
 export const listEvalRuns = () =>
   api.get<{ runs: EvalRunArtifact[] }>('/evals/runs').then((r) => r.runs)
-
-export const getEvalRun = (runId: string) =>
-  api.get<EvalRunArtifact>(`/evals/runs/${encodeURIComponent(runId)}`)
-
-export const getEvalJob = (jobId: string) =>
-  api.get<EvalJobStatus>(`/evals/jobs/${encodeURIComponent(jobId)}`)
 
 export const getEvalCorpus = () =>
   api.get<{ products: ProductEvalInfo[] }>('/evals/corpus').then((r) => r.products)

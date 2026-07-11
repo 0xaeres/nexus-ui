@@ -47,7 +47,7 @@ const CONNECTOR_OPTIONS: Array<{
     id: 'jira',
     name: 'Jira',
     auth: 'token',
-    desc: 'Jira Cloud issues via JQL — indexes tickets as searchable knowledge',
+    desc: 'Jira Cloud issues via JQL, indexes tickets as searchable knowledge',
     fields: [
       { key: 'site_url', label: 'site url', placeholder: 'https://yourorg.atlassian.net' },
       { key: 'email', placeholder: 'you@yourorg.com' },
