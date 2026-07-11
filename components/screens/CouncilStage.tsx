@@ -310,10 +310,10 @@ function CouncilLive({
           <TypingCard key={entry.role} role={entry.role} text={entry.text} label="streaming tokens" />
         ))}
         {ended && !notice && (
-          <Muted className="text-center py-2 font-mono">— forwarding to review —</Muted>
+          <Muted className="text-center py-2 font-mono">forwarding to review</Muted>
         )}
         {ended && notice && (
-          <Muted className="text-center py-2 font-mono">— session stopped —</Muted>
+          <Muted className="text-center py-2 font-mono">session stopped</Muted>
         )}
       </div>
     </div>

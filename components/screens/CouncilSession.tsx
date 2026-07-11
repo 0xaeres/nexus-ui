@@ -289,7 +289,7 @@ export function CouncilSession({ sessionId }: { sessionId: string }) {
               <TypingCard key={entry.role} role={entry.role} text={entry.text} label="live model tokens" className="max-w-[860px]" />
             ))}
             {ended && messages.length > 0 && (
-              <Muted className="text-center py-4 font-mono">— session ended —</Muted>
+              <Muted className="text-center py-4 font-mono">session ended</Muted>
             )}
           </div>
         </div>
