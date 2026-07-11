@@ -12,8 +12,8 @@ type AnvayLogoProps = {
 }
 
 const SIZE = {
-  sm: { width: 111, height: 24 },
-  md: { width: 166, height: 36 },
+  sm: { width: 68, height: 24 },
+  md: { width: 102, height: 36 },
 }
 
 export function AnvayLogo({
@@ -26,7 +26,7 @@ export function AnvayLogo({
   if (markOnly) {
     return (
       <Image
-        src="/anvay-symbol-v2.svg"
+        src="/anvay-symbol-v4.svg"
         alt="Anvay"
         width={SIZE[size].height}
         height={SIZE[size].height}
@@ -38,7 +38,7 @@ export function AnvayLogo({
 
   return (
     <Image
-      src={tone === 'light' ? '/anvay-logo-v2-light.svg' : '/anvay-logo-v2.svg'}
+      src={tone === 'light' ? '/anvay-logo-v4-light.svg' : '/anvay-logo-v4.svg'}
       alt="Anvay"
       width={SIZE[size].width}
       height={SIZE[size].height}

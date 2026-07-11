@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { ChevronDown, Info, Loader2, Play, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ChevronDown, Info, Loader2, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { H3, Muted, Small } from '@/components/ui/typography'
-import { MetricGroupedBarChart } from '@/components/evals/MetricGroupedBarChart'
 import {
   ApiError,
   evalJobStreamUrl,
@@ -34,12 +34,17 @@ import {
   type Thresholds,
 } from '@/lib/evals'
 
-const ABLATION_KEYS: MetricKey[] = [
-  'recall_at_k',
-  'ndcg_at_k',
-  'answer_correctness',
-  'context_recall',
-]
+/** A product's most recent score, plus where/when it came from. */
+type MergedProduct = {
+  product: ProductResult
+  generatedAt: string
+  runId: string
+  language: string
+}
+
+/** Metrics surfaced both in the combined tiles and per-product summary rows. */
+const HEADLINE_METRICS: MetricKey[] = ['recall_at_k', 'ndcg_at_k', 'answer_correctness']
+const PRIMARY_MODE = 'auto'
 
 export function EvalsScreen() {
   const [corpus, setCorpus] = useState<ProductEvalInfo[]>([])
@@ -49,6 +54,9 @@ export function EvalsScreen() {
 
   const [jobId, setJobId] = useState<string | null>(null)
   const [phase, setPhase] = useState<string>('')
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  // null while a run is starting/settling; 'all' or a product_id once known.
+  const [runningTarget, setRunningTarget] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -70,40 +78,97 @@ export function EvalsScreen() {
   useEventStream(jobId ? evalJobStreamUrl(jobId) : null, {
     enabled: !!jobId,
     onEvent: (ev) => {
-      const data = ev.data as { product_id?: string }
+      const data = ev.data as {
+        product_id?: string
+        done?: number
+        total?: number
+        item_id?: string
+        message?: string
+      }
       if (ev.event === 'ingest_start' && data.product_id) {
         setPhase(`ingesting ${data.product_id}…`)
       } else if (ev.event === 'eval_start') {
-        setPhase('scoring…')
+        setPhase('preparing evaluator…')
+      } else if (ev.event === 'product_start' && data.product_id) {
+        setPhase(`scoring ${data.product_id}…`)
+        setProgress(null)
+      } else if (
+        ev.event === 'item_progress' &&
+        typeof data.done === 'number' &&
+        typeof data.total === 'number'
+      ) {
+        setProgress({ done: data.done, total: data.total })
+        setPhase(`scoring ${data.product_id ?? 'product'} · ${data.item_id ?? 'query'}…`)
+      } else if (ev.event === 'product_done') {
+        setProgress(null)
       } else if (ev.event === 'job_done') {
         setPhase('')
+        setProgress(null)
         setJobId(null)
+        setRunningTarget(null)
         void refresh()
       } else if (ev.event === 'error') {
         setPhase('')
+        setProgress(null)
         setJobId(null)
-        setError('eval job failed')
+        setRunningTarget(null)
+        setError(data.message ? `eval job failed: ${data.message}` : 'eval job failed')
         void refresh()
       }
     },
   })
 
-  const startRun = useCallback(async () => {
-    const products = corpus.map((p) => p.product_id)
-    if (products.length === 0) return
-    try {
-      setError(null)
-      const ref = await startEvalRun({ products, modes: ['auto'] })
-      setJobId(ref.job_id)
-      setPhase('starting…')
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e))
-    }
-  }, [corpus])
+  const launch = useCallback(
+    async (products: string[], target: string) => {
+      if (products.length === 0) return
+      try {
+        setError(null)
+        setRunningTarget(target)
+        setPhase('starting eval job…')
+        setProgress(null)
+        const ref = await startEvalRun({ products, modes: [PRIMARY_MODE] })
+        setJobId(ref.job_id)
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : String(e))
+        setRunningTarget(null)
+        setPhase('')
+        setProgress(null)
+      }
+    },
+    [],
+  )
 
-  // The most recent run is the dashboard; older runs are history.
-  const latest = runs[0] ?? null
-  const running = !!jobId
+  const runAll = useCallback(
+    () => launch(corpus.map((p) => p.product_id), 'all'),
+    [corpus, launch],
+  )
+  const runProduct = useCallback((id: string) => launch([id], id), [launch])
+
+  // Latest score per product, newest run wins — a single-product run refreshes
+  // only that product and leaves every other score untouched.
+  const merged = useMemo<MergedProduct[]>(() => {
+    const langByProduct = new Map(corpus.map((p) => [p.product_id, p.language]))
+    const order = corpus.map((p) => p.product_id)
+    const byProduct = new Map<string, MergedProduct>()
+    for (const run of runs) {
+      for (const product of run.products) {
+        if (byProduct.has(product.product_id)) continue
+        byProduct.set(product.product_id, {
+          product,
+          generatedAt: run.generated_at,
+          runId: run.run_id,
+          language: langByProduct.get(product.product_id) ?? '?',
+        })
+      }
+    }
+    return [...byProduct.values()].sort(
+      (a, b) => order.indexOf(a.product.product_id) - order.indexOf(b.product.product_id),
+    )
+  }, [runs, corpus])
+
+  const mergedProducts = useMemo(() => merged.map((m) => m.product), [merged])
+  const thresholds = runs[0]?.thresholds ?? null
+  const running = runningTarget !== null
 
   if (loading) {
     return (
@@ -115,34 +180,47 @@ export function EvalsScreen() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         {/* header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <H3>Evals dashboard</H3>
-            <Muted>
-              Launch-grade context quality for Anvay&apos;s shipping retrieval path, scored across
-              products so teams can see the indexes that make answers trustworthy.
-            </Muted>
+            <H3>Evals</H3>
+            <Muted>Context quality for the shipping retrieval path, scored per product.</Muted>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => void refresh()} disabled={running}>
-              <RefreshCw className="size-4" /> Refresh
-            </Button>
-            <Button size="sm" onClick={() => void startRun()} disabled={running || corpus.length === 0}>
-              {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-              Run all products
-            </Button>
-          </div>
+          <Button size="sm" onClick={() => void runAll()} disabled={running || corpus.length === 0}>
+            {running && runningTarget === 'all' ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Play className="size-4" />
+            )}
+            Run all
+          </Button>
         </div>
 
         {running && (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-accent/25 bg-accent/10 px-3 py-2 text-xs text-accent">
-            <Loader2 className="size-3.5 animate-spin" /> {phase || 'running…'}
-            <span className="inline-flex items-center gap-1 text-fg-muted">
-              <Info className="size-3.5" />
-              auto mode runs the production retrieval policy for each product.
-            </span>
+          <div
+            className="space-y-2 rounded-md border border-accent/25 bg-accent/10 px-3 py-3"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex flex-wrap items-center gap-2 text-xs text-accent">
+              <Loader2 className="size-3.5 animate-spin" />
+              <span>{phase || 'running eval…'}</span>
+              {progress && (
+                <span className="font-mono text-fg-muted">
+                  {progress.done}/{progress.total}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-fg-muted">
+                <Info className="size-3.5" />
+                Keep this page open for live progress. Existing scores remain visible.
+              </span>
+            </div>
+            <Progress
+              value={progress ? (progress.done / Math.max(progress.total, 1)) * 100 : 4}
+              className={progress ? undefined : 'animate-pulse'}
+              aria-label={progress ? `${progress.done} of ${progress.total} eval queries complete` : phase}
+            />
           </div>
         )}
         {error && (
@@ -151,7 +229,7 @@ export function EvalsScreen() {
           </Card>
         )}
 
-        {!latest ? (
+        {merged.length === 0 || !thresholds ? (
           <Card variant="surface">
             <CardContent className="py-6 text-sm text-fg-muted">
               No runs yet — run all products to populate the dashboard.
@@ -159,13 +237,24 @@ export function EvalsScreen() {
           </Card>
         ) : (
           <>
-            <RunMeta run={latest} corpus={corpus} />
-            <DashboardSummary run={latest} />
-            {latest.modes.length > 1 && <AblationBanner run={latest} />}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {latest.products.map((product) => (
-                <ProductCard key={product.product_id} product={product} thresholds={latest.thresholds} />
-              ))}
+            <CombinedSummary products={mergedProducts} thresholds={thresholds} />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Small className="uppercase tracking-wide text-fg-muted">Per-product</Small>
+                <Small className="text-fg-subtle">expand a product for full metrics</Small>
+              </div>
+              <div className="space-y-2">
+                {merged.map((m) => (
+                  <ProductRow
+                    key={m.product.product_id}
+                    entry={m}
+                    thresholds={thresholds}
+                    running={running && runningTarget === m.product.product_id}
+                    disabled={running}
+                    onRun={() => void runProduct(m.product.product_id)}
+                  />
+                ))}
+              </div>
             </div>
           </>
         )}
@@ -174,312 +263,317 @@ export function EvalsScreen() {
   )
 }
 
-// ---- run meta strip -------------------------------------------------------
+// ---- combined summary -----------------------------------------------------
 
-function RunMeta({ run, corpus }: { run: EvalRunArtifact; corpus: ProductEvalInfo[] }) {
-  const judge = String(run.config_fingerprint?.judge_model ?? '?')
-  const langByProduct = new Map(corpus.map((p) => [p.product_id, p.language]))
-  return (
-    <Card variant="stat">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Badge variant={run.passed ? 'success' : 'danger'}>{run.passed ? 'PASS' : 'FAIL'}</Badge>
-          <Small className="font-mono text-fg-muted">{run.run_id}</Small>
-        </div>
-        <Small className="text-fg-muted">
-          judge <code>{judge}</code> · {formatModeSummary(run.modes)} · top_k {run.top_k}
-          {run.limit ? ` · limit ${run.limit}` : ''}
-        </Small>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        {run.products.map((p) => (
-          <Badge key={p.product_id} variant={p.passed ? 'success' : 'danger'} className="gap-1.5">
-            {p.product_id}
-            <span className="opacity-60">·</span>
-            {langByProduct.get(p.product_id) ?? '?'}
-            <span className="opacity-60">·</span>
-            n={p.n}
-          </Badge>
-        ))}
-      </CardContent>
-    </Card>
-  )
-}
-
-function DashboardSummary({ run }: { run: EvalRunArtifact }) {
-  const mode = run.modes[0]
+function CombinedSummary({
+  products,
+  thresholds,
+}: {
+  products: ProductResult[]
+  thresholds: Thresholds
+}) {
+  const passed = products.every((p) => p.passed)
   const tiles: Array<{ label: string; value: string; detail: string; metric?: MetricKey }> = [
     {
       label: 'Evidence recall',
-      value: formatMetric(crossProductMean(run.products, mode, 'recall_at_k')),
+      value: formatMetric(crossProductMean(products, PRIMARY_MODE, 'recall_at_k')),
       detail: 'expected evidence found',
       metric: 'recall_at_k',
     },
     {
       label: 'Ranking quality',
-      value: formatMetric(crossProductMean(run.products, mode, 'ndcg_at_k')),
+      value: formatMetric(crossProductMean(products, PRIMARY_MODE, 'ndcg_at_k')),
       detail: 'best evidence lifted',
       metric: 'ndcg_at_k',
     },
     {
       label: 'Answer correctness',
-      value: formatMetric(crossProductMean(run.products, mode, 'answer_correctness')),
+      value: formatMetric(crossProductMean(products, PRIMARY_MODE, 'answer_correctness')),
       detail: 'answers pass judged evals',
       metric: 'answer_correctness',
     },
     {
       label: 'Graph navigation',
-      value: formatPercent(meanDiagnostic(run.products, mode, 'graph_hit_rate')),
+      value: formatPercent(meanDiagnostic(products, PRIMARY_MODE, 'graph_hit_rate')),
       detail: 'queries using graph context',
     },
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {tiles.map((tile) => {
-        const threshold = tile.metric ? thresholdFor(run.thresholds, tile.metric) : undefined
-        const tone = tile.metric
-          ? metricTone(crossProductMean(run.products, mode, tile.metric), threshold)
-          : 'neutral'
-        return (
-          <Card key={tile.label} variant="stat">
-            <CardContent className="space-y-1.5 py-4">
+    <Card variant="stat">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+        <div className="flex items-center gap-2">
+          <Badge variant={passed ? 'success' : 'danger'}>{passed ? 'PASS' : 'FAIL'}</Badge>
+          <Small className="text-fg-muted">
+            {products.length} product{products.length === 1 ? '' : 's'} · combined
+          </Small>
+        </div>
+        <Small className="text-fg-subtle">mean across products, shipping retrieval</Small>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {tiles.map((tile) => {
+          const threshold = tile.metric ? thresholdFor(thresholds, tile.metric) : undefined
+          const tone = tile.metric
+            ? metricTone(crossProductMean(products, PRIMARY_MODE, tile.metric), threshold)
+            : 'neutral'
+          return (
+            <div key={tile.label} className="space-y-1">
               <Small>{tile.label}</Small>
-              <div className={`font-mono text-2xl font-semibold ${toneTextClass(tone)}`}>{tile.value}</div>
-              <Small>{tile.detail}</Small>
-            </CardContent>
-          </Card>
+              <div className={`font-mono text-2xl font-semibold ${toneTextClass(tone)}`}>
+                {tile.value}
+              </div>
+              <Small className="text-fg-subtle">{tile.detail}</Small>
+            </div>
+          )
+        })}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---- per-product row (collapsed by default) -------------------------------
+
+function ProductRow({
+  entry,
+  thresholds,
+  running,
+  disabled,
+  onRun,
+}: {
+  entry: MergedProduct
+  thresholds: Thresholds
+  running: boolean
+  disabled: boolean
+  onRun: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const { product, generatedAt, language } = entry
+  const primary = product.modes.find((m) => m.mode === PRIMARY_MODE) ?? product.modes[0]
+
+  return (
+    <Card variant="surface" className="overflow-hidden">
+      {/* summary line */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-expanded={open}
+        >
+          <ChevronDown
+            className={`size-4 shrink-0 text-fg-muted transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+          <span
+            className={`size-2 shrink-0 rounded-full ${product.passed ? 'bg-success' : 'bg-danger'}`}
+            aria-hidden
+          />
+          <span className="truncate font-medium text-fg">{product.product_id}</span>
+          <Small className="hidden text-fg-subtle sm:inline">
+            {language} · n={product.n} · {relTime(generatedAt)}
+          </Small>
+        </button>
+
+        <div className="flex items-center gap-3">
+          {HEADLINE_METRICS.map((key) => {
+            const v = primary ? (primary[key] as number | null) : null
+            const tone = metricTone(v, thresholdFor(thresholds, key))
+            return (
+              <div key={key} className="hidden text-right md:block">
+                <div className={`font-mono text-sm ${toneTextClass(tone)}`}>{formatMetric(v)}</div>
+                <div className="text-xs uppercase tracking-wide text-fg-subtle">
+                  {SHORT_LABEL[key]}
+                </div>
+              </div>
+            )
+          })}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRun}
+            disabled={disabled}
+            title={`Re-run evals for ${product.product_id}`}
+          >
+            {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+            Run
+          </Button>
+        </div>
+      </div>
+
+      {/* expanded detail */}
+      {open && (
+        <div className="border-t border-border px-4 py-4">
+          <ProductDetail product={product} thresholds={thresholds} />
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function ProductDetail({
+  product,
+  thresholds,
+}: {
+  product: ProductResult
+  thresholds: Thresholds
+}) {
+  const [showMisses, setShowMisses] = useState(false)
+  const primary = product.modes.find((m) => m.mode === PRIMARY_MODE) ?? product.modes[0]
+  const misses = primary?.misses ?? []
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-5 lg:grid-cols-2">
+        <MetricGroup
+          label="Retrieval"
+          keys={RETRIEVAL_METRICS}
+          metrics={primary}
+          thresholds={thresholds}
+        />
+        <MetricGroup
+          label="Answer quality"
+          keys={ANSWER_METRICS}
+          metrics={primary}
+          thresholds={thresholds}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-border pt-3">
+        <DiagStat label="graph hits" value={formatPercent(primary?.graph_hit_rate ?? null)} />
+        <DiagStat label="candidates" value={primary ? primary.avg_candidates.toFixed(0) : '—'} />
+        <DiagStat label="latency" value={primary ? formatLatency(primary.avg_latency_ms) : '—'} />
+      </div>
+
+      {misses.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowMisses((v) => !v)}
+            className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg"
+          >
+            <ChevronDown className={`size-3.5 transition-transform ${showMisses ? 'rotate-180' : ''}`} />
+            {misses.length} retrieval miss{misses.length === 1 ? '' : 'es'}
+          </button>
+          {showMisses && (
+            <ul className="mt-1.5 space-y-1 border-l border-border pl-3 text-xs text-fg-muted">
+              {misses.map((q) => (
+                <li key={q}>{q}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** One metric group: label + bullet bar per metric. Descriptions live in hover tooltips. */
+function MetricGroup({
+  label,
+  keys,
+  metrics,
+  thresholds,
+}: {
+  label: string
+  keys: readonly MetricKey[]
+  metrics: ModeMetrics | undefined
+  thresholds: Thresholds
+}) {
+  return (
+    <div className="space-y-2.5">
+      <Small className="uppercase tracking-wide text-fg-subtle">{label}</Small>
+      {keys.map((key) => {
+        const value = metrics ? (metrics[key] as number | null) : null
+        const threshold = thresholdFor(thresholds, key)
+        return (
+          <BulletRow
+            key={key}
+            label={METRIC_LABELS[key]}
+            description={METRIC_DESCRIPTIONS[key]}
+            value={value}
+            threshold={threshold}
+          />
         )
       })}
     </div>
   )
 }
 
-// ---- ablation banner: cross-product mean delta, auto -> last mode ---------
-
-function AblationBanner({ run }: { run: EvalRunArtifact }) {
-  const base = run.modes[0]
-  const other = run.modes[run.modes.length - 1]
-  const deltas = ABLATION_KEYS.map((key) => {
-    const b = crossProductMean(run.products, base, key)
-    const o = crossProductMean(run.products, other, key)
-    return { key, delta: b != null && o != null ? o - b : null }
-  })
-  const latencyDelta = avgLatencyDelta(run.products, base, other)
-  const moved = deltas.some((d) => d.delta != null && Math.abs(d.delta) >= 0.03)
-
-  return (
-    <Card variant="surface">
-      <CardHeader className="pb-2">
-        <Small className="uppercase tracking-wide text-fg-muted">
-          Ablation · <code>{displayModeName(other)}</code> vs <code>{displayModeName(base)}</code>{' '}
-          (cross-product mean)
-        </Small>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex flex-wrap gap-2">
-          {deltas.map(({ key, delta }) => (
-            <Badge key={key} variant="outline" className="font-mono">
-              {key} {delta == null ? '—' : signed(delta)}
-            </Badge>
-          ))}
-          {latencyDelta != null && (
-            <Badge variant="outline" className="font-mono">
-              latency {latencyDelta >= 0 ? '+' : ''}
-              {(latencyDelta / 1000).toFixed(1)}s
-            </Badge>
-          )}
-        </div>
-        <Muted className="text-xs">
-          {moved
-            ? `${displayModeName(other)} moves quality metrics beyond run-to-run noise — inspect per-product before adopting.`
-            : `${displayModeName(other)} does not move retrieval/answer quality beyond noise (±0.03); the added latency is not earning its cost.`}
-        </Muted>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ---- per-product card -----------------------------------------------------
-
-function ProductCard({ product, thresholds }: { product: ProductResult; thresholds: Thresholds }) {
-  const [showMisses, setShowMisses] = useState(false)
-  const modes = product.modes
-  const primary = modes[0]
-  const misses = primary?.misses ?? []
-
-  return (
-    <Card variant="surface">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <H3>{product.product_id}</H3>
-          <Badge variant={product.passed ? 'success' : 'danger'}>
-            {product.passed ? 'pass' : 'fail'}
-          </Badge>
-        </div>
-        <Small>
-          {product.n} eval questions · scores run from 0 to 1, where higher means better evidence
-          and better grounded answers.
-        </Small>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-0">
-        <MetricTable label="Retrieval" keys={RETRIEVAL_METRICS} modes={modes} thresholds={thresholds} />
-        <MetricTable label="Answer (RAGAS)" keys={ANSWER_METRICS} modes={modes} thresholds={thresholds} />
-
-        <div className="grid grid-cols-1 gap-2 border-t border-border pt-3 sm:grid-cols-3">
-          <IndexStat
-            label="Graph navigation"
-            value={formatPercent(primary?.graph_hit_rate ?? null)}
-            detail="share of questions helped by graph-local context"
-          />
-          <IndexStat
-            label="Candidate pool"
-            value={primary ? primary.avg_candidates.toFixed(0) : '—'}
-            detail="average evidence candidates considered before rerank"
-          />
-          <IndexStat
-            label="Latency"
-            value={primary ? `${Math.round(primary.avg_latency_ms)}ms` : '—'}
-            detail="average end-to-end retrieval time"
-          />
-          {modes.length > 1 &&
-            modes.slice(1).map((m) => (
-              <IndexStat
-                key={m.mode}
-                label={displayModeName(m.mode)}
-                value={`${formatPercent(m.graph_hit_rate)} graph`}
-                detail={`${Math.round(m.avg_latency_ms)}ms · ${m.avg_candidates.toFixed(0)} candidates`}
-              />
-            ))}
-        </div>
-
-        <div className="rounded-md border border-border bg-surface-sunk/40 p-3">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <Small className="font-medium text-fg">Index scorecard</Small>
-            <Small>0 weak · 1 strong · gated metrics use launch thresholds</Small>
-          </div>
-          <MetricGroupedBarChart product={product} />
-        </div>
-
-        {misses.length > 0 && (
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowMisses((v) => !v)}
-              className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg"
-            >
-              <ChevronDown className={`size-3.5 transition-transform ${showMisses ? 'rotate-180' : ''}`} />
-              {misses.length} retrieval miss{misses.length === 1 ? '' : 'es'} ({primary.mode})
-            </button>
-            {showMisses && (
-              <ul className="mt-1.5 space-y-1 border-l border-border pl-3 text-xs text-fg-muted">
-                {misses.map((q) => (
-                  <li key={q}>{q}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-function MetricTable({
+/** Thin horizontal bar against a track, gate rendered as a tick. */
+function BulletRow({
   label,
-  keys,
-  modes,
-  thresholds,
+  description,
+  value,
+  threshold,
 }: {
   label: string
-  keys: readonly MetricKey[]
-  modes: ModeMetrics[]
-  thresholds: Thresholds
+  description: string
+  value: number | null
+  threshold?: number
 }) {
-  const showDelta = modes.length > 1
-  const base = modes[0]
-  const last = modes[modes.length - 1]
+  const tone = metricTone(value, threshold)
+  const pct = value == null ? 0 : Math.max(0, Math.min(1, value)) * 100
+  const tip = threshold != null ? `${description} Gate ${formatMetric(threshold)}.` : description
   return (
-    <div>
-      <Small className="text-fg-muted">{label}</Small>
-      <table className="mt-1 w-full text-sm">
-        <thead>
-          <tr className="text-xs text-fg-muted">
-            <th className="text-left font-normal">index</th>
-            <th className="hidden text-left font-normal sm:table-cell">what it proves</th>
-            {modes.map((m) => (
-              <th key={m.mode} className="text-right font-normal">
-                {displayModeName(m.mode)}
-              </th>
-            ))}
-            {showDelta && <th className="text-right font-normal">Δ</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {keys.map((key) => {
-            const threshold = thresholdFor(thresholds, key)
-            const b = base[key] as number | null
-            const l = last[key] as number | null
-            const delta = showDelta && b != null && l != null ? l - b : null
-            return (
-              <tr key={key} className="align-top">
-                <td className="py-1 pr-3 text-fg">{METRIC_LABELS[key]}</td>
-                <td className="hidden max-w-[18rem] py-1 pr-3 text-xs text-fg-muted sm:table-cell">
-                  {METRIC_DESCRIPTIONS[key]}
-                  {threshold != null && (
-                    <span className="font-mono text-fg-subtle"> · gate {formatMetric(threshold)}</span>
-                  )}
-                </td>
-                {modes.map((m) => {
-                  const v = m[key] as number | null
-                  const tone = metricTone(v, threshold)
-                  return (
-                    <td key={m.mode} className={`py-1 text-right font-mono ${toneTextClass(tone)}`}>
-                      {formatMetric(v)}
-                    </td>
-                  )
-                })}
-                {showDelta && (
-                  <td
-                    className={`py-1 text-right font-mono text-xs ${
-                      delta == null ? 'text-fg-muted' : delta >= 0 ? 'text-success' : 'text-danger'
-                    }`}
-                  >
-                    {delta == null ? '—' : signed(delta)}
-                  </td>
-                )}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="flex items-center gap-3" title={tip}>
+      <Small className="w-36 shrink-0 truncate text-fg-muted">{label}</Small>
+      <div className="relative h-1.5 flex-1 rounded-full bg-surface-sunk">
+        {value != null && (
+          <div
+            className={`absolute inset-y-0 left-0 rounded-full ${TONE_BAR[tone]}`}
+            style={{ width: `${pct}%` }}
+          />
+        )}
+        {threshold != null && (
+          <div
+            className="absolute -inset-y-1 w-px bg-fg-subtle"
+            style={{ left: `${threshold * 100}%` }}
+          />
+        )}
+      </div>
+      <div className={`w-14 shrink-0 text-right font-mono text-sm ${toneTextClass(tone)}`}>
+        {formatMetric(value)}
+      </div>
     </div>
   )
 }
 
-function IndexStat({ label, value, detail }: { label: string; value: string; detail: string }) {
+function DiagStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-border bg-surface-sunk/40 px-3 py-2">
-      <Small>{label}</Small>
-      <div className="font-mono text-base font-semibold text-fg">{value}</div>
-      <Small>{detail}</Small>
-    </div>
+    <Small className="text-fg-muted">
+      {label} <span className="font-mono text-fg">{value}</span>
+    </Small>
   )
 }
 
 // ---- helpers --------------------------------------------------------------
 
-function signed(v: number): string {
-  return `${v >= 0 ? '+' : ''}${v.toFixed(3)}`
+const SHORT_LABEL: Record<string, string> = {
+  recall_at_k: 'recall',
+  ndcg_at_k: 'ndcg',
+  answer_correctness: 'answer',
 }
 
-function displayModeName(mode: string): string {
-  return mode === 'auto' ? 'Shipping retrieval' : mode
+/** Bar fill per tone — status colors are earned (gate comparison), not decoration. */
+const TONE_BAR: Record<ReturnType<typeof metricTone>, string> = {
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger: 'bg-danger',
+  neutral: 'bg-fg-subtle',
 }
 
-function formatModeSummary(modes: string[]): string {
-  if (modes.length === 1 && modes[0] === 'auto') return 'shipping retrieval'
-  return `modes ${modes.map(displayModeName).join(', ')}`
+function formatLatency(ms: number): string {
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`
+}
+
+function relTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  if (!Number.isFinite(ms)) return ''
+  const m = Math.round(ms / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.round(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.round(h / 24)}d ago`
 }
 
 function meanDiagnostic(
@@ -492,15 +586,4 @@ function meanDiagnostic(
     .filter((v): v is number => v != null)
   if (vals.length === 0) return null
   return vals.reduce((a, b) => a + b, 0) / vals.length
-}
-
-function avgLatencyDelta(products: ProductResult[], base: string, other: string): number | null {
-  const diffs: number[] = []
-  for (const p of products) {
-    const b = p.modes.find((m) => m.mode === base)?.avg_latency_ms
-    const o = p.modes.find((m) => m.mode === other)?.avg_latency_ms
-    if (b != null && o != null) diffs.push(o - b)
-  }
-  if (diffs.length === 0) return null
-  return diffs.reduce((a, b) => a + b, 0) / diffs.length
 }

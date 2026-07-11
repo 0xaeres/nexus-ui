@@ -149,11 +149,19 @@ be flat surfaces with focused use of `stat` for emphasis.
 
 ### 6.4 Color identity
 
-- Accent `#40D389` · Success `#4DD4AC` · Warning `#E8B86B` ·
-  Danger `#F26D6D` · High `#FF9159` · Violet `#8AB4FF`
+- Accent **indigo** `#7C8CFF` (`oklch(67% 0.13 277)`) — matches the
+  README/badge brand. Mint `--color-accent-mint` is a brand support hue
+  (landing, gradients), distinct from semantic Success.
+- Success `#2F8F73` · Warning `#E8B86B` · Danger `#F26D6D` ·
+  High `#FF9159` · Violet `#8AB4FF`
+- Neutral ink ramp (bg/surface/fg) sits on oklch hue 272 (indigo-ink).
 - Connector state, severity tiers, and the confidence ramp use these
   same hues. Per-agent hex values live in `lib/types.ts`
   (`COUNCIL_AGENT_HUES`).
+- Logo/mark: v4 "AV monogram" (`public/anvay-symbol-v4.svg`,
+  `anvay-logo-v4*.svg`, `app/icon.svg`) — one continuous mint→indigo
+  gradient stroke; A (lambda-style, no crossbar) and V share their
+  middle edge. No dots, no frame. v2/v3 assets kept for reference only.
 
 ### 6.5 Typography (canonical scale)
 

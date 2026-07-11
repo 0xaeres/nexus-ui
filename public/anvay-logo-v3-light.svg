@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272 96" fill="none">
+  <title>Anvay</title>
+  <desc>Anvay logo (light surfaces): knowledge-graph A mark with wordmark.</desc>
+  <defs>
+    <linearGradient id="alv3l-stroke" x1="20" y1="82" x2="78" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#12A57C"/>
+      <stop offset="1" stop-color="#5B6CF0"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path d="M22 79 48 17 74 79" stroke="url(#alv3l-stroke)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M33 57h30" stroke="url(#alv3l-stroke)" stroke-width="8.5" stroke-linecap="round"/>
+    <circle cx="48" cy="17" r="5.5" fill="#10131F"/>
+    <circle cx="22" cy="79" r="5.5" fill="#12A57C"/>
+    <circle cx="74" cy="79" r="5.5" fill="#5B6CF0"/>
+    <circle cx="48" cy="57" r="7.5" fill="#FFFFFF" stroke="#5B6CF0" stroke-width="3"/>
+    <circle cx="48" cy="57" r="2.6" fill="#10131F"/>
+  </g>
+  <text x="96" y="66" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="50" font-weight="700" letter-spacing="-1" fill="#10131F">Anvay</text>
+</svg>

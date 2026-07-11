@@ -119,7 +119,10 @@ export function useEventStream(
       'session_end',
       'delta',
       // eval job stream (/evals/jobs/{job_id}/stream)
+      'ingest_start',
+      'eval_start',
       'product_start',
+      'item_progress',
       'product_done',
       'job_done',
     ]

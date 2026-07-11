@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   title: 'Anvay',
   description: 'Sovereign MCP-native context engine',
   icons: {
-    icon: '/anvay-app-icon-v2.svg',
-    shortcut: '/anvay-app-icon-v2.svg',
+    icon: '/anvay-symbol-v4.svg',
+    shortcut: '/anvay-symbol-v4.svg',
   },
 }
 
