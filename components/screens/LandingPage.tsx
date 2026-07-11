@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { LandingMotion, LandingNav, ScrollTopButton } from './LandingChrome'
+import { QUICKSTART_URL, REPOS } from '@/lib/links'
 
 const SOURCES = ['GitHub', 'Jira', 'Confluence', 'Filesystem', 'Remote MCP'] as const
 const AGENTS = ['Claude Code', 'Codex', 'Cursor', 'Continue'] as const
@@ -55,23 +56,34 @@ export function LandingPage() {
         </div>
 
         <div className="anvay-landing-container anvay-landing-hero-inner">
-          <div className="anvay-landing-eyebrow">MCP-native context engine · Apache-2.0</div>
+          <div className="anvay-landing-eyebrow">Open source · Self-hosted · Apache-2.0</div>
           <h1 className="anvay-landing-heading-1">
             A living brain<br />for your product.
           </h1>
           <p className="anvay-landing-lead">
             Anvay fuses your repos, tickets, docs, and hard-won tribal knowledge into one
             continuously-synced, <em>cited</em> intelligence layer, then serves it to every
-            AI coding agent you use.
+            AI coding agent you use. <strong>You run it</strong>&nbsp;— your context never
+            leaves your infrastructure.
           </p>
           <div className="anvay-landing-hero-actions">
-            <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href="/request-access">
-              Request access
+            <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href={QUICKSTART_URL}>
+              Deploy Anvay
             </Link>
-            <a className="anvay-landing-btn anvay-landing-btn-secondary anvay-landing-btn-lg" href="#how">
-              See how it works
+            <a
+              className="anvay-landing-btn anvay-landing-btn-secondary anvay-landing-btn-lg"
+              href={REPOS.backend}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View on GitHub
             </a>
           </div>
+          <p className="anvay-landing-hero-note">
+            Self-hosted, no waitlist. Clone the repo, run it on your own machine or cloud.{' '}
+            Already have an instance running?{' '}
+            <Link href="/login">Sign in</Link>.
+          </p>
           <div className="anvay-landing-agent-strip" aria-label="Supported agents">
             <span>Serves</span>
             {AGENTS.map((a) => (
@@ -234,9 +246,9 @@ export function LandingPage() {
           <div className="anvay-landing-cta-box anvay-reveal">
             <div className="anvay-landing-cta-orb" aria-hidden="true" />
             <h2 className="anvay-landing-heading-2">Give every agent the right context.</h2>
-            <p>Start with one product. Connect your sources. Build the brain.</p>
+            <p>Self-host in minutes. Connect your sources. Build the brain. Start with one product.</p>
             <div className="anvay-landing-hero-actions anvay-landing-cta-actions">
-              <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href="/request-access">Request access</Link>
+              <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href={QUICKSTART_URL}>Deploy Anvay</Link>
               <Link className="anvay-landing-btn anvay-landing-btn-secondary anvay-landing-btn-lg" href="/docs">Read the docs</Link>
             </div>
           </div>
@@ -253,8 +265,8 @@ export function LandingPage() {
           </div>
           <div className="anvay-landing-footer-links">
             <Link href="/docs">Docs</Link>
+            <a href={REPOS.backend} target="_blank" rel="noreferrer">GitHub</a>
             <Link href="/login">Sign in</Link>
-            <Link href="/request-access">Request access</Link>
           </div>
           <span className="anvay-landing-footer-license">Apache-2.0</span>
         </div>

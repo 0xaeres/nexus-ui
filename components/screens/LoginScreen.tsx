@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { H2, Small } from '@/components/ui/typography'
 import { ApiError, login } from '@/lib/api'
+import { QUICKSTART_URL } from '@/lib/links'
 
 function loginErrorMessage(e: unknown) {
   if (e instanceof ApiError) {
@@ -51,8 +52,8 @@ export function LoginScreen() {
             <div className="flex h-10 items-center justify-center">
               <AnvayLogo size="sm" priority className="opacity-95" />
             </div>
-            <H2 className="mt-3">Sign in to your console</H2>
-            <Small>Enter your credentials to manage products</Small>
+            <H2 className="mt-3">Sign in to your instance</H2>
+            <Small>Anvay is self-hosted. Use the credentials for the instance your team runs.</Small>
           </div>
 
           <form onSubmit={submit} className="flex flex-col gap-4">
@@ -122,6 +123,14 @@ export function LoginScreen() {
               <Small className="hover:text-fg transition-all">Product overview</Small>
             </Link>
           </div>
+
+          <p className="text-center text-fg-subtle text-xs leading-relaxed">
+            No instance yet? Anvay is open source and self-hosted.{' '}
+            <Link href={QUICKSTART_URL} className="underline underline-offset-2 hover:text-fg">
+              Deploy your own
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </main>

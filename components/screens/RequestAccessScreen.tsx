@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { H1, Muted, Small } from '@/components/ui/typography'
 import { ApiError, requestAccess } from '@/lib/api'
+import { QUICKSTART_URL } from '@/lib/links'
 
 function requestAccessErrorMessage(e: unknown) {
   if (e instanceof ApiError) {
@@ -49,7 +50,10 @@ export function RequestAccessScreen() {
       <Card variant="surface" className="w-full max-w-md">
         <CardHeader>
           <H1>Request access</H1>
-          <Muted>Owner approval required</Muted>
+          <Muted>
+            Ask the administrator of your team&apos;s self-hosted Anvay instance to approve you.
+            This is not a hosted signup — access is granted on the instance you&apos;re pointed at.
+          </Muted>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-3">
@@ -88,8 +92,8 @@ export function RequestAccessScreen() {
             <Link href="/login" className="hover:text-fg">
               <Small>Back to sign in</Small>
             </Link>
-            <Link href="/docs" className="hover:text-fg">
-              <Small>Read the docs</Small>
+            <Link href={QUICKSTART_URL} className="hover:text-fg">
+              <Small>No instance yet? Deploy your own</Small>
             </Link>
           </form>
         </CardContent>
