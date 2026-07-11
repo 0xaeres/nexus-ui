@@ -114,7 +114,10 @@ export function ScrollTopButton() {
       className="anvay-landing-totop"
       data-visible={visible || undefined}
       aria-label="Back to top"
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      onClick={() => {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' })
+      }}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path
