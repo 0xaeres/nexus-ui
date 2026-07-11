@@ -90,17 +90,6 @@ export interface EvalJobRef {
   status: string
 }
 
-export interface EvalJobStatus {
-  job_id: string
-  status: 'running' | 'completed' | 'failed'
-  products: string[]
-  modes: string[]
-  started_at: string
-  completed_at: string | null
-  run_id: string | null
-  error: string | null
-}
-
 export interface ProductEvalInfo {
   product_id: string
   language: string
@@ -132,24 +121,6 @@ const TONE_TEXT: Record<MetricTone, string> = {
 
 export function toneTextClass(tone: MetricTone): string {
   return TONE_TEXT[tone]
-}
-
-const TONE_FILL: Record<MetricTone, string> = {
-  success: '#2F8F73',
-  warning: '#C9913D',
-  danger: '#C2554D',
-  neutral: '#7C8595',
-}
-
-export function toneFill(tone: MetricTone): string {
-  return TONE_FILL[tone]
-}
-
-/** Stable per-mode hue for charts. */
-const MODE_HUES = ['#5B8DEF', '#9B6FE0', '#3FA796', '#E0915B']
-
-export function modeHue(index: number): string {
-  return MODE_HUES[index % MODE_HUES.length]
 }
 
 /** The gate for a metric key, if the thresholds object defines one. */
