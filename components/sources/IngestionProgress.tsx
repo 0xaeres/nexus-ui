@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Small } from '@/components/ui/typography'
-import { sourceLogUrl, syncSource } from '@/lib/api'
+import { getSource, sourceLogUrl, syncSource } from '@/lib/api'
 import type { Source } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,30 @@ interface LogLine {
   done?: number
   total?: number
   pct?: number
+  phase?: 'read' | 'index'
+  repo?: string
+  repo_index?: number
+  repo_count?: number
+}
+
+interface RepoProgress {
+  readPct: number
+  readDone: number
+  readTotal: number
+  indexPct: number
+  indexDone: number
+  indexTotal: number
+  phase: 'read' | 'index'
+  repo?: string
+  repoIndex?: number
+  repoCount?: number
+}
+
+// Reading is the first half of the bar, indexing (chunk → embed → upsert) the
+// second half, so the bar keeps moving through chunking instead of freezing at
+// 100% once files are read.
+function overallPct(p: RepoProgress): number {
+  return Math.round(0.5 * p.readPct + 0.5 * p.indexPct)
 }
 
 interface Props {
@@ -43,9 +67,14 @@ export function IngestionProgress({
     return 'running'
   }, [forceRunning, idleUntilStarted, source.lastSync, source.resourceCount, source.status])
 
+  // Detect page-refresh mid-ingestion: backend still running but UI lost all state.
+  const isReconnect = initial === 'running' && !forceRunning && source.status === 'syncing'
+
   const [status, setStatus] = useState<IngestStatus>(initial)
-  const [lines, setLines] = useState<LogLine[]>([])
-  const [progress, setProgress] = useState<{ done: number; total: number; pct: number } | null>(null)
+  const [lines, setLines] = useState<LogLine[]>(
+    isReconnect ? [{ level: 'info', msg: 'Reconnected – ingestion is running. Waiting for next update…' }] : [],
+  )
+  const [progress, setProgress] = useState<RepoProgress | null>(null)
   const [retrying, setRetrying] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastStatusRef = useRef<IngestStatus>(initial)
@@ -70,8 +99,60 @@ export function IngestionProgress({
         item = { level: 'info', msg: e.data }
       }
 
+      if (item.level === 'started') {
+        // New repo began — reset the bar and capture its file count.
+        setProgress({
+          readPct: 0,
+          readDone: 0,
+          readTotal: item.total ?? 0,
+          indexPct: 0,
+          indexDone: 0,
+          indexTotal: item.total ?? 0,
+          phase: 'read',
+          repo: item.repo,
+          repoIndex: item.repo_index,
+          repoCount: item.repo_count,
+        })
+        setLines((prev) => [...prev, item])
+        return
+      }
+
       if (item.level === 'progress') {
-        setProgress({ done: item.done!, total: item.total!, pct: item.pct! })
+        const phase = item.phase ?? 'read'
+        setProgress((prev) => {
+          const base: RepoProgress = prev ?? {
+            readPct: 0,
+            readDone: 0,
+            readTotal: 0,
+            indexPct: 0,
+            indexDone: 0,
+            indexTotal: 0,
+            phase,
+          }
+          const repo = {
+            repo: item.repo ?? base.repo,
+            repoIndex: item.repo_index ?? base.repoIndex,
+            repoCount: item.repo_count ?? base.repoCount,
+          }
+          if (phase === 'index') {
+            return {
+              ...base,
+              ...repo,
+              phase,
+              indexPct: item.pct ?? base.indexPct,
+              indexDone: item.done ?? base.indexDone,
+              indexTotal: item.total ?? base.indexTotal,
+            }
+          }
+          return {
+            ...base,
+            ...repo,
+            phase,
+            readPct: item.pct ?? base.readPct,
+            readDone: item.done ?? base.readDone,
+            readTotal: item.total ?? base.readTotal,
+          }
+        })
         return
       }
 
@@ -96,14 +177,53 @@ export function IngestionProgress({
     }
     es.onerror = () => {
       if (es.readyState === EventSource.CLOSED && !done) {
-        done = true
-        setStatus('error')
-        setLines((prev) => [...prev, { level: 'error', msg: 'Stream closed unexpectedly.' }])
+        // Race: backend may have finished just before/as we reconnected.
+        // Check source status before declaring error.
+        getSource(productId, source.id)
+          .then((s) => {
+            if (done) return
+            done = true
+            if (s.status !== 'syncing' && s.lastSync && s.resourceCount > 0) {
+              setStatus('done')
+            } else if (s.status === 'error') {
+              setStatus('error')
+              setLines((prev) => [...prev, { level: 'error', msg: 'Source reported an error.' }])
+            } else {
+              setStatus('error')
+              setLines((prev) => [...prev, { level: 'error', msg: 'Stream closed unexpectedly.' }])
+            }
+          })
+          .catch(() => {
+            if (done) return
+            done = true
+            setStatus('error')
+            setLines((prev) => [...prev, { level: 'error', msg: 'Stream closed unexpectedly.' }])
+          })
       }
     }
     return () => {
       es.close()
     }
+  }, [productId, source.id, status])
+
+  // Fallback poll: catches completion if SSE drops the terminal event or is
+  // silent after a refresh. Stops as soon as status leaves 'running'.
+  useEffect(() => {
+    if (status !== 'running') return
+    const id = setInterval(async () => {
+      try {
+        const s = await getSource(productId, source.id)
+        if (s.status !== 'syncing') {
+          if (s.lastSync && s.resourceCount > 0) {
+            setStatus('done')
+          } else if (s.status === 'error') {
+            setStatus('error')
+            setLines((prev) => [...prev, { level: 'error', msg: 'Source reported an error.' }])
+          }
+        }
+      } catch { /* ignore transient poll errors */ }
+    }, 5000)
+    return () => clearInterval(id)
   }, [productId, source.id, status])
 
   useEffect(() => {
@@ -126,8 +246,15 @@ export function IngestionProgress({
       <StatusRow source={source} status={status} onRetry={status === 'error' ? retry : undefined} retrying={retrying} />
       {status === 'running' && progress && (
         <div className="flex flex-col gap-1">
-          <Progress value={progress.pct} className="h-1.5" />
-          <span className="font-mono text-xs text-fg-subtle">{progress.done} / {progress.total} files</span>
+          <Progress value={overallPct(progress)} className="h-1.5" />
+          <span className="font-mono text-xs text-fg-subtle">
+            {progress.repoCount && progress.repoCount > 1 && (
+              <span className="text-accent">[{progress.repoIndex}/{progress.repoCount}] </span>
+            )}
+            {progress.phase === 'index'
+              ? `Indexing ${progress.indexDone} / ${progress.indexTotal} files`
+              : `Reading ${progress.readDone} / ${progress.readTotal} files`}
+          </span>
         </div>
       )}
       <ScrollArea className="h-44 rounded-md border border-border bg-bg font-mono text-xs">

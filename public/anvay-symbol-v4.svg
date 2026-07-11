@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <title>Anvay symbol</title>
+  <desc>Anvay AV monogram: one continuous form, A and V sharing an edge, flat horizontal ends.</desc>
+  <defs>
+    <linearGradient id="av4" x1="10" y1="76" x2="91" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3BE0AF"/>
+      <stop offset="1" stop-color="#7C8CFF"/>
+    </linearGradient>
+  </defs>
+  <path d="M5.00 76.00 L37.00 9.64 L64.00 65.64 L86.00 20.00 L96.00 20.00 L64.00 86.36 L37.00 30.36 L15.00 76.00 Z" fill="url(#av4)"/>
+</svg>

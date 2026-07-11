@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, MessageSquareText, Plug, Settings, Shield, Sparkles } from 'lucide-react'
+import { BarChart3, BookOpen, ClipboardCheck, Compass, Database, LayoutDashboard, MessageSquareText, Plug, Settings, Shield, Sparkles } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useProduct } from '@/lib/product-context'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,12 @@ export function SideNav() {
       </div>
 
       <NavLink href="/" icon={Compass} label="Products" active={!inProduct && pathname === '/'} />
+      <NavLink
+        href="/evals"
+        icon={BarChart3}
+        label="Evals"
+        active={pathname === '/evals'}
+      />
 
       {inProduct && (
         <>
@@ -81,12 +87,6 @@ export function SideNav() {
         system
       </div>
 
-      <NavLink
-        href="/setup"
-        icon={Settings}
-        label="Setup"
-        active={pathname === '/setup'}
-      />
       {currentUser.role === 'admin' && (
         <NavLink
           href="/admin/access"

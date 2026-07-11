@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272 96" fill="none">
+  <title>Anvay</title>
+  <desc>Anvay logo: AV monogram with wordmark.</desc>
+  <defs>
+    <linearGradient id="alv4" x1="10" y1="76" x2="91" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3BE0AF"/>
+      <stop offset="1" stop-color="#7C8CFF"/>
+    </linearGradient>
+  </defs>
+  <path d="M5.00 76.00 L37.00 9.64 L64.00 65.64 L86.00 20.00 L96.00 20.00 L64.00 86.36 L37.00 30.36 L15.00 76.00 Z" fill="url(#alv4)"/>
+  <text x="100" y="66" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="50" font-weight="700" letter-spacing="-1" fill="#EDEFFA">Anvay</text>
+</svg>

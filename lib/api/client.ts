@@ -8,7 +8,9 @@ const REQUEST_TIMEOUT_MS = 10_000
 const LONG_REQUEST_TIMEOUT_MS = 90_000
 
 function timeoutFor(path: string) {
-  return path.includes('/agent/messages') ? LONG_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+  return path.includes('/agent/messages') || path === '/evals/runs'
+    ? LONG_REQUEST_TIMEOUT_MS
+    : REQUEST_TIMEOUT_MS
 }
 
 export class ApiError extends Error {

@@ -6,7 +6,7 @@ const PROXY_TIMEOUT_MS = 10_000
 const LONG_PROXY_TIMEOUT_MS = 90_000
 
 function timeoutFor(path: string[]) {
-  return path.at(-2) === 'agent' && path.at(-1) === 'messages'
+  return (path.at(-2) === 'agent' && path.at(-1) === 'messages') || path.join('/') === 'evals/runs'
     ? LONG_PROXY_TIMEOUT_MS
     : PROXY_TIMEOUT_MS
 }

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StatusDot } from '@/components/ui/status-dot'
 import { H3, Muted, Small, Subtle } from '@/components/ui/typography'
@@ -52,7 +52,11 @@ export function CouncilStage({ productId }: { productId: string }) {
           router.replace(`/p/${productId}/ingest`)
           return
         }
-        if (!sessionId && s.currentSessionId) setSessionId(s.currentSessionId)
+        // Adopt an in-flight session if we don't already have one. Functional
+        // update keeps sessionId out of the dep array so this guard runs only
+        // on mount — otherwise starting a council sets sessionId, re-runs this
+        // effect, and a still-stale hasEmbeddings bounces us back to /ingest.
+        setSessionId((cur) => cur ?? s.currentSessionId ?? null)
       })
       .catch((e: unknown) => {
         if (cancelled) return
@@ -61,7 +65,7 @@ export function CouncilStage({ productId }: { productId: string }) {
     return () => {
       cancelled = true
     }
-  }, [productId, router, sessionId])
+  }, [productId, router])
 
   const runCouncil = async () => {
     setLaunching(true)
