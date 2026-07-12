@@ -296,23 +296,41 @@ export function MarkdownContent({
   children,
   className,
   compact = false,
+  prose = false,
 }: {
   children: string
   className?: string
   compact?: boolean
+  /** Long-form document rhythm: heading-scaled margins, neutral tables and
+      callouts, reading line-height. Used by the docs site; app surfaces keep
+      the default compact flex rhythm. */
+  prose?: boolean
 }) {
   const blocks = parseBlocks(children)
   const headingCounts = new Map<string, number>()
 
   return (
-    <div className={cn('flex flex-col gap-3 text-fg', compact && 'gap-2', className)}>
+    <div
+      className={cn(
+        prose ? 'text-fg' : 'flex flex-col gap-3 text-fg',
+        !prose && compact && 'gap-2',
+        className,
+      )}
+    >
       {blocks.map((block, index) => {
         const key = `md-${index}`
         if (block.type === 'code') {
           if (block.lang.toLowerCase() === 'mermaid') {
-            return <MermaidDiagram key={key} chart={block.content} />
+            return prose ? (
+              <div key={key} className="my-5">
+                <MermaidDiagram chart={block.content} />
+              </div>
+            ) : (
+              <MermaidDiagram key={key} chart={block.content} />
+            )
           }
-          return <CodeBlock key={key} content={block.content} lang={block.lang} compact={compact} />
+          const codeBlock = <CodeBlock key={key} content={block.content} lang={block.lang} compact={compact} />
+          return prose ? <div key={key} className="my-5">{codeBlock}</div> : codeBlock
         }
         if (block.type === 'heading') {
           const baseId = slugifyHeading(block.content)
@@ -321,21 +339,33 @@ export function MarkdownContent({
           if (indexesHeading) headingCounts.set(baseId, count + 1)
           const id = count ? `${baseId}-${count + 1}` : baseId
           return block.depth <= 2 ? (
-            <H2 key={key} id={id} className={cn('scroll-mt-20 border-l-2 border-accent pl-3', compact && 'text-base')}>{parseInline(block.content, key)}</H2>
+            <H2
+              key={key}
+              id={id}
+              className={cn(
+                prose
+                  ? 'mt-12 mb-4 scroll-mt-24 first:mt-0'
+                  : 'scroll-mt-20 border-l-2 border-accent pl-3',
+                compact && 'text-base',
+              )}
+            >{parseInline(block.content, key)}</H2>
           ) : (
-            <H3 key={key} id={id} className="scroll-mt-20">{parseInline(block.content, key)}</H3>
+            <H3 key={key} id={id} className={cn('scroll-mt-24', prose ? 'mt-8 mb-3' : 'scroll-mt-20')}>{parseInline(block.content, key)}</H3>
           )
         }
         if (block.type === 'table') {
           return (
-            <div key={key} className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full border-collapse text-left text-base">
-                <thead className="bg-accent-soft">
+            <div key={key} className={cn('overflow-x-auto rounded-md border border-border', prose && 'my-5')}>
+              <table className={cn('w-full border-collapse text-left', prose ? 'text-sm' : 'text-base')}>
+                <thead className={prose ? 'bg-surface' : 'bg-accent-soft'}>
                   <tr>
                     {block.headers.map((header, headerIndex) => (
                       <th
                         key={`${key}-head-${headerIndex}`}
-                        className="border-b border-border px-4 py-3 font-medium text-fg"
+                        className={cn(
+                          'border-b border-border font-medium text-fg',
+                          prose ? 'px-4 py-2.5' : 'px-4 py-3',
+                        )}
                       >
                         {parseInline(header, `${key}-head-${headerIndex}`)}
                       </th>
@@ -346,7 +376,10 @@ export function MarkdownContent({
                   {block.rows.map((row, rowIndex) => (
                     <tr key={`${key}-row-${rowIndex}`} className="border-b border-border last:border-b-0">
                       {block.headers.map((_, cellIndex) => (
-                        <td key={`${key}-cell-${rowIndex}-${cellIndex}`} className="px-4 py-3 text-fg-muted">
+                        <td
+                          key={`${key}-cell-${rowIndex}-${cellIndex}`}
+                          className={cn('text-fg-muted', prose ? 'px-4 py-2.5 leading-relaxed' : 'px-4 py-3')}
+                        >
                           {parseInline(row[cellIndex] ?? '', `${key}-cell-${rowIndex}-${cellIndex}`)}
                         </td>
                       ))}
@@ -358,7 +391,7 @@ export function MarkdownContent({
           )
         }
         if (block.type === 'rule') {
-          return <div key={key} className="h-px bg-border" />
+          return <div key={key} className={cn('h-px bg-border', prose && 'my-8')} />
         }
         if (block.type === 'list') {
           const List = block.ordered ? 'ol' : 'ul'
@@ -366,7 +399,10 @@ export function MarkdownContent({
             <List
               key={key}
               className={cn(
-                'm-0 flex flex-col gap-2 pl-6 text-base leading-relaxed text-fg-muted',
+                'm-0 flex flex-col pl-6 text-fg-muted',
+                prose
+                  ? 'my-3.5 gap-1.5 text-base leading-7 marker:text-fg-subtle'
+                  : 'gap-2 text-base leading-relaxed',
                 block.ordered ? 'list-decimal' : 'list-disc',
               )}
             >
@@ -378,13 +414,26 @@ export function MarkdownContent({
         }
         if (block.type === 'quote') {
           return (
-            <blockquote key={key} className="m-0 rounded-r-md border-l-2 border-accent bg-accent-soft px-4 py-3 text-base leading-relaxed text-fg-muted">
+            <blockquote
+              key={key}
+              className={cn(
+                'm-0 rounded-r-md border-l-2 border-accent text-base leading-relaxed text-fg-muted',
+                prose ? 'my-5 bg-surface px-4 py-3' : 'bg-accent-soft px-4 py-3',
+              )}
+            >
               {parseInline(block.content, key)}
             </blockquote>
           )
         }
         return (
-          <Body key={key} className={cn('text-base leading-loose text-fg-muted', compact && 'text-sm')}>
+          <Body
+            key={key}
+            className={cn(
+              'text-base text-fg-muted',
+              prose ? 'my-3.5 leading-7 first:mt-0' : 'leading-loose',
+              compact && 'text-sm',
+            )}
+          >
             {parseInline(block.content, key)}
           </Body>
         )
