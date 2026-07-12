@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrandIcon } from '@/components/icons/BrandIcon'
 import { REPOS } from '@/lib/links'
 
@@ -11,16 +11,25 @@ const SECTIONS = [
   { id: 'quality', label: 'Quality' },
 ] as const
 
-/** Sticky nav with shrink-on-scroll and scrollspy links. */
+/** Sticky nav with scroll progress, shrink-on-scroll, and scrollspy links. */
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false)
   const [active, setActive] = useState<string | null>(null)
+  const progressRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let raf = 0
     const onScroll = () => {
       cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => setScrolled(window.scrollY > 12))
+      raf = requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 12)
+        const doc = document.documentElement
+        const max = doc.scrollHeight - window.innerHeight
+        progressRef.current?.style.setProperty(
+          'transform',
+          `scaleX(${max > 0 ? window.scrollY / max : 0})`,
+        )
+      })
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -51,6 +60,9 @@ export function LandingNav() {
 
   return (
     <header className="anvay-landing-nav" data-scrolled={scrolled || undefined}>
+      <div className="anvay-landing-progress" aria-hidden="true">
+        <div ref={progressRef} />
+      </div>
       <div className="anvay-landing-container anvay-landing-nav-inner">
         <a className="anvay-landing-brand" href="#top" aria-label="Anvay home">
           <span className="anvay-landing-mark" aria-hidden="true">
@@ -88,6 +100,48 @@ export function LandingNav() {
   )
 }
 
+/** Floating back-to-top button, appears after scrolling past the hero. */
+export function ScrollTopButton() {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    let raf = 0
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => setVisible(window.scrollY > 600))
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
+  return (
+    <button
+      type="button"
+      className="anvay-landing-totop"
+      data-visible={visible || undefined}
+      aria-label="Back to top"
+      onClick={() => {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' })
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path
+          d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  )
+}
+
 /**
  * JS fallback for browsers without CSS scroll-driven animations
  * (Safari, Firefox): IntersectionObserver reveals + lerped rAF parallax.
@@ -116,6 +170,7 @@ export function LandingMotion() {
     root.querySelectorAll('.anvay-reveal').forEach((el) => io.observe(el))
 
     const art = root.querySelector<HTMLElement>('.anvay-landing-hero-art')
+    const chips = root.querySelector<HTMLElement>('.anvay-landing-hero-chips')
     const inner = root.querySelector<HTMLElement>('.anvay-landing-hero-inner')
 
     let target = 0
@@ -124,6 +179,7 @@ export function LandingMotion() {
     const tick = () => {
       current += (target - current) * 0.14
       if (art) art.style.transform = `translate3d(0, ${current * 0.1}px, 0)`
+      if (chips) chips.style.transform = `translate3d(0, ${current * -0.14}px, 0)`
       if (inner) inner.style.transform = `translate3d(0, ${current * -0.045}px, 0)`
       raf = Math.abs(target - current) > 0.4 ? requestAnimationFrame(tick) : 0
     }

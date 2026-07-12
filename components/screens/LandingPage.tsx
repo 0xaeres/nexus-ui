@@ -1,9 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { BrandIcon } from '@/components/icons/BrandIcon'
-import { LandingMotion, LandingNav } from './LandingChrome'
+import { LandingMotion, LandingNav, ScrollTopButton } from './LandingChrome'
 import { QUICKSTART_URL, REPOS } from '@/lib/links'
 
+const SOURCES = ['GitHub', 'Jira', 'Confluence', 'Filesystem', 'Remote MCP'] as const
 const AGENTS = ['Claude Code', 'Codex', 'Cursor', 'Continue'] as const
 
 const STEPS = [
@@ -25,7 +26,7 @@ const STEPS = [
   {
     num: '04',
     title: 'Served over MCP',
-    body: 'Claude Code, Codex, Cursor, and Continue, all from the same source.',
+    body: 'Claude Code, Codex, Cursor, and Continue, all from one source.',
   },
 ] as const
 
@@ -49,6 +50,11 @@ export function LandingPage() {
           <div className="anvay-landing-orb anvay-landing-orb-b" />
           <div className="anvay-landing-hero-grid-bg" />
         </div>
+        <div className="anvay-landing-hero-chips" aria-hidden="true">
+          {SOURCES.map((s, i) => (
+            <span key={s} className={`anvay-landing-chip anvay-landing-chip-${i + 1}`}>{s}</span>
+          ))}
+        </div>
 
         <div className="anvay-landing-container anvay-landing-hero-inner">
           <div className="anvay-landing-eyebrow">Open source · Self-hosted · Apache-2.0</div>
@@ -56,8 +62,9 @@ export function LandingPage() {
             The context engine<br />for AI coding agents.
           </h1>
           <p className="anvay-landing-lead">
-            Anvay indexes your repos, tickets, and docs into a cited knowledge base and
-            serves it to your coding agents over MCP. Your context never leaves your infrastructure.
+            Anvay indexes your repos, tickets, and docs into a cited knowledge base
+            and serves it to your coding agents over MCP. Your context never leaves
+            your infrastructure.
           </p>
           <div className="anvay-landing-hero-actions">
             <Link className="anvay-landing-btn anvay-landing-btn-primary anvay-landing-btn-lg" href={QUICKSTART_URL}>
@@ -74,7 +81,8 @@ export function LandingPage() {
             </a>
           </div>
           <p className="anvay-landing-hero-note">
-            No waitlist. Run it on your own machine or cloud. <Link href="/login">Sign in</Link>.
+            No waitlist. Run it on your own machine or cloud.{' '}
+            Already have an instance? <Link href="/login">Sign in</Link>.
           </p>
           <div className="anvay-landing-agent-strip" aria-label="Supported agents">
             <span>Serves</span>
@@ -85,7 +93,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="anvay-landing-container anvay-landing-frame-wrap anvay-reveal">
+        <div className="anvay-landing-container anvay-landing-frame-wrap">
           <ProductFrame />
         </div>
       </section>
@@ -95,9 +103,7 @@ export function LandingPage() {
         <div className="anvay-landing-container">
           <div className="anvay-landing-section-head anvay-reveal">
             <h2 className="anvay-landing-heading-2">How it works</h2>
-            <p>
-              Four stages, humans in the loop. <Link href="/docs">Details in the docs</Link>.
-            </p>
+            <p>Four stages, humans in the loop.</p>
           </div>
           <div className="anvay-landing-steps">
             {STEPS.map((step) => (
@@ -115,6 +121,7 @@ export function LandingPage() {
       <section id="quality" className="anvay-landing-section anvay-landing-stats-section">
         <div className="anvay-landing-container">
           <div className="anvay-landing-section-head anvay-landing-section-head-center anvay-reveal">
+            <div className="anvay-landing-eyebrow">Eval-gated</div>
             <h2 className="anvay-landing-heading-2">Retrieval quality, measured.</h2>
             <p>End-to-end eval runs on real corpora. Hard floors fail CI.</p>
           </div>
@@ -133,6 +140,7 @@ export function LandingPage() {
       <section className="anvay-landing-section anvay-landing-cta-section">
         <div className="anvay-landing-container">
           <div className="anvay-landing-cta-box anvay-reveal">
+            <div className="anvay-landing-cta-orb" aria-hidden="true" />
             <h2 className="anvay-landing-heading-2">Give every agent the right context.</h2>
             <p>Self-host in minutes. Start with one product.</p>
             <div className="anvay-landing-hero-actions anvay-landing-cta-actions">
@@ -143,6 +151,8 @@ export function LandingPage() {
         </div>
       </section>
 
+      <ScrollTopButton />
+
       <footer className="anvay-landing-footer">
         <div className="anvay-landing-container anvay-landing-footer-inner">
           <div className="anvay-landing-brand">
@@ -151,10 +161,7 @@ export function LandingPage() {
           </div>
           <div className="anvay-landing-footer-links">
             <Link href="/docs">Docs</Link>
-            <a href={REPOS.backend} target="_blank" rel="noreferrer" className="anvay-landing-footer-github">
-              <BrandIcon id="github" size={15} />
-              GitHub
-            </a>
+            <a href={REPOS.backend} target="_blank" rel="noreferrer">GitHub</a>
             <Link href="/login">Sign in</Link>
           </div>
           <span className="anvay-landing-footer-license">Apache-2.0</span>
