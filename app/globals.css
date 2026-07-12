@@ -1360,3 +1360,5 @@ html:has(.anvay-landing) {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* rev: restore main styling */

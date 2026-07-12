@@ -266,21 +266,20 @@ export function DocsSearch({ groups }: { groups: DocNavGroup[] }) {
               searchRef.current?.blur()
             }
           }}
-          placeholder="Search docs"
+          placeholder="Search docs…"
           aria-keyshortcuts="Meta+K Control+K /"
-          className="h-10 w-full rounded-md border border-border-strong bg-surface pl-9 pr-20 text-base text-fg shadow-card outline-none placeholder:text-fg-subtle focus-visible:border-accent"
+          className="h-9 w-full rounded-md border border-border bg-surface pl-9 pr-14 text-sm text-fg outline-none placeholder:text-fg-subtle focus-visible:border-accent"
           type="search"
         />
-        <span className="pointer-events-none absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center gap-1 font-mono text-xs text-fg-subtle">
+        <span className="pointer-events-none absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center font-mono text-[11px] text-fg-subtle">
           <span className="rounded border border-border px-1.5 py-0.5">⌘K</span>
-          <span className="rounded border border-border px-1.5 py-0.5">/</span>
         </span>
         </label>
 
         {query ? (
           <div
             id="docs-search-listbox"
-            className="absolute left-0 right-0 top-12 z-40 max-h-[min(32rem,70vh)] overflow-auto rounded-md border border-border-strong bg-surface-raised p-1 shadow-2xl lg:right-auto lg:w-[36rem]"
+            className="absolute left-0 right-0 top-11 z-40 max-h-[min(32rem,70vh)] overflow-auto rounded-md border border-border-strong bg-surface-raised p-1 shadow-2xl lg:right-auto lg:w-[32rem]"
             role="listbox"
             aria-label="Documentation search results"
           >
@@ -343,13 +342,13 @@ export function DocsNav({
   activeSlug: string
 }) {
   return (
-    <nav className="grid grid-cols-2 gap-x-4 gap-y-5 lg:flex lg:flex-col" aria-label="Documentation">
+    <nav className="grid grid-cols-2 gap-x-4 gap-y-6 lg:flex lg:flex-col" aria-label="Documentation">
         {groups.map((group) => (
-          <div key={group.label} className="flex flex-col gap-2">
-            <div className="px-2 font-mono text-xs font-medium uppercase text-accent">
+          <div key={group.label} className="flex flex-col gap-1.5">
+            <div className="px-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
               {group.label}
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-px">
               {group.items.map((item) => {
                 const active = item.slug === activeSlug
                 return (
@@ -357,13 +356,13 @@ export function DocsNav({
                     key={item.slug}
                     href={item.slug === 'index' ? '/docs' : `/docs/${item.slug}`}
                     className={cn(
-                      'border-l-2 px-3 py-2 text-sm transition-colors',
+                      'rounded-md px-3 py-1.5 text-sm transition-colors',
                       active
-                        ? 'border-accent bg-bg-selected text-fg'
-                        : 'border-transparent text-fg-muted hover:border-border-strong hover:bg-bg-hover hover:text-fg',
+                        ? 'bg-bg-selected font-medium text-fg'
+                        : 'text-fg-muted hover:bg-bg-hover hover:text-fg',
                     )}
                   >
-                    <span className="block font-medium">{item.title}</span>
+                    {item.title}
                   </Link>
                 )
               })}

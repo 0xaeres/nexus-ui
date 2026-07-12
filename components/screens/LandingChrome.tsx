@@ -3,10 +3,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import { BrandIcon } from '@/components/icons/BrandIcon'
 import { REPOS } from '@/lib/links'
 
 const SECTIONS = [
-  { id: 'problem', label: 'Why Anvay' },
   { id: 'how', label: 'How it works' },
   { id: 'quality', label: 'Quality' },
 ] as const
@@ -88,6 +88,7 @@ export function LandingNav() {
             target="_blank"
             rel="noreferrer"
           >
+            <BrandIcon id="github" size={16} />
             GitHub
           </a>
           <Link className="anvay-landing-btn anvay-landing-btn-primary" href="/docs/quickstart">

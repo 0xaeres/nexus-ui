@@ -1,9 +1,7 @@
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { AnvayLogo } from '@/components/icons/AnvayLogo'
 import { DocsNav, DocsSearch } from '@/components/docs/DocsNav'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { MarkdownContent } from '@/components/ui/markdown'
 import { H1, H2, Muted, SectionLabel } from '@/components/ui/typography'
 import { REPOS } from '@/lib/links'
@@ -36,17 +34,20 @@ function DocsTopBar({ groups }: { groups?: DocNavGroup[] }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-bg/90 backdrop-blur-xl">
       <div className="mx-auto flex min-h-14 w-full max-w-[1440px] flex-wrap items-center gap-3 px-4 py-2 sm:flex-nowrap sm:gap-4 sm:px-6 lg:px-8">
-        <Link href="/landing" className="flex items-center gap-2 text-base font-semibold text-fg">
-          <AnvayLogo markOnly size="sm" priority />
-          <span>Anvay</span>
+        <Link href="/landing" className="flex items-baseline gap-2 text-base font-semibold text-fg">
+          <span className="flex items-center gap-2">
+            <AnvayLogo markOnly size="sm" priority />
+            <span>Anvay</span>
+          </span>
+          <span className="text-sm font-normal text-fg-subtle" aria-hidden="true">/</span>
+          <span className="text-sm font-normal text-fg-muted">Docs</span>
         </Link>
-        <Badge variant="accent" className="font-mono">docs</Badge>
         {groups ? (
-          <div className="order-3 mx-auto w-full sm:order-none sm:max-w-xl sm:px-6">
+          <div className="order-3 mx-auto w-full sm:order-none sm:max-w-sm sm:px-2">
             <DocsSearch groups={groups} />
           </div>
         ) : <div className="flex-1" />}
-        <nav className="ml-auto flex shrink-0 items-center gap-3 text-sm text-fg-muted" aria-label="Public">
+        <nav className="ml-auto flex shrink-0 items-center gap-4 text-sm text-fg-muted" aria-label="Public">
           <Link href="/landing" className="hover:text-fg">Overview</Link>
           <a href={REPOS.backend} target="_blank" rel="noreferrer" className="hover:text-fg">GitHub</a>
           <Link href="/login" className="hover:text-fg">Sign in</Link>
@@ -71,56 +72,65 @@ export function DocsChrome({
   return (
     <main className="min-h-screen bg-bg text-fg">
       <DocsTopBar groups={groups} />
-      <div className="mx-auto grid w-full max-w-[1520px] grid-cols-1 gap-0 lg:grid-cols-[300px_minmax(0,1fr)_240px]">
-        <aside className="border-b border-border bg-surface-sunk/40 px-4 py-4 lg:sticky lg:top-14 lg:h-[calc(100vh-56px)] lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 lg:py-7">
+      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-0 lg:grid-cols-[260px_minmax(0,1fr)_220px]">
+        <aside className="border-b border-border px-4 py-4 lg:sticky lg:top-14 lg:h-[calc(100vh-56px)] lg:overflow-auto lg:border-b-0 lg:border-r lg:px-4 lg:py-8">
           <DocsNav groups={groups} activeSlug={page.slug} />
         </aside>
 
-        <article className="min-w-0 px-5 py-10 sm:px-10 lg:px-14 lg:py-14">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-10 flex flex-col gap-4 border-b border-border pb-9">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="accent" className="font-mono">{page.group}</Badge>
-              </div>
-              <H1>{page.title}</H1>
-              {page.description ? <Muted className="max-w-3xl text-base leading-relaxed">{page.description}</Muted> : null}
+        <article className="min-w-0 px-5 py-10 sm:px-10 lg:px-16 lg:py-12">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-9 flex flex-col gap-3 border-b border-border pb-8">
+              <div className="text-xs font-semibold uppercase tracking-wider text-accent">{page.group}</div>
+              <H1 className="text-3xl">{page.title}</H1>
+              {page.description ? <Muted className="text-base leading-relaxed">{page.description}</Muted> : null}
             </div>
 
-            <MarkdownContent className="gap-6" compact={false}>{page.body}</MarkdownContent>
+            <MarkdownContent prose>{page.body}</MarkdownContent>
 
-            <div className="mt-10 grid gap-3 border-t border-border pt-6 sm:grid-cols-2">
+            <nav className="mt-12 grid gap-3 border-t border-border pt-8 sm:grid-cols-2" aria-label="Pagination">
               {previous ? (
-                <Button asChild variant="secondary" className="justify-start">
-                  <Link href={previous.slug === 'index' ? '/docs' : `/docs/${previous.slug}`}>
-                    <ArrowLeft className="h-4 w-4" />
-                    {previous.title}
-                  </Link>
-                </Button>
+                <Link
+                  href={previous.slug === 'index' ? '/docs' : `/docs/${previous.slug}`}
+                  className="group flex flex-col gap-1 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-border-strong"
+                >
+                  <span className="flex items-center gap-1 text-xs text-fg-subtle">
+                    <ArrowLeft className="h-3 w-3" />
+                    Previous
+                  </span>
+                  <span className="text-sm font-medium text-fg group-hover:text-accent">{previous.title}</span>
+                </Link>
               ) : <div />}
               {next ? (
-                <Button asChild variant="secondary" className="justify-end">
-                  <Link href={next.slug === 'index' ? '/docs' : `/docs/${next.slug}`}>
-                    {next.title}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
+                <Link
+                  href={next.slug === 'index' ? '/docs' : `/docs/${next.slug}`}
+                  className="group flex flex-col items-end gap-1 rounded-lg border border-border bg-surface px-4 py-3 text-right transition-colors hover:border-border-strong"
+                >
+                  <span className="flex items-center gap-1 text-xs text-fg-subtle">
+                    Next
+                    <ArrowRight className="h-3 w-3" />
+                  </span>
+                  <span className="text-sm font-medium text-fg group-hover:text-accent">{next.title}</span>
+                </Link>
               ) : null}
-            </div>
+            </nav>
           </div>
         </article>
 
-        <aside className="hidden border-l border-border bg-surface-sunk/25 px-6 py-7 lg:sticky lg:top-14 lg:block lg:h-[calc(100vh-56px)] lg:overflow-auto">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-fg">
-              <BookOpen className="h-4 w-4 text-accent" />
+        <aside className="hidden px-4 py-8 lg:sticky lg:top-14 lg:block lg:h-[calc(100vh-56px)] lg:overflow-auto">
+          <div className="flex flex-col gap-3 border-l border-border pl-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               On this page
             </div>
-            <nav className="flex flex-col gap-2" aria-label="On this page">
+            <nav className="flex flex-col gap-1.5" aria-label="On this page">
               {headings.length ? headings.map((heading) => (
                 <a
                   key={heading.id}
                   href={`#${heading.id}`}
-                  className={heading.depth > 2 ? 'pl-3 text-sm text-fg-subtle hover:text-accent' : 'text-sm text-fg-muted hover:text-accent'}
+                  className={
+                    heading.depth > 2
+                      ? 'pl-3 text-[13px] leading-snug text-fg-subtle transition-colors hover:text-fg'
+                      : 'text-[13px] leading-snug text-fg-muted transition-colors hover:text-fg'
+                  }
                 >
                   {heading.text}
                 </a>
